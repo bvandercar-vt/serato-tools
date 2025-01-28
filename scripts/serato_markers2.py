@@ -9,8 +9,6 @@ from typing import Tuple
 
 import mutagen
 
-from .utils.utils import get_geob, tag_geob
-
 FMT_VERSION = 'BB'
 
 GEOB_KEY = "Serato Markers2"
@@ -279,11 +277,11 @@ def main(argv=None):
     import ast
     import configparser
     import math
-    import shutil
     import subprocess
     import tempfile
 
-    from .utils.utils import ui_ask
+    from .utils.utils import (get_geob, get_hex_editor, get_text_editor,
+                              tag_geob, ui_ask)
     
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
@@ -291,15 +289,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.edit:
-        text_editor = shutil.which(os.getenv('EDITOR', 'vi'))
-        if not text_editor:
-            print('No suitable $EDITOR found.', file=sys.stderr)
-            return 1
-
-        hex_editor = shutil.which(os.getenv('HEXEDITOR', 'bvi'))
-        if not hex_editor:
-            print('No suitable HEXEDITOR found.', file=sys.stderr)
-            return 1
+        text_editor = get_text_editor()
+        hex_editor = get_hex_editor()
 
     tagfile = mutagen.File(args.file)
     if tagfile is not None:

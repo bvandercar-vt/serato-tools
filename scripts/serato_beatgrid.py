@@ -7,8 +7,6 @@ import sys
 
 import mutagen
 
-from .utils.utils import get_geob
-
 FMT_VERSION = 'BB'
 
 GEOB_KEY = "Serato BeatGrid"
@@ -51,6 +49,9 @@ def parse(fp: io.BytesIO | io.BufferedReader):
 
 def main(argv=None):
     import argparse
+
+    from .utils.utils import get_geob
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     args = parser.parse_args(argv)

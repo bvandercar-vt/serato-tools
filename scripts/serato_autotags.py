@@ -6,8 +6,6 @@ import sys
 
 import mutagen
 
-from .utils.utils import get_geob, tag_geob
-
 FMT_VERSION = 'BB'
 
 GEOB_KEY = "Serato Autotags"
@@ -38,10 +36,10 @@ def dump(bpm: float, autogain: float, gaindb: float):
 def main(argv=None):
     import argparse
     import configparser
-    import os
-    import shutil
     import subprocess
     import tempfile
+
+    from .utils.utils import get_geob, get_text_editor, tag_geob
 
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
@@ -58,10 +56,7 @@ def main(argv=None):
         bpm, autogain, gaindb = parse(fp)
 
     if args.edit:
-        editor = shutil.which(os.getenv('EDITOR', 'vi'))
-        if not editor:
-            print('No suitable $EDITOR found.', file=sys.stderr)
-            return 1
+        editor = get_text_editor()
 
         with tempfile.NamedTemporaryFile() as f:
             f.write((

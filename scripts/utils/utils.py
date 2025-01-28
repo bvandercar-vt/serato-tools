@@ -1,3 +1,6 @@
+import os
+import shutil
+
 import mutagen
 
 
@@ -22,6 +25,18 @@ def ui_ask(question, choices, default=None):
                 '{} - {}'.format(choice, desc)
                 for choice, desc in (*choices.items(), ('?', 'print help'))
             ))
+
+def get_text_editor():
+    text_editor = shutil.which(os.getenv('EDITOR', 'vi'))
+    if not text_editor:
+        raise Exception('No suitable EDITOR found.')
+    return text_editor
+
+def get_hex_editor():
+    hex_editor = shutil.which(os.getenv('HEXEDITOR', 'bvi'))
+    if not hex_editor:
+        raise Exception('No suitable HEXEDITOR found.')
+    return hex_editor
 
 def get_geob(tagfile: mutagen.id3.ID3FileType, geob_key: str) -> bytes:
     geob_key = f"GEOB:{geob_key}"
