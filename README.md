@@ -1,3 +1,13 @@
+Fork of https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained.
+
+Can install using pip:
+
+`pip install git+https://github.com/bvandercar-vt/serato-tags@main`
+
+Or add this line to your `requirements.txt`:
+
+`git+https://github.com/bvandercar-vt/serato-tags@main`
+
 # Serato Tags
 
 This repository aims to document the GEOB ID3 tags that the Serato DJ software uses to store its metadata.
