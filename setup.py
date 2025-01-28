@@ -7,5 +7,6 @@ setup(
    author='TODO',
    author_email='TODO',
    packages=['serato-tags'],
-   install_requires=[],
+   package_dir={'serato-tags':'scripts'},
+   install_requires=['mutagen']
 )
