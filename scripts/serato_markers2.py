@@ -225,7 +225,11 @@ def parse(data):
     version = struct.unpack(FMT_VERSION, data[:versionlen])
     assert version == (0x01, 0x01)
 
-    b64data = data[versionlen:data.index(b'\x00', versionlen)].replace(b'\n', b'')
+    try:
+        b64data = data[versionlen : data.index(b"\x00", versionlen)]
+    except:
+        b64data = data[versionlen:]
+    b64data = b64data.replace(b"\n", b"")
     padding = b'A==' if len(b64data) % 4 == 1 else (b'=' * (-len(b64data) % 4))
     payload = base64.b64decode(b64data + padding)
     fp = io.BytesIO(payload)
