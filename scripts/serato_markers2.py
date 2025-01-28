@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import ast
 import base64
+import configparser
 import io
-import os
 import struct
 import sys
 from typing import Tuple
@@ -85,6 +86,13 @@ class Entry(object):
             name=self.__class__.__name__,
             data=', '.join('{}={!r}'.format(name, getattr(self, name))
                            for name in self.FIELDS))
+
+    @classmethod
+    def load(cls, data: bytes):
+        return cls(data)
+
+    def dump(self) -> bytes:
+        return self.data
 
 
 class UnknownEntry(Entry):
@@ -209,8 +217,6 @@ class FlipEntry(Entry):
     def dump(self):
         raise NotImplementedError('FLIP entry dumps are not implemented!')
 
-EntryType = list[BpmLockEntry | ColorEntry | CueEntry | FlipEntry | LoopEntry | UnknownEntry]
-
 def get_entry_type(entry_name: str):
     for entry_cls in (BpmLockEntry, ColorEntry, CueEntry, LoopEntry, FlipEntry):
         if entry_cls.NAME == entry_name:
@@ -243,7 +249,7 @@ def parse(data: bytes):
         yield entry_type.load(fp.read(entry_len))
 
 
-def dump(entries: EntryType):
+def dump(entries: list[Entry]):
     version = struct.pack(FMT_VERSION, 0x01, 0x01)
 
     contents = [version]
@@ -271,11 +277,29 @@ def dump(entries: EntryType):
     data += payload_base64
     return data.ljust(470, b'\x00')
 
+def parse_entries_file(contents: str, assert_len_1: bool):
+    cp = configparser.ConfigParser()
+    cp.read_string(contents)
+    sections = tuple(sorted(cp.sections()))
+    if assert_len_1:
+        assert len(sections) == 1
+
+    results: list[Entry] = []
+    for section in sections:
+        l, s, r = section.partition(': ')
+        entry_type = get_entry_type(r if s else l)
+
+        e = entry_type(*(
+            ast.literal_eval(
+                cp.get(section, field),
+            ) for field in entry_type.FIELDS
+        ))
+        results.append(entry_type.load(e.dump()))
+    return results
+
 
 def main(argv=None):
     import argparse
-    import ast
-    import configparser
     import math
     import subprocess
     import tempfile
@@ -356,23 +380,10 @@ def main(argv=None):
                     else:
                         try:
                             if action != 'b':
-                                cp = configparser.ConfigParser()
-                                cp.read_string(output.decode())
-                                sections = tuple(sorted(cp.sections()))
-                                if action != 'a':
-                                    assert len(sections) == 1
-
-                                results = []
-                                for section in sections:
-                                    l, s, r = section.partition(': ')
-                                    entry_type = get_entry_type(r if s else l)
-
-                                    e = entry_type(*(
-                                        ast.literal_eval(
-                                            cp.get(section, field),
-                                        ) for field in entry_type.FIELDS
-                                    ))
-                                    results.append(entry_type.load(e.dump()))
+                                results = parse_entries_file(
+                                            output.decode(), 
+                                            assert_len_1=action != 'a'
+                                          )
                             else:
                                 results = [entry.load(output)]
                         except Exception as e:
