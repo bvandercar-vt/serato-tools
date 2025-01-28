@@ -1,4 +1,4 @@
-from setuptools import find_packages, setup
+from setuptools import setup
 
 setup(
    name='serato_tags',
@@ -6,6 +6,7 @@ setup(
    description='Serato track metadata tags',
    author='TODO',
    author_email='TODO',
-   packages=["scripts"],   package_dir={"serato_tags": "scripts"},
+   packages=["serato_tags"],   
+   package_dir={"serato_tags": "scripts"},
    install_requires=['mutagen']
 )
