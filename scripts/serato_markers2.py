@@ -8,7 +8,8 @@ import sys
 from typing import Tuple
 
 import mutagen
-from utils.utils import get_geob, tag_geob
+
+from .utils.utils import get_geob, tag_geob
 
 FMT_VERSION = 'BB'
 
@@ -282,7 +283,7 @@ def main(argv=None):
     import subprocess
     import tempfile
 
-    from utils.utils import ui_ask
+    from .utils.utils import ui_ask
     
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')

@@ -5,7 +5,8 @@ import struct
 import sys
 
 import mutagen
-from utils.utils import get_geob, tag_geob
+
+from .utils.utils import get_geob, tag_geob
 
 FMT_VERSION = 'BB'
 

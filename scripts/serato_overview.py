@@ -7,7 +7,8 @@ from typing import Generator
 
 import mutagen
 from PIL import Image, ImageColor
-from utils.utils import get_geob
+
+from .utils.utils import get_geob
 
 FMT_VERSION = 'BB'
 
