@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
 import collections
 import io
 import struct
 import sys
+
 import mutagen
 
 FMT_VERSION = 'BB'
@@ -25,7 +25,7 @@ Footer = collections.namedtuple('Footer', (
 ))
 
 
-def parse(fp):
+def parse(fp: io.BytesIO | io.BufferedReader):
     version = struct.unpack(FMT_VERSION, fp.read(2))
     assert version == (0x01, 0x00)
 
@@ -46,6 +46,7 @@ def parse(fp):
 
 
 def main(argv=None):
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     args = parser.parse_args(argv)

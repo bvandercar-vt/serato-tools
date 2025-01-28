@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import configparser
 import io
-import shutil
-import subprocess
-import os
-import tempfile
 import struct
 import sys
+
 import mutagen
 
 FMT_VERSION = 'BB'
 
 
-def readbytes(fp):
+def readbytes(fp: io.BytesIO | io.BufferedReader):
     for x in iter(lambda: fp.read(1), b''):
         if x == b'\00':
             break
         yield x
 
 
-def parse(fp):
+def parse(fp: io.BytesIO | io.BufferedReader):
     version = struct.unpack(FMT_VERSION, fp.read(2))
     assert version == (0x01, 0x01)
 
@@ -30,15 +25,21 @@ def parse(fp):
         yield float(data.decode('ascii'))
 
 
-def dump(bpm, autogain, gaindb):
+def dump(bpm: float, autogain: float, gaindb: float):
     data = struct.pack(FMT_VERSION, 0x01, 0x01)
     for value, decimals in ((bpm, 2), (autogain, 3), (gaindb, 3)):
         data += '{:.{}f}'.format(value, decimals).encode('ascii')
         data += b'\x00'
     return data
 
-
 def main(argv=None):
+    import argparse
+    import configparser
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     parser.add_argument('-e', '--edit', action='store_true')

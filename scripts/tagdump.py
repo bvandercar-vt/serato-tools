@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
+
 import base64
-import os.path
+import os
+
 import mutagen
 
 
-def get_serato_tagdata(tagfile, decode=False):
+def get_serato_tagdata(tagfile: mutagen.id3.ID3FileType, decode: bool=False):
     if tagfile and tagfile.tags:
         if isinstance(tagfile, (mutagen.mp3.MP3, mutagen.aiff.AIFF)):
             for tagname, tagvalue in tagfile.tags.items():
@@ -49,6 +50,7 @@ def get_serato_tagdata(tagfile, decode=False):
 
 
 def main(argv=None):
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('output_dir')
     parser.add_argument('input_file')

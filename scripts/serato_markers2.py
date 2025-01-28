@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import ast
 import base64
-import configparser
 import io
-import math
 import os
-import shutil
 import struct
-import subprocess
 import sys
-import tempfile
+from typing import Tuple
 
 import mutagen
 
@@ -68,7 +62,7 @@ TRACK_COLORS = {
     }.items()
 }
 
-def readbytes(fp):
+def readbytes(fp: io.BytesIO):
     for x in iter(lambda: fp.read(1), b''):
         if x == b'\00':
             break
@@ -76,6 +70,9 @@ def readbytes(fp):
 
 
 class Entry(object):
+    NAME: str | None
+    FIELDS: Tuple[str, ...]
+
     def __init__(self, *args):
         assert len(args) == len(self.FIELDS)
         for field, value in zip(self.FIELDS, args):
@@ -93,7 +90,7 @@ class UnknownEntry(Entry):
     FIELDS = ('data',)
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data: bytes):
         return cls(data)
 
     def dump(self):
@@ -106,7 +103,7 @@ class BpmLockEntry(Entry):
     FMT = '?'
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data: bytes):
         return cls(*struct.unpack(cls.FMT, data))
 
     def dump(self):
@@ -119,7 +116,7 @@ class ColorEntry(Entry):
     FIELDS = ('field1', 'color',)
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data: bytes):
         return cls(*struct.unpack(cls.FMT, data))
 
     def dump(self):
@@ -133,7 +130,7 @@ class CueEntry(Entry):
               'name',)
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data: bytes):
         info_size = struct.calcsize(cls.FMT)
         info = struct.unpack(cls.FMT, data[:info_size])
         name, nullbyte, other = data[info_size:].partition(b'\x00')
@@ -157,7 +154,7 @@ class LoopEntry(Entry):
               'field6', 'color', 'locked', 'name',)
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data: bytes):
         info_size = struct.calcsize(cls.FMT)
         info = struct.unpack(cls.FMT, data[:info_size])
         name, nullbyte, other = data[info_size:].partition(b'\x00')
@@ -210,17 +207,16 @@ class FlipEntry(Entry):
     def dump(self):
         raise NotImplementedError('FLIP entry dumps are not implemented!')
 
+EntryType = list[BpmLockEntry | ColorEntry | CueEntry | FlipEntry | LoopEntry | UnknownEntry]
 
-def get_entry_type(entry_name):
-    entry_type = UnknownEntry
+def get_entry_type(entry_name: str):
     for entry_cls in (BpmLockEntry, ColorEntry, CueEntry, LoopEntry, FlipEntry):
         if entry_cls.NAME == entry_name:
-            entry_type = entry_cls
-            break
-    return entry_type
+            return entry_cls
+    return UnknownEntry
 
 
-def parse(data):
+def parse(data: bytes):
     versionlen = struct.calcsize(FMT_VERSION)
     version = struct.unpack(FMT_VERSION, data[:versionlen])
     assert version == (0x01, 0x01)
@@ -245,7 +241,7 @@ def parse(data):
         yield entry_type.load(fp.read(entry_len))
 
 
-def dump(entries):
+def dump(entries: EntryType):
     version = struct.pack(FMT_VERSION, 0x01, 0x01)
 
     contents = [version]
@@ -274,30 +270,17 @@ def dump(entries):
     return data.ljust(470, b'\x00')
 
 
-def ui_ask(question, choices, default=None):
-    text = '{question} [{choices}]? '.format(
-        question=question,
-        choices='/'.join(
-            x.upper() if x == default else x
-            for x in (*choices.keys(), '?')
-        )
-    )
-
-    while True:
-        answer = input(text).lower()
-        if default and answer == '':
-            answer = default
-
-        if answer in choices.keys():
-            return answer
-        else:
-            print('\n'.join(
-                '{} - {}'.format(choice, desc)
-                for choice, desc in (*choices.items(), ('?', 'print help'))
-            ))
-
-
 def main(argv=None):
+    import argparse
+    import ast
+    import configparser
+    import math
+    import shutil
+    import subprocess
+    import tempfile
+
+    from utils.utils import ui_ask
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     parser.add_argument('-e', '--edit', action='store_true')

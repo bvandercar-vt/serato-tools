@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import os
-import ast
-import configparser
-import io
-import math
-import shutil
-import struct
-import subprocess
-import sys
-import tempfile
 import enum
+import io
+import struct
+import sys
+
 import mutagen
 
 FMT_VERSION = 'BB'
@@ -23,7 +16,7 @@ class EntryType(enum.IntEnum):
     LOOP = 3
 
 
-def serato32encode(data):
+def serato32encode(data: bytes):
     """Encode 3 byte plain text into 4 byte Serato binary format."""
     a, b, c = struct.unpack('BBB', data)
     z = c & 0x7F
@@ -33,7 +26,7 @@ def serato32encode(data):
     return bytes(bytearray([w, x, y, z]))
 
 
-def serato32decode(data):
+def serato32decode(data: bytes):
     """Decode 4 byte Serato binary format into 3 byte plain text."""
     w, x, y, z = struct.unpack('BBBB', data)
     c = (z & 0x7F) | ((y & 0x01) << 7)
@@ -59,7 +52,7 @@ class Entry(object):
                            for name in self.FIELDS))
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data: bytes):
         info_size = struct.calcsize(cls.FMT)
         info = struct.unpack(cls.FMT, data[:info_size])
         entry_data = []
@@ -128,7 +121,7 @@ class Color(Entry):
     FIELDS = ('color',)
 
 
-def parse(fp):
+def parse(fp: io.BytesIO | io.BufferedReader):
     assert struct.unpack(FMT_VERSION, fp.read(2)) == (0x02, 0x05)
 
     num_entries = struct.unpack('>I', fp.read(4))[0]
@@ -142,7 +135,7 @@ def parse(fp):
     yield Color.load(fp.read())
 
 
-def dump(new_entries):
+def dump(new_entries: list):
     data = struct.pack(FMT_VERSION, 0x02, 0x05)
     num_entries = len(new_entries) - 1
     data += struct.pack('>I', num_entries)
@@ -150,31 +143,18 @@ def dump(new_entries):
         data += entry_data.dump()
     return data
 
-
-def ui_ask(question, choices, default=None):
-    text = '{question} [{choices}]? '.format(
-        question=question,
-        choices='/'.join(
-            x.upper() if x == default else x
-            for x in (*choices.keys(), '?')
-        )
-    )
-
-    while True:
-        answer = input(text).lower()
-        if default and answer == '':
-            answer = default
-
-        if answer in choices.keys():
-            return answer
-        else:
-            print('\n'.join(
-                '{} - {}'.format(choice, desc)
-                for choice, desc in (*choices.items(), ('?', 'print help'))
-            ))
-
-
 def main(argv=None):
+    import argparse
+    import ast
+    import configparser
+    import math
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+
+    from utils.utils import ui_ask
+
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     parser.add_argument('-e', '--edit', action='store_true')

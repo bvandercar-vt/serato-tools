@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import struct
 import io
+import struct
 import sys
+from typing import Generator
+
 import mutagen
-from PIL import Image
-from PIL import ImageColor
+from PIL import Image, ImageColor
 
 FMT_VERSION = 'BB'
 
 
-def parse(fp):
+def parse(fp: io.BytesIO | io.BufferedReader):
     version = struct.unpack(FMT_VERSION, fp.read(2))
     assert version == (0x01, 0x05)
 
@@ -20,7 +20,7 @@ def parse(fp):
         yield bytearray(x)
 
 
-def draw_waveform(data):
+def draw_waveform(data: Generator[bytearray]):
     img = Image.new('RGB', (240, 16), "black")
     pixels = img.load()
 
@@ -43,6 +43,7 @@ def draw_waveform(data):
 
 
 def main(argv=None):
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     args = parser.parse_args(argv)

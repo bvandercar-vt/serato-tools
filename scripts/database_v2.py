@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import struct
 import io
+import struct
 import sys
-
 
 FIELDPARSERS = {
     'b': lambda x: struct.unpack('?', x)[0],
@@ -44,7 +42,7 @@ FIELDNAMES = {
 }
 
 
-def parse(fp):
+def parse(fp: io.BytesIO | io.BufferedReader):
     for i, header in enumerate(iter(lambda: fp.read(8), b'')):
         assert len(header) == 8
         name_ascii, length = struct.unpack('>4sI', header)
@@ -70,6 +68,8 @@ def parse(fp):
 
 
 def main(argv=None):
+    import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE', type=argparse.FileType('rb'))
     args = parser.parse_args(argv)
