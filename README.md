@@ -1,5 +1,7 @@
 Fork of https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained.
 
+# Installation
+
 Can install using pip:
 
 `pip install git+https://github.com/bvandercar-vt/serato-tags@main`
