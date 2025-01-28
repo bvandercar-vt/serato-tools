@@ -12,10 +12,61 @@ import struct
 import subprocess
 import sys
 import tempfile
+
 import mutagen
 
 FMT_VERSION = 'BB'
 
+CUE_COLORS = {
+    k: bytes.fromhex(v)
+    for k, v in {
+        "red": "CC0000",  # Hot Cue 1
+        "orange": "CC4400",
+        "yelloworange": "CC8800",  # Hot Cue 2
+        "yellow": "CCCC00",  # Hot Cue 4
+        "limegreen1": "88CC00",
+        "darkgreen": "44CC00",
+        "limegreen2": "00CC00",  # Hot Cue 5
+        "limegreen3": "00CC44",
+        "seafoam": "00CC88",
+        "cyan": "00CCCC",  # Hot Cue 7
+        "lightblue": "0088CC",
+        "blue1": "0044CC",
+        "blue2": "0000CC",  # Hot Cue 3
+        "purple1": "4400CC",
+        "purple2": "8800CC",  # Hot Cue 8
+        "pink": "CC00CC",  # Hot Cue 6
+        "magenta": "CC0088",
+        "pinkred": "CC0044",
+    }.items()
+}
+
+TRACK_COLORS = {
+    k: bytes.fromhex(v)
+    for k, v in {
+        "pink": "FF99FF",
+        "darkpink": "FF99DD",
+        "pinkred": "FF99BB",
+        "red": "FF9999",
+        "orange": "FFBB99",
+        "yelloworange": "FFDD99",
+        "yellow": "FFFF99",
+        "limegreen1": "DDFF99",
+        "limegreen2": "BBFF99",
+        "limegreen3": "99FF99",
+        "limegreen4": "99FFBB",
+        "seafoam": "99FFDD",
+        "cyan": "99FFFF",
+        "lightblue": "99DDFF",
+        "blue1": "99BBFF",
+        "blue2": "9999FF",
+        "purple": "BB99FF",
+        "magenta": "DD99FF",
+        "white": "FFFFFF",
+        "grey": "BBBBBB",
+        "black": "999999",
+    }.items()
+}
 
 def readbytes(fp):
     for x in iter(lambda: fp.read(1), b''):
