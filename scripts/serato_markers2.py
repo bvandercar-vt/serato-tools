@@ -8,8 +8,11 @@ import sys
 from typing import Tuple
 
 import mutagen
+from utils.utils import get_geob, tag_geob
 
 FMT_VERSION = 'BB'
+
+GEOB_KEY = "Serato Markers2"
 
 CUE_COLORS = {
     k: bytes.fromhex(v)
@@ -299,11 +302,7 @@ def main(argv=None):
 
     tagfile = mutagen.File(args.file)
     if tagfile is not None:
-        try:
-            data = tagfile['GEOB:Serato Markers2'].data
-        except KeyError:
-            print('File is missing "GEOB:Serato Markers2" tag')
-            return 1
+        data = get_geob(tagfile, GEOB_KEY)
     else:
         with open(args.file, mode='rb') as fp:
             data = fp.read()
@@ -424,12 +423,7 @@ def main(argv=None):
             new_data = dump(new_entries)
 
             if tagfile is not None:
-                tagfile['GEOB:Serato Markers2'] = mutagen.id3.GEOB(
-                    encoding=0,
-                    mime='application/octet-stream',
-                    desc='Serato Markers2',
-                    data=new_data,
-                )
+                tag_geob(tagfile, GEOB_KEY, new_data)
                 tagfile.save()
             else:
                 with open(args.file, mode='wb') as fp:

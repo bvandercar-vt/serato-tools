@@ -5,9 +5,11 @@ import struct
 import sys
 
 import mutagen
+from utils.utils import get_geob, tag_geob
 
 FMT_VERSION = 'BB'
 
+GEOB_KEY = "Serato Autotags"
 
 def readbytes(fp: io.BytesIO | io.BufferedReader):
     for x in iter(lambda: fp.read(1), b''):
@@ -47,13 +49,7 @@ def main(argv=None):
 
     tagfile = mutagen.File(args.file)
     if tagfile is not None:
-        try:
-            tag = tagfile['GEOB:Serato Autotags']
-        except KeyError:
-            print('File is missing "GEOB:Serato Autotags" tag')
-            return 1
-        else:
-            fp = io.BytesIO(tag.data)
+        fp = io.BytesIO(get_geob(tagfile, GEOB_KEY))
     else:
         fp = open(args.file, mode='rb')
 
@@ -95,12 +91,7 @@ def main(argv=None):
         new_data = dump(bpm, autogain, gaindb)
         if tagfile:
             if tagfile is not None:
-                tagfile['GEOB:Serato Autotags'] = mutagen.id3.GEOB(
-                    encoding=0,
-                    mime='application/octet-stream',
-                    desc='Serato Autotags',
-                    data=new_data,
-                )
+                tag_geob(tagfile, GEOB_KEY, new_data)
                 tagfile.save()
         else:
             with open(args.file, mode='wb') as fp:

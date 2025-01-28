@@ -6,8 +6,11 @@ import struct
 import sys
 
 import mutagen
+from utils.utils import get_geob
 
 FMT_VERSION = 'BB'
+
+GEOB_KEY = "Serato BeatGrid"
 
 NonTerminalBeatgridMarker = collections.namedtuple(
     'NonTerminalBeatgridMarker', (
@@ -53,13 +56,7 @@ def main(argv=None):
 
     tagfile = mutagen.File(args.file)
     if tagfile is not None:
-        try:
-            tag = tagfile['GEOB:Serato BeatGrid']
-        except KeyError:
-            print('File is missing "GEOB:Serato BeatGrid" tag')
-            return 1
-        else:
-            fp = io.BytesIO(tag.data)
+        fp = io.BytesIO(get_geob(tagfile, GEOB_KEY))
     else:
         fp = open(args.file, mode='rb')
 

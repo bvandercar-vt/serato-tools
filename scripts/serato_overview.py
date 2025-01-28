@@ -7,9 +7,11 @@ from typing import Generator
 
 import mutagen
 from PIL import Image, ImageColor
+from utils.utils import get_geob
 
 FMT_VERSION = 'BB'
 
+GEOB_KEY = "Serato Overview"
 
 def parse(fp: io.BytesIO | io.BufferedReader):
     version = struct.unpack(FMT_VERSION, fp.read(2))
@@ -50,13 +52,7 @@ def main(argv=None):
 
     tagfile = mutagen.File(args.file)
     if tagfile is not None:
-        try:
-            tag = tagfile['GEOB:Serato Overview']
-        except KeyError:
-            print('File is missing "GEOB:Serato Overview" tag')
-            return 1
-        else:
-            fp = io.BytesIO(tag.data)
+        fp = io.BytesIO(get_geob(tagfile, GEOB_KEY))
     else:
         fp = open(args.file, mode='rb')
 
