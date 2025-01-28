@@ -37,3 +37,8 @@ def tag_geob(tagfile: mutagen.id3.ID3FileType, geob_key: str, data: bytes):
         desc=geob_key,
         data=data,
     )
+
+def del_geob(tagfile: mutagen.id3.ID3FileType, geob_key: str):
+    geob_key = f"GEOB:{geob_key}"
+    if geob_key in tagfile:
+        del tagfile[geob_key]
