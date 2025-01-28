@@ -6,7 +6,7 @@ setup(
    description='Serato track metadata tags',
    author='TODO',
    author_email='TODO',
-   packages=["serato_tags", "serato_tags.utils"],   
+   packages=["serato_tags"],   
    package_dir={"serato_tags": "scripts"},
    install_requires=['mutagen'],
    extras_require = {
