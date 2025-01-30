@@ -8,8 +8,6 @@ import struct
 import sys
 from typing import Tuple
 
-import mutagen
-
 FMT_VERSION = 'BB'
 
 GEOB_KEY = "Serato Markers2"
@@ -304,8 +302,10 @@ def main(argv=None):
     import subprocess
     import tempfile
 
-    from .utils.utils import (get_geob, get_hex_editor, get_text_editor,
-                              tag_geob, ui_ask)
+    import mutagen._file
+
+    from .utils import (get_geob, get_hex_editor, get_text_editor, tag_geob,
+                        ui_ask)
     
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
@@ -316,7 +316,7 @@ def main(argv=None):
         text_editor = get_text_editor()
         hex_editor = get_hex_editor()
 
-    tagfile = mutagen.File(args.file)
+    tagfile = mutagen._file.File(args.file)
     if tagfile is not None:
         data = get_geob(tagfile, GEOB_KEY)
     else:

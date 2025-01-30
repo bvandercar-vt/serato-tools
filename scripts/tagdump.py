@@ -4,7 +4,13 @@
 import base64
 import os
 
-import mutagen
+import mutagen._file
+import mutagen.aiff
+import mutagen.flac
+import mutagen.id3
+import mutagen.mp3
+import mutagen.mp4
+import mutagen.oggvorbis
 
 
 def get_serato_tagdata(tagfile: mutagen.id3.ID3FileType, decode: bool=False):
@@ -57,7 +63,7 @@ def main(argv=None):
     parser.add_argument('-d', '--decode', action='store_true')
     args = parser.parse_args(argv)
 
-    tagfile = mutagen.File(args.input_file)
+    tagfile = mutagen._file.File(args.input_file)
     for field, value in get_serato_tagdata(tagfile, decode=args.decode):
         filename = '{name}.octet-stream'.format(name=field)
         filepath = os.path.join(args.output_dir, filename)

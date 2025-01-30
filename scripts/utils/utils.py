@@ -1,7 +1,8 @@
 import os
 import shutil
 
-import mutagen
+import mutagen.id3
+from mutagen.id3._frames import GEOB
 
 
 def ui_ask(question, choices, default=None):
@@ -46,7 +47,7 @@ def get_geob(tagfile: mutagen.id3.ID3FileType, geob_key: str) -> bytes:
         raise KeyError(f'File is missing "{geob_key}" tag')
 
 def tag_geob(tagfile: mutagen.id3.ID3FileType, geob_key: str, data: bytes):
-    tagfile[f"GEOB:{geob_key}"] = mutagen.id3.GEOB(
+    tagfile[f"GEOB:{geob_key}"] = GEOB(
         encoding=0,
         mime='application/octet-stream',
         desc=geob_key,

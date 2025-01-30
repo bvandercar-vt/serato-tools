@@ -4,8 +4,6 @@ import io
 import struct
 import sys
 
-import mutagen
-
 FMT_VERSION = 'BB'
 
 GEOB_KEY = "Serato Autotags"
@@ -39,14 +37,16 @@ def main(argv=None):
     import subprocess
     import tempfile
 
-    from .utils.utils import get_geob, get_text_editor, tag_geob
+    import mutagen._file
+
+    from .utils import get_geob, get_text_editor, tag_geob
 
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
     parser.add_argument('-e', '--edit', action='store_true')
     args = parser.parse_args(argv)
 
-    tagfile = mutagen.File(args.file)
+    tagfile = mutagen._file.File(args.file)
     if tagfile is not None:
         fp = io.BytesIO(get_geob(tagfile, GEOB_KEY))
     else:
