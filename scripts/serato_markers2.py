@@ -295,6 +295,9 @@ def parse_entries_file(contents: str, assert_len_1: bool):
         results.append(entry_type.load(e.dump()))
     return results
 
+def is_beatgrid_locked(entries: list[Entry]):
+    any((isinstance(entry, BpmLockEntry) and getattr(entry, "enabled")) for entry in entries)
+
 
 def main(argv=None):
     import argparse
