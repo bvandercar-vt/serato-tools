@@ -6,7 +6,7 @@ import configparser
 import io
 import struct
 import sys
-from typing import Tuple
+from typing import Any, Callable, Tuple, TypedDict
 
 FMT_VERSION = 'BB'
 
@@ -295,9 +295,34 @@ def parse_entries_file(contents: str, assert_len_1: bool):
         results.append(entry_type.load(e.dump()))
     return results
 
+ValueType = bytes | str
+
+class EntryModifyCriteria(TypedDict):
+    field: str
+    value_modify: Callable[[ValueType], ValueType | None]
+
+def change_entry(
+    entry: Entry,
+    criteria: list[EntryModifyCriteria],
+):
+    output = f"[{entry.NAME}]\n"
+    for field in entry.FIELDS:
+        value = getattr(entry, field)
+
+        for c in criteria:
+            if field == c["field"]:
+                result = c["value_modify"](value)
+                if result is not None:
+                    value = result
+
+        output += f"{field}: {value!r}\n"
+    output += "\n"
+
+    entry = parse_entries_file(output, assert_len_1=True)[0]
+    return entry
+
 def is_beatgrid_locked(entries: list[Entry]):
     any((isinstance(entry, BpmLockEntry) and getattr(entry, "enabled")) for entry in entries)
-
 
 def main(argv=None):
     import argparse
@@ -327,7 +352,7 @@ def main(argv=None):
             data = fp.read()
 
     entries = list(parse(data))
-    new_entries = []
+    new_entries: list[Entry] = []
     action = None
 
     width = math.floor(math.log10(len(entries)))+1

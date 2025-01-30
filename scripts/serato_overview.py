@@ -20,7 +20,7 @@ def parse(fp: io.BytesIO | io.BufferedReader):
         yield bytearray(x)
 
 
-def draw_waveform(data: Generator[bytearray]):
+def draw_waveform(data: Generator[bytearray, None, None]):
     img = Image.new('RGB', (240, 16), "black")
     pixels = img.load()
 
