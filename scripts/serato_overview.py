@@ -5,8 +5,6 @@ import struct
 import sys
 from typing import Generator
 
-from PIL import Image, ImageColor
-
 FMT_VERSION = 'BB'
 
 GEOB_KEY = "Serato Overview"
@@ -21,6 +19,8 @@ def parse(fp: io.BytesIO | io.BufferedReader):
 
 
 def draw_waveform(data: Generator[bytearray, None, None]):
+    from PIL import Image, ImageColor
+    
     img = Image.new('RGB', (240, 16), "black")
     pixels = img.load()
 

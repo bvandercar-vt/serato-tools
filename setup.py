@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="serato_tags",
-    version="1.4.2",
+    version="1.4.3",
     description="Serato track metadata tags",
     author="TODO",
     author_email="TODO",
