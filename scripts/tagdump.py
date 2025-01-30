@@ -13,7 +13,7 @@ import mutagen.mp4
 import mutagen.oggvorbis
 
 
-def get_serato_tagdata(tagfile: mutagen.id3.ID3FileType, decode: bool=False):
+def get_serato_tagdata(tagfile, decode: bool=False):
     if tagfile and tagfile.tags:
         if isinstance(tagfile, (mutagen.mp3.MP3, mutagen.aiff.AIFF)):
             for tagname, tagvalue in tagfile.tags.items():

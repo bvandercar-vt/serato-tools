@@ -39,7 +39,8 @@ def main(argv=None):
 
     import mutagen._file
 
-    from .utils import get_geob, get_text_editor, tag_geob
+    from .utils.tags import get_geob, tag_geob
+    from .utils.ui import get_text_editor
 
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')

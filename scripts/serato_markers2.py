@@ -304,8 +304,8 @@ def main(argv=None):
 
     import mutagen._file
 
-    from .utils import (get_geob, get_hex_editor, get_text_editor, tag_geob,
-                        ui_ask)
+    from .utils.tags import get_geob, tag_geob
+    from .utils.ui import get_hex_editor, get_text_editor, ui_ask
     
     parser = argparse.ArgumentParser()
     parser.add_argument('file', metavar='FILE')
