@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import io
+import os
 import struct
 import sys
-from typing import Any, Generator, TypedDict
+from typing import Any, Callable, Generator, Iterable, Tuple, TypedDict
+
+DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")
 
 
 class DbEntry(TypedDict):
@@ -40,8 +43,10 @@ FIELDNAMES = {
     "ptrk": "Track Path",
 }
 
+ParsedType = Tuple[str, int, Any, bytes]
 
-def parse(fp: io.BytesIO | io.BufferedReader):
+
+def parse(fp: io.BytesIO | io.BufferedReader) -> Generator[ParsedType]:
     for i, header in enumerate(iter(lambda: fp.read(8), b"")):
         assert len(header) == 8
         name_ascii: bytes
@@ -49,9 +54,9 @@ def parse(fp: io.BytesIO | io.BufferedReader):
         name_ascii, length = struct.unpack(">4sI", header)
 
         name: str = name_ascii.decode("ascii")
-        type_id = "t" if name == "vrsn" else name[0] # vrsn field has no type_id, but contains text
 
-
+        # vrsn field has no type_id, but contains text
+        type_id: str = "t" if name == "vrsn" else name[0]
 
         data = fp.read(length)
         assert len(data) == length
@@ -70,11 +75,82 @@ def parse(fp: io.BytesIO | io.BufferedReader):
         else:
             value = data
 
-        yield name, length, value
+        yield name, length, value, data
 
 
-def parse_to_objects(fp: io.BytesIO | io.BufferedReader) -> Generator[DbEntry]:
-    for name, length, value in parse(fp):
+class ModifyRule(TypedDict):
+    field: str
+    func: Callable[[str, Any], Any]
+
+
+def modify(
+    fp: io.BytesIO | io.BufferedWriter,
+    parsed: Iterable[ParsedType],
+    rules: list[ModifyRule] = [],
+):
+    track_filename: str = ""
+    for name, length, value, data in parsed:
+        name_bytes = name.encode("ascii")
+        assert len(name_bytes) == 4
+
+        # vrsn field has no type_id, but contains text
+        type_id = "t" if name == "vrsn" else name[0]
+
+        if name == "pfil":
+            assert isinstance(value, str)
+            track_filename = os.path.normpath(value)
+
+        rule_has_been_done = False
+        for i, rule in enumerate(rules):
+            if name == rule["field"]:
+                maybe_new_value = rule["func"](track_filename, value)
+                if maybe_new_value is not None:
+                    assert (
+                        not rule_has_been_done
+                    ), f"Should only pass one rule per field (field: {name})"
+                    rule_has_been_done = True
+                    value = maybe_new_value
+
+        if type_id == "b":
+            data = struct.pack("?", value)
+        elif type_id in ("o", "r"):
+            assert isinstance(value, tuple)
+            nested_buffer = io.BytesIO()
+            modify(nested_buffer, value, rules)
+            data = nested_buffer.getvalue()
+        elif type_id in ("p", "t"):
+            new_data = str(value).encode("utf-16")[2:]
+            assert new_data[-1:] == b"\x00"
+            data = data[:1] + new_data[:-1]
+        elif type_id == "s":
+            data = struct.pack(">H", value)
+        elif type_id == "u":
+            data = struct.pack(">I", value)
+
+        length = len(data)
+
+        header = struct.pack(">4sI", name_bytes, length)
+        fp.write(header)
+        fp.write(data)
+
+
+def modify_file(file: str, rules: list[ModifyRule]):
+    with open(file, "rb") as read_file:
+        parsed = list(parse(read_file))
+
+    output = io.BytesIO()
+    modify(output, parsed, rules)
+
+    with open(file, "wb") as write_file:
+        output.seek(0)
+        write_file.write(output.read())
+
+
+def parse_to_objects(fp: io.BytesIO | io.BufferedReader | str) -> Generator[DbEntry]:
+    if isinstance(fp, str):
+        fp = open(fp, "rb")
+
+    for name, length, value, data in parse(fp):
         if isinstance(value, tuple):
             new_val: list[DbEntry] = [
                 {
