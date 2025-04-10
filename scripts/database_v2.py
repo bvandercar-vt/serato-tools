@@ -3,16 +3,15 @@
 import io
 import struct
 import sys
+from typing import Any, Generator, TypedDict
 
-FIELDPARSERS = {
-    "b": lambda x: struct.unpack("?", x)[0],
-    "o": lambda x: tuple(parse(io.BytesIO(x))),
-    "p": lambda x: (x[1:] + b"\00").decode("utf-16"),
-    "r": lambda x: tuple(parse(io.BytesIO(x))),
-    "s": lambda x: struct.unpack(">H", x)[0],
-    "t": lambda x: (x[1:] + b"\00").decode("utf-16"),
-    "u": lambda x: struct.unpack(">I", x)[0],
-}
+
+class DbEntry(TypedDict):
+    field: str
+    field_name: str
+    value: str | int | bool | list["DbEntry"]
+    size_bytes: int
+
 
 FIELDNAMES = {
     # Database
@@ -47,26 +46,55 @@ def parse(fp: io.BytesIO | io.BufferedReader):
         assert len(header) == 8
         name_ascii: bytes
         length: int
-        name_ascii, length = struct.unpack('>4sI', header)
+        name_ascii, length = struct.unpack(">4sI", header)
 
-        name: str = name_ascii.decode('ascii')
-        type_id = name[0]
+        name: str = name_ascii.decode("ascii")
+        type_id = "t" if name == "vrsn" else name[0] # vrsn field has no type_id, but contains text
 
-        # vrsn field has no type_id, but contains text
-        if name == "vrsn":
-            type_id = "t"
+
 
         data = fp.read(length)
         assert len(data) == length
 
-        try:
-            fieldparser = FIELDPARSERS[type_id]
-        except KeyError:
-            value = data
+        value: Any
+        if type_id == "b":
+            value = struct.unpack("?", data)[0]
+        elif type_id in ("o", "r"):
+            value = tuple(parse(io.BytesIO(data)))
+        elif type_id in ("p", "t"):
+            value = (data[1:] + b"\00").decode("utf-16")
+        elif type_id == "s":
+            value = struct.unpack(">H", data)[0]
+        elif type_id == "u":
+            value = struct.unpack(">I", data)[0]
         else:
-            value = fieldparser(data)
+            value = data
 
         yield name, length, value
+
+
+def parse_to_objects(fp: io.BytesIO | io.BufferedReader) -> Generator[DbEntry]:
+    for name, length, value in parse(fp):
+        if isinstance(value, tuple):
+            new_val: list[DbEntry] = [
+                {
+                    "field": n,
+                    "field_name": FIELDNAMES.get(n, "Unknown"),
+                    "size_bytes": l,
+                    "value": v,
+                }
+                for n, l, v in value
+            ]
+            value = new_val
+        else:
+            value = repr(value)
+
+        yield {
+            "field": name,
+            "field_name": FIELDNAMES.get(name, "Unknown"),
+            "size_bytes": length,
+            "value": value,
+        }
 
 
 def main(argv=None):
@@ -76,15 +104,18 @@ def main(argv=None):
     parser.add_argument("file", metavar="FILE", type=argparse.FileType("rb"))
     args = parser.parse_args(argv)
 
-    for name, length, value in parse(args.file):
-        fieldname = FIELDNAMES.get(name, "Unknown")
-        if isinstance(value, tuple):
-            print(f"{name} ({fieldname}, {length} B)")
-            for name, length, value in value:
-                fieldname = FIELDNAMES.get(name, "Unknown")
-                print(f"  {name} ({fieldname}, {length} B): {repr(value)}")
+    for entry in parse_to_objects(args.file):
+        if isinstance(entry["value"], list):
+            print(f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)")
+            for e in entry["value"]:
+                print(
+                    f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {e['value']}"
+                )
         else:
-            print(f"{name} ({length} B): {repr(value)}")
+            print(
+                f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}"
+            )
+
     return 0
 
 
