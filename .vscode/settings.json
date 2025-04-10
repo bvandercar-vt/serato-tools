@@ -1,0 +1,7 @@
+{
+  "python.terminal.activateEnvironment": true,
+  "python.venvPath": ".venv",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportPrivateImportUsage": "none"
+  }
+}

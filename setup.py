@@ -9,5 +9,5 @@ setup(
     packages=["serato_tags", "serato_tags.utils"],
     package_dir={"serato_tags": "scripts"},
     install_requires=["mutagen"],
-    extras_require={"waveform_drawing": ["PIL"]},
+    extras_require={"waveform_drawing": ["pillow"]},
 )
