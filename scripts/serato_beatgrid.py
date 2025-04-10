@@ -47,7 +47,7 @@ def parse(fp: io.BytesIO | io.BufferedReader):
     assert fp.read() == b""
 
 
-def main(argv=None):
+if __name__ == "__main__":
     import argparse
 
     import mutagen._file
@@ -55,8 +55,8 @@ def main(argv=None):
     from .utils.tags import get_geob
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", metavar="FILE")
-    args = parser.parse_args(argv)
+    parser.add_argument("file")
+    args = parser.parse_args()
 
     tagfile = mutagen._file.File(args.file)
     if tagfile is not None:
@@ -67,9 +67,3 @@ def main(argv=None):
     with fp:
         for marker in parse(fp):
             print(marker)
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

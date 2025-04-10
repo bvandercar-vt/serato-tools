@@ -56,14 +56,14 @@ def get_serato_tagdata(tagfile, decode: bool = False):
                 yield tagname, tagvalue[0].encode("utf-8")
 
 
-def main(argv=None):
+if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("output_dir")
     parser.add_argument("input_file")
     parser.add_argument("-d", "--decode", action="store_true")
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     tagfile = mutagen._file.File(args.input_file)
     for field, value in get_serato_tagdata(tagfile, decode=args.decode):
@@ -76,7 +76,3 @@ def main(argv=None):
         )
         with open(filepath, mode="wb") as fp:
             fp.write(value)
-
-
-if __name__ == "__main__":
-    main()

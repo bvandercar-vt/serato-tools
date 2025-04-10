@@ -33,7 +33,7 @@ def dump(bpm: float, autogain: float, gaindb: float):
     return data
 
 
-def main(argv=None):
+if __name__ == "__main__":
     import argparse
     import configparser
     import subprocess
@@ -45,9 +45,9 @@ def main(argv=None):
     from .utils.ui import get_text_editor
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", metavar="FILE")
+    parser.add_argument("file")
     parser.add_argument("-e", "--edit", action="store_true")
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     tagfile = mutagen._file.File(args.file)
     if tagfile is not None:
@@ -73,8 +73,9 @@ def main(argv=None):
             output = f.read()
 
         if status != 0:
-            print(f"Command executation failed with status: {status}", file=sys.stderr)
-            return 1
+            error_str = (f"Command executation failed with status: {status}",)
+            print(error_str, file=sys.stderr)
+            raise Exception(error_str)
 
         cp = configparser.ConfigParser()
         try:
@@ -84,7 +85,7 @@ def main(argv=None):
             gaindb = cp.getfloat("Autotags", "gaindb")
         except Exception:
             print("Invalid input, no changes made", file=sys.stderr)
-            return 1
+            raise
 
         new_data = dump(bpm, autogain, gaindb)
         if tagfile:
@@ -98,9 +99,3 @@ def main(argv=None):
         print(f"BPM: {bpm}")
         print(f"Auto Gain: {autogain}")
         print(f"Gain dB: {gaindb}")
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

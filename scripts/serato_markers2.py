@@ -8,7 +8,7 @@ import struct
 import sys
 from typing import Any, Callable, Tuple, TypedDict
 
-FMT_VERSION = 'BB'
+FMT_VERSION = "BB"
 
 GEOB_KEY = "Serato Markers2"
 
@@ -63,9 +63,10 @@ TRACK_COLORS = {
     }.items()
 }
 
+
 def readbytes(fp: io.BytesIO):
-    for x in iter(lambda: fp.read(1), b''):
-        if x == b'\00':
+    for x in iter(lambda: fp.read(1), b""):
+        if x == b"\00":
             break
         yield x
 
@@ -80,10 +81,12 @@ class Entry(object):
             setattr(self, field, value)
 
     def __repr__(self):
-        return '{name}({data})'.format(
+        return "{name}({data})".format(
             name=self.__class__.__name__,
-            data=', '.join('{}={!r}'.format(name, getattr(self, name))
-                           for name in self.FIELDS))
+            data=", ".join(
+                "{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS
+            ),
+        )
 
     @classmethod
     def load(cls, data: bytes):
@@ -95,7 +98,7 @@ class Entry(object):
 
 class UnknownEntry(Entry):
     NAME = None
-    FIELDS = ('data',)
+    FIELDS = ("data",)
 
     @classmethod
     def load(cls, data: bytes):
@@ -106,9 +109,9 @@ class UnknownEntry(Entry):
 
 
 class BpmLockEntry(Entry):
-    NAME = 'BPMLOCK'
-    FIELDS = ('enabled',)
-    FMT = '?'
+    NAME = "BPMLOCK"
+    FIELDS = ("enabled",)
+    FMT = "?"
 
     @classmethod
     def load(cls, data: bytes):
@@ -119,9 +122,12 @@ class BpmLockEntry(Entry):
 
 
 class ColorEntry(Entry):
-    NAME = 'COLOR'
-    FMT = 'c3s'
-    FIELDS = ('field1', 'color',)
+    NAME = "COLOR"
+    FMT = "c3s"
+    FIELDS = (
+        "field1",
+        "color",
+    )
 
     @classmethod
     def load(cls, data: bytes):
@@ -132,67 +138,86 @@ class ColorEntry(Entry):
 
 
 class CueEntry(Entry):
-    NAME = 'CUE'
-    FMT = '>cBIc3s2s'
-    FIELDS = ('field1', 'index', 'position', 'field4', 'color', 'field6',
-              'name',)
+    NAME = "CUE"
+    FMT = ">cBIc3s2s"
+    FIELDS = (
+        "field1",
+        "index",
+        "position",
+        "field4",
+        "color",
+        "field6",
+        "name",
+    )
 
     @classmethod
     def load(cls, data: bytes):
         info_size = struct.calcsize(cls.FMT)
         info = struct.unpack(cls.FMT, data[:info_size])
-        name, nullbyte, other = data[info_size:].partition(b'\x00')
-        assert nullbyte == b'\x00'
-        assert other == b''
-        return cls(*info, name.decode('utf-8'))
+        name, nullbyte, other = data[info_size:].partition(b"\x00")
+        assert nullbyte == b"\x00"
+        assert other == b""
+        return cls(*info, name.decode("utf-8"))
 
     def dump(self):
         struct_fields = self.FIELDS[:-1]
-        return b''.join((
-            struct.pack(self.FMT, *(getattr(self, f) for f in struct_fields)),
-            self.name.encode('utf-8'),
-            b'\x00',
-        ))
+        return b"".join(
+            (
+                struct.pack(self.FMT, *(getattr(self, f) for f in struct_fields)),
+                self.name.encode("utf-8"),
+                b"\x00",
+            )
+        )
 
 
 class LoopEntry(Entry):
-    NAME = 'LOOP'
-    FMT = '>cBII4s4sB?'
-    FIELDS = ('field1', 'index', 'startposition', 'endposition', 'field5',
-              'field6', 'color', 'locked', 'name',)
+    NAME = "LOOP"
+    FMT = ">cBII4s4sB?"
+    FIELDS = (
+        "field1",
+        "index",
+        "startposition",
+        "endposition",
+        "field5",
+        "field6",
+        "color",
+        "locked",
+        "name",
+    )
 
     @classmethod
     def load(cls, data: bytes):
         info_size = struct.calcsize(cls.FMT)
         info = struct.unpack(cls.FMT, data[:info_size])
-        name, nullbyte, other = data[info_size:].partition(b'\x00')
-        assert nullbyte == b'\x00'
-        assert other == b''
-        return cls(*info, name.decode('utf-8'))
+        name, nullbyte, other = data[info_size:].partition(b"\x00")
+        assert nullbyte == b"\x00"
+        assert other == b""
+        return cls(*info, name.decode("utf-8"))
 
     def dump(self):
         struct_fields = self.FIELDS[:-1]
-        return b''.join((
-            struct.pack(self.FMT, *(getattr(self, f) for f in struct_fields)),
-            self.name.encode('utf-8'),
-            b'\x00',
-        ))
+        return b"".join(
+            (
+                struct.pack(self.FMT, *(getattr(self, f) for f in struct_fields)),
+                self.name.encode("utf-8"),
+                b"\x00",
+            )
+        )
 
 
 class FlipEntry(Entry):
-    NAME = 'FLIP'
-    FMT1 = 'cB?'
-    FMT2 = '>BI'
-    FMT3 = '>BI16s'
-    FIELDS = ('field1', 'index', 'enabled', 'name', 'loop', 'num_actions',
-              'actions')
+    NAME = "FLIP"
+    FMT1 = "cB?"
+    FMT2 = ">BI"
+    FMT3 = ">BI16s"
+    FIELDS = ("field1", "index", "enabled", "name", "loop", "num_actions", "actions")
 
     @classmethod
     def load(cls, data):
         info1_size = struct.calcsize(cls.FMT1)
         info1 = struct.unpack(cls.FMT1, data[:info1_size])
-        name, nullbyte, other = data[info1_size:].partition(b'\x00')
-        assert nullbyte == b'\x00'
+        name, nullbyte, other = data[info1_size:].partition(b"\x00")
+        assert nullbyte == b"\x00"
 
         info2_size = struct.calcsize(cls.FMT2)
         loop, num_actions = struct.unpack(cls.FMT2, other[:info2_size])
@@ -202,18 +227,19 @@ class FlipEntry(Entry):
             type_id, size = struct.unpack(cls.FMT2, action_data[:info2_size])
             action_data = action_data[info2_size:]
             if type_id == 0:
-                payload = struct.unpack('>dd', action_data[:size])
+                payload = struct.unpack(">dd", action_data[:size])
                 actions.append(("JUMP", *payload))
             elif type_id == 1:
-                payload = struct.unpack('>ddd', action_data[:size])
+                payload = struct.unpack(">ddd", action_data[:size])
                 actions.append(("CENSOR", *payload))
             action_data = action_data[size:]
-        assert action_data == b''
+        assert action_data == b""
 
-        return cls(*info1, name.decode('utf-8'), loop, num_actions, actions)
+        return cls(*info1, name.decode("utf-8"), loop, num_actions, actions)
 
     def dump(self):
-        raise NotImplementedError('FLIP entry dumps are not implemented!')
+        raise NotImplementedError("FLIP entry dumps are not implemented!")
+
 
 def get_entry_type(entry_name: str):
     for entry_cls in (BpmLockEntry, ColorEntry, CueEntry, LoopEntry, FlipEntry):
@@ -232,15 +258,15 @@ def parse(data: bytes):
     except:
         b64data = data[versionlen:]
     b64data = b64data.replace(b"\n", b"")
-    padding = b'A==' if len(b64data) % 4 == 1 else (b'=' * (-len(b64data) % 4))
+    padding = b"A==" if len(b64data) % 4 == 1 else (b"=" * (-len(b64data) % 4))
     payload = base64.b64decode(b64data + padding)
     fp = io.BytesIO(payload)
     assert struct.unpack(FMT_VERSION, fp.read(2)) == (0x01, 0x01)
     while True:
-        entry_name = b''.join(readbytes(fp)).decode('utf-8')
+        entry_name = b"".join(readbytes(fp)).decode("utf-8")
         if not entry_name:
             break
-        entry_len = struct.unpack('>I', fp.read(4))[0]
+        entry_len = struct.unpack(">I", fp.read(4))[0]
         assert entry_len > 0
 
         entry_type = get_entry_type(entry_name)
@@ -256,15 +282,19 @@ def dump(entries: list[Entry]):
             contents.append(entry.dump())
         else:
             data = entry.dump()
-            contents.append(b''.join((
-                entry.NAME.encode('utf-8'),
-                b'\x00',
-                struct.pack('>I', (len(data))),
-                data,
-            )))
+            contents.append(
+                b"".join(
+                    (
+                        entry.NAME.encode("utf-8"),
+                        b"\x00",
+                        struct.pack(">I", (len(data))),
+                        data,
+                    )
+                )
+            )
 
-    payload = b''.join(contents)
-    payload_base64 = bytearray(base64.b64encode(payload).replace(b'=', b'A'))
+    payload = b"".join(contents)
+    payload_base64 = bytearray(base64.b64encode(payload).replace(b"=", b"A"))
 
     i = 72
     while i < len(payload_base64):
@@ -273,7 +303,8 @@ def dump(entries: list[Entry]):
 
     data = version
     data += payload_base64
-    return data.ljust(470, b'\x00')
+    return data.ljust(470, b"\x00")
+
 
 def parse_entries_file(contents: str, assert_len_1: bool):
     cp = configparser.ConfigParser()
@@ -284,22 +315,28 @@ def parse_entries_file(contents: str, assert_len_1: bool):
 
     results: list[Entry] = []
     for section in sections:
-        l, s, r = section.partition(': ')
+        l, s, r = section.partition(": ")
         entry_type = get_entry_type(r if s else l)
 
-        e = entry_type(*(
-            ast.literal_eval(
-                cp.get(section, field),
-            ) for field in entry_type.FIELDS
-        ))
+        e = entry_type(
+            *(
+                ast.literal_eval(
+                    cp.get(section, field),
+                )
+                for field in entry_type.FIELDS
+            )
+        )
         results.append(entry_type.load(e.dump()))
     return results
 
+
 ValueType = bytes | str
+
 
 class EntryModifyCriteria(TypedDict):
     field: str
     value_modify: Callable[[ValueType], ValueType | None]
+
 
 def change_entry(
     entry: Entry,
@@ -321,10 +358,15 @@ def change_entry(
     entry = parse_entries_file(output, assert_len_1=True)[0]
     return entry
 
-def is_beatgrid_locked(entries: list[Entry]):
-    any((isinstance(entry, BpmLockEntry) and getattr(entry, "enabled")) for entry in entries)
 
-def main(argv=None):
+def is_beatgrid_locked(entries: list[Entry]):
+    any(
+        (isinstance(entry, BpmLockEntry) and getattr(entry, "enabled"))
+        for entry in entries
+    )
+
+
+if __name__ == "__main__":
     import argparse
     import math
     import subprocess
@@ -334,11 +376,11 @@ def main(argv=None):
 
     from .utils.tags import get_geob, tag_geob
     from .utils.ui import get_hex_editor, get_text_editor, ui_ask
-    
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('file', metavar='FILE')
-    parser.add_argument('-e', '--edit', action='store_true')
-    args = parser.parse_args(argv)
+    parser.add_argument("file")
+    parser.add_argument("-e", "--edit", action="store_true")
+    args = parser.parse_args()
 
     if args.edit:
         text_editor = get_text_editor()
@@ -348,51 +390,64 @@ def main(argv=None):
     if tagfile is not None:
         data = get_geob(tagfile, GEOB_KEY)
     else:
-        with open(args.file, mode='rb') as fp:
+        with open(args.file, mode="rb") as fp:
             data = fp.read()
 
     entries = list(parse(data))
     new_entries: list[Entry] = []
     action = None
 
-    width = math.floor(math.log10(len(entries)))+1
+    width = math.floor(math.log10(len(entries))) + 1
     for entry_index, entry in enumerate(entries):
         if args.edit:
-            if action not in ('q', '_'):
-                print('{:{}d}: {!r}'.format(entry_index, width, entry))
-                action = ui_ask('Edit this entry', {
-                    'y': 'edit this entry',
-                    'n': 'do not edit this entry',
-                    'q': ('quit; do not edit this entry or any of the '
-                          'remaining ones'),
-                    'a': 'edit this entry and all later entries in the file',
-                    'b': 'edit raw bytes',
-                    'r': 'remove this entry',
-                }, default='n')
+            if action not in ("q", "_"):
+                print("{:{}d}: {!r}".format(entry_index, width, entry))
+                action = ui_ask(
+                    "Edit this entry",
+                    {
+                        "y": "edit this entry",
+                        "n": "do not edit this entry",
+                        "q": (
+                            "quit; do not edit this entry or any of the "
+                            "remaining ones"
+                        ),
+                        "a": "edit this entry and all later entries in the file",
+                        "b": "edit raw bytes",
+                        "r": "remove this entry",
+                    },
+                    default="n",
+                )
 
-            if action in ('y', 'a', 'b'):
+            if action in ("y", "a", "b"):
                 while True:
                     with tempfile.NamedTemporaryFile() as f:
-                        if action == 'b':
+                        if action == "b":
                             f.write(entry.dump())
                             editor = hex_editor
                         else:
-                            if action == 'a':
-                                entries_to_edit = ((
-                                    '{:{}d}: {}'.format(i, width, e.NAME),
-                                    e,
-                                ) for i, e in enumerate(
-                                    entries[entry_index:], start=entry_index))
+                            if action == "a":
+                                entries_to_edit = (
+                                    (
+                                        "{:{}d}: {}".format(i, width, e.NAME),
+                                        e,
+                                    )
+                                    for i, e in enumerate(
+                                        entries[entry_index:], start=entry_index
+                                    )
+                                )
                             else:
                                 entries_to_edit = ((entry.NAME, entry),)
 
                             for section, e in entries_to_edit:
-                                f.write('[{}]\n'.format(section).encode())
+                                f.write("[{}]\n".format(section).encode())
                                 for field in e.FIELDS:
-                                    f.write('{}: {!r}\n'.format(
-                                        field, getattr(e, field),
-                                    ).encode())
-                                f.write(b'\n')
+                                    f.write(
+                                        "{}: {!r}\n".format(
+                                            field,
+                                            getattr(e, field),
+                                        ).encode()
+                                    )
+                                f.write(b"\n")
                             editor = text_editor
                         f.flush()
                         status = subprocess.call((editor, f.name))
@@ -400,56 +455,70 @@ def main(argv=None):
                         output = f.read()
 
                     if status != 0:
-                        if ui_ask('Command failed, retry', {
-                            'y': 'edit again',
-                            'n': 'leave unchanged',
-                        }) == 'n':
+                        if (
+                            ui_ask(
+                                "Command failed, retry",
+                                {
+                                    "y": "edit again",
+                                    "n": "leave unchanged",
+                                },
+                            )
+                            == "n"
+                        ):
                             break
                     else:
                         try:
-                            if action != 'b':
+                            if action != "b":
                                 results = parse_entries_file(
-                                            output.decode(), 
-                                            assert_len_1=action != 'a'
-                                          )
+                                    output.decode(), assert_len_1=action != "a"
+                                )
                             else:
                                 results = [entry.load(output)]
                         except Exception as e:
                             print(str(e))
-                            if ui_ask('Content seems to be invalid, retry', {
-                                'y': 'edit again',
-                                'n': 'leave unchanged',
-                            }) == 'n':
+                            if (
+                                ui_ask(
+                                    "Content seems to be invalid, retry",
+                                    {
+                                        "y": "edit again",
+                                        "n": "leave unchanged",
+                                    },
+                                )
+                                == "n"
+                            ):
                                 break
                         else:
                             for i, e in enumerate(results, start=entry_index):
-                                print('{:{}d}: {!r}'.format(i, width, e))
+                                print("{:{}d}: {!r}".format(i, width, e))
                             subaction = ui_ask(
-                                'Above content is valid, save changes', {
-                                    'y': 'save current changes',
-                                    'n': 'discard changes',
-                                    'e': 'edit again',
-                                }, default='y')
-                            if subaction == 'y':
+                                "Above content is valid, save changes",
+                                {
+                                    "y": "save current changes",
+                                    "n": "discard changes",
+                                    "e": "edit again",
+                                },
+                                default="y",
+                            )
+                            if subaction == "y":
                                 new_entries.extend(results)
-                                if action == 'a':
-                                    action = '_'
+                                if action == "a":
+                                    action = "_"
                                 break
-                            elif subaction == 'n':
-                                if action == 'a':
-                                    action = 'q'
+                            elif subaction == "n":
+                                if action == "a":
+                                    action = "q"
                                 new_entries.append(entry)
                                 break
-            elif action in ('r', '_'):
+            elif action in ("r", "_"):
                 continue
             else:
                 new_entries.append(entry)
         else:
-            print('{:{}d}: {!r}'.format(entry_index, width, entry))
+            print("{:{}d}: {!r}".format(entry_index, width, entry))
 
     if args.edit:
         if new_entries == entries:
-            print('No changes made.')
+            print("No changes made.")
         else:
             new_data = dump(new_entries)
 
@@ -457,11 +526,5 @@ def main(argv=None):
                 tag_geob(tagfile, GEOB_KEY, new_data)
                 tagfile.save()
             else:
-                with open(args.file, mode='wb') as fp:
+                with open(args.file, mode="wb") as fp:
                     fp.write(new_data)
-
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

@@ -5,9 +5,10 @@ import io
 import struct
 import sys
 
-FMT_VERSION = 'BB'
+FMT_VERSION = "BB"
 
 GEOB_KEY = "Serato Markers_"
+
 
 class EntryType(enum.IntEnum):
     INVALID = 0
@@ -17,27 +18,35 @@ class EntryType(enum.IntEnum):
 
 def serato32encode(data: bytes):
     """Encode 3 byte plain text into 4 byte Serato binary format."""
-    a, b, c = struct.unpack('BBB', data)
+    a, b, c = struct.unpack("BBB", data)
     z = c & 0x7F
     y = ((c >> 7) | (b << 1)) & 0x7F
     x = ((b >> 6) | (a << 2)) & 0x7F
-    w = (a >> 5)
+    w = a >> 5
     return bytes(bytearray([w, x, y, z]))
 
 
 def serato32decode(data: bytes):
     """Decode 4 byte Serato binary format into 3 byte plain text."""
-    w, x, y, z = struct.unpack('BBBB', data)
+    w, x, y, z = struct.unpack("BBBB", data)
     c = (z & 0x7F) | ((y & 0x01) << 7)
     b = ((y & 0x7F) >> 1) | ((x & 0x03) << 6)
     a = ((x & 0x7F) >> 2) | ((w & 0x07) << 5)
-    return struct.pack('BBB', a, b, c)
+    return struct.pack("BBB", a, b, c)
 
 
 class Entry(object):
-    FMT = '>B4sB4s6s4sBB'
-    FIELDS = ('start_position_set', 'start_position', 'end_position_set',
-              'end_position', 'field5', 'color', 'type', 'is_locked')
+    FMT = ">B4sB4s6s4sBB"
+    FIELDS = (
+        "start_position_set",
+        "start_position",
+        "end_position_set",
+        "end_position",
+        "field5",
+        "color",
+        "type",
+        "is_locked",
+    )
 
     def __init__(self, *args):
         assert len(args) == len(self.FIELDS)
@@ -45,10 +54,12 @@ class Entry(object):
             setattr(self, field, value)
 
     def __repr__(self):
-        return '{name}({data})'.format(
+        return "{name}({data})".format(
             name=self.__class__.__name__,
-            data=', '.join('{}={!r}'.format(name, getattr(self, name))
-                           for name in self.FIELDS))
+            data=", ".join(
+                "{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS
+            ),
+        )
 
     @classmethod
     def load(cls, data: bytes):
@@ -59,31 +70,33 @@ class Entry(object):
         start_position_set = None
         end_position_set = None
         for field, value in zip(cls.FIELDS, info):
-            if field == 'start_position_set':
+            if field == "start_position_set":
                 assert value in (0x00, 0x7F)
                 value = value != 0x7F
                 start_position_set = value
-            elif field == 'end_position_set':
+            elif field == "end_position_set":
                 assert value in (0x00, 0x7F)
                 value = value != 0x7F
                 end_position_set = value
-            elif field == 'start_position':
+            elif field == "start_position":
                 assert start_position_set is not None
                 if start_position_set:
                     value = struct.unpack(
-                        '>I', serato32decode(value).rjust(4, b'\x00'))[0]
+                        ">I", serato32decode(value).rjust(4, b"\x00")
+                    )[0]
                 else:
                     value = None
-            elif field == 'end_position':
+            elif field == "end_position":
                 assert end_position_set is not None
                 if end_position_set:
                     value = struct.unpack(
-                        '>I', serato32decode(value).rjust(4, b'\x00'))[0]
+                        ">I", serato32decode(value).rjust(4, b"\x00")
+                    )[0]
                 else:
                     value = None
-            elif field == 'color':
+            elif field == "color":
                 value = serato32decode(value)
-            elif field == 'type':
+            elif field == "type":
                 value = EntryType(value)
             entry_data.append(value)
 
@@ -93,37 +106,37 @@ class Entry(object):
         entry_data = []
         for field in self.FIELDS:
             value = getattr(self, field)
-            if field == 'start_position_set':
+            if field == "start_position_set":
                 value = 0x7F if not value else 0x00
-            elif field == 'end_position_set':
+            elif field == "end_position_set":
                 value = 0x7F if not value else 0x00
-            elif field == 'color':
+            elif field == "color":
                 value = serato32encode(value)
-            elif field == 'start_position':
+            elif field == "start_position":
                 if value is None:
                     value = 0x7F7F7F7F
                 else:
-                    value = serato32encode(struct.pack('>I', value)[1:])
-            elif field == 'end_position':
+                    value = serato32encode(struct.pack(">I", value)[1:])
+            elif field == "end_position":
                 if value is None:
                     value = 0x7F7F7F7F
                 else:
-                    value = serato32encode(struct.pack('>I', value)[1:])
-            elif field == 'type':
+                    value = serato32encode(struct.pack(">I", value)[1:])
+            elif field == "type":
                 value = int(value)
             entry_data.append(value)
         return struct.pack(self.FMT, *entry_data)
 
 
 class Color(Entry):
-    FMT = '>4s'
-    FIELDS = ('color',)
+    FMT = ">4s"
+    FIELDS = ("color",)
 
 
 def parse(fp: io.BytesIO | io.BufferedReader):
     assert struct.unpack(FMT_VERSION, fp.read(2)) == (0x02, 0x05)
 
-    num_entries = struct.unpack('>I', fp.read(4))[0]
+    num_entries = struct.unpack(">I", fp.read(4))[0]
     for i in range(num_entries):
         entry_data = fp.read(0x16)
         assert len(entry_data) == 0x16
@@ -137,12 +150,13 @@ def parse(fp: io.BytesIO | io.BufferedReader):
 def dump(new_entries: list):
     data = struct.pack(FMT_VERSION, 0x02, 0x05)
     num_entries = len(new_entries) - 1
-    data += struct.pack('>I', num_entries)
+    data += struct.pack(">I", num_entries)
     for entry_data in new_entries:
         data += entry_data.dump()
     return data
 
-def main(argv=None):
+
+if __name__ == "__main__":
     import argparse
     import ast
     import configparser
@@ -156,9 +170,9 @@ def main(argv=None):
     from .utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('file', metavar='FILE')
-    parser.add_argument('-e', '--edit', action='store_true')
-    args = parser.parse_args(argv)
+    parser.add_argument("file")
+    parser.add_argument("-e", "--edit", action="store_true")
+    args = parser.parse_args()
 
     if args.edit:
         text_editor = get_text_editor()
@@ -168,60 +182,84 @@ def main(argv=None):
     if tagfile is not None:
         data = get_geob(tagfile, GEOB_KEY)
     else:
-        with open(args.file, mode='rb') as fp:
+        with open(args.file, mode="rb") as fp:
             data = fp.read()
 
     entries = list(parse(io.BytesIO(data)))
     new_entries = []
     action = None
 
-    width = math.floor(math.log10(len(entries)))+1
+    width = math.floor(math.log10(len(entries))) + 1
     for entry_index, entry in enumerate(entries):
         if args.edit:
-            if action not in ('q', '_'):
-                print('{:{}d}: {!r}'.format(entry_index, width, entry))
-                action = ui_ask('Edit this entry', {
-                    'y': 'edit this entry',
-                    'n': 'do not edit this entry',
-                    'q': ('quit; do not edit this entry or any of the '
-                          'remaining ones'),
-                    'a': 'edit this entry and all later entries in the file',
-                    'b': 'edit raw bytes',
-                    'r': 'remove this entry',
-                }, default='n')
+            if action not in ("q", "_"):
+                print("{:{}d}: {!r}".format(entry_index, width, entry))
+                action = ui_ask(
+                    "Edit this entry",
+                    {
+                        "y": "edit this entry",
+                        "n": "do not edit this entry",
+                        "q": (
+                            "quit; do not edit this entry or any of the "
+                            "remaining ones"
+                        ),
+                        "a": "edit this entry and all later entries in the file",
+                        "b": "edit raw bytes",
+                        "r": "remove this entry",
+                    },
+                    default="n",
+                )
 
-            if action in ('y', 'a', 'b'):
+            if action in ("y", "a", "b"):
                 while True:
                     with tempfile.NamedTemporaryFile() as f:
-                        if action == 'b':
+                        if action == "b":
                             f.write(entry.dump())
                             editor = hex_editor
                         else:
-                            if action == 'a':
-                                entries_to_edit = ((
-                                    '{:{}d}: {}'.format(
-                                        i, width,
-                                        repr(e.type) if e.__class__ == Entry
-                                        else 'Color'),
-                                    e,
-                                ) for i, e in enumerate(
-                                    entries[entry_index:], start=entry_index))
+                            if action == "a":
+                                entries_to_edit = (
+                                    (
+                                        "{:{}d}: {}".format(
+                                            i,
+                                            width,
+                                            (
+                                                repr(e.type)
+                                                if e.__class__ == Entry
+                                                else "Color"
+                                            ),
+                                        ),
+                                        e,
+                                    )
+                                    for i, e in enumerate(
+                                        entries[entry_index:], start=entry_index
+                                    )
+                                )
                             else:
                                 entries_to_edit = (
-                                    (repr(entry.type)
-                                     if entry.__class__ == Entry else 'Color',
-                                     entry),)
+                                    (
+                                        (
+                                            repr(entry.type)
+                                            if entry.__class__ == Entry
+                                            else "Color"
+                                        ),
+                                        entry,
+                                    ),
+                                )
 
                             for section, e in entries_to_edit:
-                                f.write('[{}]\n'.format(section).encode())
+                                f.write("[{}]\n".format(section).encode())
                                 for field in e.FIELDS:
                                     value = getattr(e, field)
-                                    if field == 'type':
+                                    if field == "type":
                                         value = int(value)
-                                    f.write('{}: {!r}\n'.format(
-                                        field, value,
-                                    ).encode())
-                                f.write(b'\n')
+                                    f.write(
+                                        "{}: {!r}\n".format(
+                                            field,
+                                            value,
+                                        ).encode()
+                                    )
+                                f.write(b"\n")
                             editor = text_editor
                         f.flush()
                         status = subprocess.call((editor, f.name))
@@ -229,69 +267,87 @@ def main(argv=None):
                         output = f.read()
 
                     if status != 0:
-                        if ui_ask('Command failed, retry', {
-                            'y': 'edit again',
-                            'n': 'leave unchanged',
-                        }) == 'n':
+                        if (
+                            ui_ask(
+                                "Command failed, retry",
+                                {
+                                    "y": "edit again",
+                                    "n": "leave unchanged",
+                                },
+                            )
+                            == "n"
+                        ):
                             break
                     else:
                         try:
-                            if action != 'b':
+                            if action != "b":
                                 cp = configparser.ConfigParser()
                                 cp.read_string(output.decode())
                                 sections = tuple(sorted(cp.sections()))
-                                if action != 'a':
+                                if action != "a":
                                     assert len(sections) == 1
 
                                 results = []
                                 for section in sections:
-                                    l, s, r = section.partition(': ')
+                                    l, s, r = section.partition(": ")
                                     name = r if s else l
-                                    cls = Color if name == 'Color' else Entry
-                                    e = cls(*(
-                                        ast.literal_eval(
-                                            cp.get(section, field),
-                                        ) for field in cls.FIELDS
-                                    ))
+                                    cls = Color if name == "Color" else Entry
+                                    e = cls(
+                                        *(
+                                            ast.literal_eval(
+                                                cp.get(section, field),
+                                            )
+                                            for field in cls.FIELDS
+                                        )
+                                    )
                                     results.append(cls.load(e.dump()))
                             else:
                                 results = [entry.load(output)]
                         except Exception as e:
                             print(str(e))
-                            if ui_ask('Content seems to be invalid, retry', {
-                                'y': 'edit again',
-                                'n': 'leave unchanged',
-                            }) == 'n':
+                            if (
+                                ui_ask(
+                                    "Content seems to be invalid, retry",
+                                    {
+                                        "y": "edit again",
+                                        "n": "leave unchanged",
+                                    },
+                                )
+                                == "n"
+                            ):
                                 break
                         else:
                             for i, e in enumerate(results, start=entry_index):
-                                print('{:{}d}: {!r}'.format(i, width, e))
+                                print("{:{}d}: {!r}".format(i, width, e))
                             subaction = ui_ask(
-                                'Above content is valid, save changes', {
-                                    'y': 'save current changes',
-                                    'n': 'discard changes',
-                                    'e': 'edit again',
-                                }, default='y')
-                            if subaction == 'y':
+                                "Above content is valid, save changes",
+                                {
+                                    "y": "save current changes",
+                                    "n": "discard changes",
+                                    "e": "edit again",
+                                },
+                                default="y",
+                            )
+                            if subaction == "y":
                                 new_entries.extend(results)
-                                if action == 'a':
-                                    action = '_'
+                                if action == "a":
+                                    action = "_"
                                 break
-                            elif subaction == 'n':
-                                if action == 'a':
-                                    action = 'q'
+                            elif subaction == "n":
+                                if action == "a":
+                                    action = "q"
                                 new_entries.append(entry)
                                 break
-            elif action in ('r', '_'):
+            elif action in ("r", "_"):
                 continue
             else:
                 new_entries.append(entry)
         else:
-            print('{:{}d}: {!r}'.format(entry_index, width, entry))
+            print("{:{}d}: {!r}".format(entry_index, width, entry))
 
     if args.edit:
         if new_entries == entries:
-            print('No changes made.')
+            print("No changes made.")
         else:
             new_data = dump(new_entries)
 
@@ -299,11 +355,5 @@ def main(argv=None):
                 tag_geob(tagfile, GEOB_KEY, new_data)
                 tagfile.save()
             else:
-                with open(args.file, mode='wb') as fp:
+                with open(args.file, mode="wb") as fp:
                     fp.write(new_data)
-
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

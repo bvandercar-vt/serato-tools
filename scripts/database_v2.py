@@ -43,20 +43,23 @@ FIELDNAMES = {
     "ptrk": "Track Path",
 }
 
+
+def _get_type_id(name: str) -> str:
+    # vrsn field has no type_id, but contains text
+    return "t" if name == "vrsn" else name[0]
+
+
 ParsedType = Tuple[str, int, Any, bytes]
 
 
 def parse(fp: io.BytesIO | io.BufferedReader) -> Generator[ParsedType]:
-    for i, header in enumerate(iter(lambda: fp.read(8), b"")):
+    for header in iter(lambda: fp.read(8), b""):
         assert len(header) == 8
         name_ascii: bytes
         length: int
         name_ascii, length = struct.unpack(">4sI", header)
-
         name: str = name_ascii.decode("ascii")
-
-        # vrsn field has no type_id, but contains text
-        type_id: str = "t" if name == "vrsn" else name[0]
+        type_id: str = _get_type_id(name)
 
         data = fp.read(length)
         assert len(data) == length
@@ -93,15 +96,14 @@ def modify(
         name_bytes = name.encode("ascii")
         assert len(name_bytes) == 4
 
-        # vrsn field has no type_id, but contains text
-        type_id = "t" if name == "vrsn" else name[0]
+        type_id: str = _get_type_id(name)
 
         if name == "pfil":
             assert isinstance(value, str)
             track_filename = os.path.normpath(value)
 
         rule_has_been_done = False
-        for i, rule in enumerate(rules):
+        for rule in rules:
             if name == rule["field"]:
                 maybe_new_value = rule["func"](track_filename, value)
                 if maybe_new_value is not None:
@@ -152,15 +154,19 @@ def parse_to_objects(fp: io.BytesIO | io.BufferedReader | str) -> Generator[DbEn
 
     for name, length, value, data in parse(fp):
         if isinstance(value, tuple):
-            new_val: list[DbEntry] = [
-                {
-                    "field": n,
-                    "field_name": FIELDNAMES.get(n, "Unknown"),
-                    "size_bytes": l,
-                    "value": v,
-                }
-                for n, l, v in value
-            ]
+            try:
+                new_val: list[DbEntry] = [
+                    {
+                        "field": n,
+                        "field_name": FIELDNAMES.get(n, "Unknown"),
+                        "size_bytes": l,
+                        "value": v,
+                    }
+                    for n, l, v, d in value
+                ]
+            except:
+                print(f"error on {value}")
+                raise
             value = new_val
         else:
             value = repr(value)
@@ -173,12 +179,17 @@ def parse_to_objects(fp: io.BytesIO | io.BufferedReader | str) -> Generator[DbEn
         }
 
 
-def main(argv=None):
+if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", metavar="FILE", type=argparse.FileType("rb"))
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "file",
+        type=argparse.FileType("rb"),
+        default=open(DATABASE_FILE, "rb"),
+        nargs="?",
+    )
+    args = parser.parse_args()
 
     for entry in parse_to_objects(args.file):
         if isinstance(entry["value"], list):
@@ -191,9 +202,3 @@ def main(argv=None):
             print(
                 f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}"
             )
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
