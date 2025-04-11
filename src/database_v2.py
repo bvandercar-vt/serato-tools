@@ -105,7 +105,10 @@ def modify(
 ):
     for rule in rules:
         if "files" in rule:
-            rule["files"] = [file.upper() for file in rule["files"]]
+            rule["files"] = [
+                os.path.normpath(os.path.splitdrive(file)[1]).lstrip("\\").upper()
+                for file in rule["files"]
+            ]
 
     track_filename: str = ""
     for name, length, value, data in parsed:
@@ -154,7 +157,7 @@ def modify(
         fp.write(data)
 
 
-def modify_file(file: str, rules: list[ModifyRule]):
+def modify_file(rules: list[ModifyRule], file: str = DATABASE_FILE):
     with open(file, "rb") as read_file:
         parsed = list(parse(read_file))
 
