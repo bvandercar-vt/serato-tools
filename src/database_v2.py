@@ -35,7 +35,6 @@ FIELDNAMES = {
     "tkey": "Key",
     "tart": "Artist",
     "utme": "File Time",
-    "bmis": "Missing",
     "tgrp": "Grouping",
     "tlbl": "Publisher",
     "ttyr": "Year",
@@ -43,6 +42,8 @@ FIELDNAMES = {
     "tadd": "Date added",
     "uadd": "Date added",
     "bbgl": "Beatgrid Locked",
+    "bcrt": "Corrupt",
+    "bmis": "Missing",
     # Crates
     "osrt": "Sorting",
     "brev": "Reverse Order",
