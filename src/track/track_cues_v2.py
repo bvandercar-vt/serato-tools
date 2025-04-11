@@ -74,6 +74,7 @@ def readbytes(fp: io.BytesIO):
 class Entry(object):
     NAME: str | None
     FIELDS: Tuple[str, ...]
+    data: bytes
 
     def __init__(self, *args):
         assert len(args) == len(self.FIELDS)
@@ -149,6 +150,7 @@ class CueEntry(Entry):
         "field6",
         "name",
     )
+    name: str
 
     @classmethod
     def load(cls, data: bytes):
@@ -184,6 +186,7 @@ class LoopEntry(Entry):
         "locked",
         "name",
     )
+    name: str
 
     @classmethod
     def load(cls, data: bytes):
@@ -374,8 +377,8 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from .utils.tags import get_geob, tag_geob
-    from .utils.ui import get_hex_editor, get_text_editor, ui_ask
+    from ..utils.tags import get_geob, tag_geob
+    from ..utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")

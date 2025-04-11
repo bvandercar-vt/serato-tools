@@ -20,7 +20,7 @@ def get_serato_tagdata(tagfile, decode: bool = False):
                 if tagname.startswith("GEOB:Serato "):
                     yield tagname[5:], tagvalue.data
         elif isinstance(tagfile, (mutagen.flac.FLAC, mutagen.mp4.MP4)):
-            for tagname, tagvalue in tagfile.tags.items():
+            for tagname, tagvalue in tagfile.tags.items(): # type: ignore
                 if not tagname.startswith("serato_") and not tagname.startswith(
                     "----:com.serato.dj:"
                 ):
@@ -50,7 +50,7 @@ def get_serato_tagdata(tagfile, decode: bool = False):
                 fielddata = data[fieldname_endpos + 1 :]
                 yield fieldname, fielddata if decode else encoded_data
         elif isinstance(tagfile, mutagen.oggvorbis.OggVorbis):
-            for tagname, tagvalue in tagfile.tags.items():
+            for tagname, tagvalue in tagfile.tags.items(): # type: ignore
                 if not tagname.startswith("serato_"):
                     continue
                 yield tagname, tagvalue[0].encode("utf-8")

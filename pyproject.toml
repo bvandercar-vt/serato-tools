@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "1.7.0"
+version = "1.8.1"
 description = "Serato library and track metadata modification"
 readme = "README.md"
 authors = [
@@ -19,7 +19,7 @@ optional-dependencies.waveform_drawing = [
 ]
 
 [tool.setuptools]
-packages = ["serato_tools", "serato_tools.utils"]
+packages = ["serato_tools", "serato_tools.utils", "serato_tools.database", "serato_tools.track"]
 
 [tool.setuptools.package-dir]
 serato_tools = "src"
