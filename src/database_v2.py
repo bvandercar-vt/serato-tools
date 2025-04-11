@@ -37,6 +37,7 @@ FIELDNAMES = {
     "utme": "File Time",
     "tgrp": "Grouping",
     "tlbl": "Publisher",
+    "tcmp": "Composer",
     "ttyr": "Year",
     # Serato stuff
     "tadd": "Date added",
