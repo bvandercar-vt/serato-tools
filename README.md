@@ -1,14 +1,4 @@
-Fork of https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained.
-
-# Installation
-
-Can install using pip:
-
-`pip install git+https://github.com/bvandercar-vt/serato-tags@main`
-
-Or add this line to your `requirements.txt`:
-
-`git+https://github.com/bvandercar-vt/serato-tags@main`
+Fork of https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained. Many updates added, including overall library tools.
 
 # Serato Tags
 
@@ -26,11 +16,3 @@ You can also have a look at [this lengthy blog post](https://homepage.ruhr-uni-b
 | [`Serato Overview`](docs/serato_overview.md) | Done          | Waveform data              | [`serato_overview.py`](scripts/serato_overview.py)
 
 The different file/tag formats that Serato uses to store the information are documented in [`docs/fileformats.md`](docs/fileformats.md), a script to dump the tag data can be found at [`scripts/tagdump.py`](scripts/tagdump.py).
-
-
-## License
-
-As example file I used [Perséphone - Retro Funky (SUNDANCE remix)](https://soundcloud.com/sundancemusic/pers-phone-retro-funky), which is licensed under the term of the [Creative Commons Attribution 3.0 Unported (CC BY 3.0) license](https://creativecommons.org/licenses/by/3.0/).
-
-The software in the scripts directory are published under the [MIT license](LICENSE).
-Everything else is licensed as [Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).

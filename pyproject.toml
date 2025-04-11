@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "serato-tools"
+version = "1.5.1"
+description = "Serato library and track metadata modification"
+readme = "README.md"
+authors = [
+    { name = "bvandercar-vt", email = "bvandercar@outlook.com" }
+]
+license = { file = "LICENSE" }
+dependencies = [
+    "mutagen"
+]
+optional-dependencies.waveform_drawing = [
+    "pillow"
+]
+
+[tool.setuptools]
+packages = ["serato-tools", "serato-tools.utils"]
+
+[tool.setuptools.package-dir]
+serato-tools = "src"
