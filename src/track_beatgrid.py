@@ -11,17 +11,11 @@ GEOB_KEY = "Serato BeatGrid"
 
 NonTerminalBeatgridMarker = collections.namedtuple(
     "NonTerminalBeatgridMarker",
-    (
-        "position",
-        "beats_till_next_marker",
-    ),
+    ("position", "beats_till_next_marker"),
 )
 TerminalBeatgridMarker = collections.namedtuple(
     "TerminalBeatgridMarker",
-    (
-        "position",
-        "bpm",
-    ),
+    ("position", "bpm"),
 )
 
 Footer = collections.namedtuple("Footer", ("unknown",))
@@ -52,7 +46,7 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from ..utils.tags import get_geob
+    from utils.tags import get_geob
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")

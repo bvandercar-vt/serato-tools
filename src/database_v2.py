@@ -7,7 +7,7 @@ import sys
 from typing import (Any, Callable, Generator, Iterable, NotRequired, Tuple,
                     TypedDict)
 
-DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")
+DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2") # type: ignore
 
 
 class DbEntry(TypedDict):
