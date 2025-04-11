@@ -4,7 +4,8 @@ import io
 import os
 import struct
 import sys
-from typing import Any, Callable, Generator, Iterable, Tuple, TypedDict
+from typing import (Any, Callable, Generator, Iterable, NotRequired, Tuple,
+                    TypedDict)
 
 DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")
 
@@ -92,6 +93,7 @@ def parse(fp: io.BytesIO | io.BufferedReader) -> Generator[ParsedType]:
 class ModifyRule(TypedDict):
     field: str
     func: Callable[[str, Any], Any]
+    files: NotRequired[list[str]]
 
 
 def modify(
@@ -99,6 +101,10 @@ def modify(
     parsed: Iterable[ParsedType],
     rules: list[ModifyRule] = [],
 ):
+    for rule in rules:
+        if "files" in rule:
+            rule["files"] = [file.upper() for file in rule["files"]]
+
     track_filename: str = ""
     for name, length, value, data in parsed:
         name_bytes = name.encode("ascii")
@@ -112,7 +118,9 @@ def modify(
 
         rule_has_been_done = False
         for rule in rules:
-            if name == rule["field"]:
+            if name == rule["field"] and (
+                "files" not in rule or track_filename.upper() in rule["files"]
+            ):
                 maybe_new_value = rule["func"](track_filename, value)
                 if maybe_new_value is not None:
                     assert (
