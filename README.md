@@ -1,4 +1,8 @@
-Fork of https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained. Many updates added, including overall library database tools, and Crate parsing from https://github.com/sharst/seratopy.
+Includes:
+- Serato file GEOB tag parsing and modification (from https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained)
+- Serato overall database parsing and modification
+- Serato Crate parsing and modification (from https://github.com/sharst/seratopy)
+- Dynamic beatgrid analysis and saving to Serato tags (beatgrid analysis from https://github.com/heyitsmass/audio/blob/master/audio/beat_grid.py)
 
 # Serato Tags
 
@@ -17,6 +21,12 @@ Original writeup on Serato GEOB tag discoveries: [blog post](https://homepage.ru
 The different file/tag formats that Serato uses to store the information are documented in [`docs/fileformats.md`](docs/fileformats.md), a script to dump the tag data can be found at [`track_tagdump.py`](src/track_tagdump.py).
 
 # Examples
+
+### Analyzing and setting a dynamic beatgrid
+
+```cmd
+>>> analyze_beatgrid "Music/Techno/Adam Beyer - Space Date (Pleasurekraft Remix).mp3"
+```
 
 ### Modifying the database file
 

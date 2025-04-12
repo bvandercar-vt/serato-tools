@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "1.10.0"
+version = "1.11.0"
 description = "Serato library and track metadata modification"
 readme = "README.md"
 authors = [
@@ -14,8 +14,14 @@ license = { file = "LICENSE" }
 dependencies = [
     "mutagen"
 ]
-optional-dependencies.waveform_drawing = [
+
+[project.optional-dependencies]
+waveform_drawing = [
     "pillow"
+]
+beatgrid_analysis = [
+    "librosa",
+    "numpy"
 ]
 
 [tool.setuptools]
@@ -26,3 +32,6 @@ packages = [
 
 [tool.setuptools.package-dir]
 serato_tools = "src"
+
+[project.scripts]
+analyze_beatgrid = "track_beatgrid:main"
