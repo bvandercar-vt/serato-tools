@@ -7,7 +7,7 @@ import sys
 from typing import (Any, Callable, Generator, Iterable, NotRequired, Tuple,
                     TypedDict)
 
-DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2") # type: ignore
+DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")  # type: ignore
 
 
 class DbEntry(TypedDict):
@@ -102,6 +102,7 @@ def modify(
     fp: io.BytesIO | io.BufferedWriter,
     parsed: Iterable[ParsedType],
     rules: list[ModifyRule] = [],
+    print_changes: bool = False,
 ):
     for rule in rules:
         if "files" in rule:
@@ -133,6 +134,10 @@ def modify(
                     ), f"Should only pass one rule per field (field: {name})"
                     rule_has_been_done = True
                     value = maybe_new_value
+                    if print_changes:
+                        print(
+                            f'Set {FIELDNAMES.get(name, "Unknown Field")}={str(value)} in library'
+                        )
 
         if type_id == "b":
             data = struct.pack("?", value)
@@ -157,12 +162,16 @@ def modify(
         fp.write(data)
 
 
-def modify_file(rules: list[ModifyRule], file: str = DATABASE_FILE):
+def modify_file(
+    rules: list[ModifyRule],
+    file: str = DATABASE_FILE,
+    print_changes: bool = False,
+):
     with open(file, "rb") as read_file:
         parsed = list(parse(read_file))
 
     output = io.BytesIO()
-    modify(output, parsed, rules)
+    modify(output, parsed, rules, print_changes)
 
     with open(file, "wb") as write_file:
         output.seek(0)

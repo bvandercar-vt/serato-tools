@@ -336,24 +336,27 @@ def parse_entries_file(contents: str, assert_len_1: bool):
 ValueType = bytes | str
 
 
-class EntryModifyCriteria(TypedDict):
+class EntryModifyRule(TypedDict):
     field: str
-    value_modify: Callable[[ValueType], ValueType | None]
+    func: Callable[[ValueType], ValueType | None]
 
 
 def change_entry(
     entry: Entry,
-    criteria: list[EntryModifyCriteria],
+    rules: list[EntryModifyRule],
+    print_changes: bool = False,
 ):
     output = f"[{entry.NAME}]\n"
     for field in entry.FIELDS:
         value = getattr(entry, field)
 
-        for c in criteria:
-            if field == c["field"]:
-                result = c["value_modify"](value)
+        for rule in rules:
+            if field == rule["field"]:
+                result = rule["func"](value)
                 if result is not None:
                     value = result
+                    if print_changes:
+                        print(f"Set cue field {field} to {str(value)}")
 
         output += f"{field}: {value!r}\n"
     output += "\n"
