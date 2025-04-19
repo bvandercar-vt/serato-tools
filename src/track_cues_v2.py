@@ -69,6 +69,20 @@ TRACK_COLORS = {
 }
 
 
+def get_cue_color_key(value: bytes) -> str | None:
+    for key, v in CUE_COLORS.items():
+        if v == value:
+            return key
+    return None
+
+
+def get_track_color_key(value: bytes) -> str | None:
+    for key, v in TRACK_COLORS.items():
+        if v == value:
+            return key
+    return None
+
+
 def readbytes(fp: io.BytesIO):
     for x in iter(lambda: fp.read(1), b""):
         if x == b"\00":
@@ -369,7 +383,26 @@ def modify_entry(
                     value = result
                     change_made = True
                     if print_changes:
-                        print(f"Set cue field {field} to {str(value)}")
+                        if isinstance(entry, ColorEntry):
+                            print_val = (
+                                get_track_color_key(value)
+                                if isinstance(value, bytes)
+                                else None
+                            )
+                            if not print_val:
+                                print_val = f"Unknown Color ({str(value)})"
+                            print(f"Set Track Color to {print_val}")
+                        elif field == "color":
+                            print_val = (
+                                get_cue_color_key(value)
+                                if isinstance(value, bytes)
+                                else None
+                            )
+                            if not print_val:
+                                print_val = f"Unknown Color ({str(value)})"
+                            print(f"Set Cue Color to {print_val}")
+                        else:
+                            print(f'Set cue entry field "{field}" to {str(value)}')
 
         output += f"{field}: {value!r}\n"
     output += "\n"
@@ -416,7 +449,7 @@ def modify_file_entries(
         maybe_new_entry = None
         if "cues" in rules and isinstance(entry, CueEntry):
             maybe_new_entry = modify_entry(entry, rules["cues"], print_changes)
-        if "color" in rules and isinstance(entry, ColorEntry):
+        elif "color" in rules and isinstance(entry, ColorEntry):
             maybe_new_entry = modify_entry(entry, rules["color"], print_changes)
         if maybe_new_entry is not None:
             entry = maybe_new_entry
@@ -429,6 +462,14 @@ def modify_file_entries(
     new_data = dump(new_entries)
     tag_geob(tags, GEOB_KEY, new_data)
     tags.save()
+
+
+# TODO: allow color or key of colors dict
+# TODO: debug why sometimes doesn't show up in Serato?
+def set_track_color(file: str | MP3, color: bytes, print_changes: bool = False):
+    modify_file_entries(
+        file, {"color": [{"field": "color", "func": lambda v: color}]}, print_changes
+    )
 
 
 def is_beatgrid_locked(entries: list[Entry]):
@@ -450,8 +491,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
+    parser.add_argument(
+        "--set_color",
+        dest="set_color",
+        default=None,
+        help="Set track color",
+    )
     parser.add_argument("-e", "--edit", action="store_true")
     args = parser.parse_args()
+
+    if args.set_color:
+        if args.set_color in TRACK_COLORS:
+            set_track_color(args.file, TRACK_COLORS[args.set_color], print_changes=True)
+        else:
+            print(f"Track color must be one of: {str(list(TRACK_COLORS.keys()))}")
+        sys.exit()
 
     if args.edit:
         text_editor = get_text_editor()

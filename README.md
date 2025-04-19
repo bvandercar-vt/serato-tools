@@ -55,6 +55,17 @@ serato_tools.database_v2.modify_file(
 )
 ```
 
+### Setting track color
+
+Is Buggy, sometimes doesn't show up in Serato. TODO: debug
+
+```python
+from serato_tools.track_cues_v2 import TRACK_COLORS, set_track_color
+
+set_track_color('/Users/Username/Music/Techno/T78 - Acid Lick.mp3', TRACK_COLORS["purple"], print_changes=True)
+
+```
+
 ### Modifying track metadata / hot cues
 
 ```python
