@@ -4,9 +4,14 @@ import ast
 import base64
 import configparser
 import io
+import logging
 import struct
 import sys
-from typing import Any, Callable, Tuple, TypedDict
+from typing import Any, Callable, NotRequired, Tuple, TypedDict
+
+from mutagen.mp3 import MP3
+
+from .utils.tags import get_geob, tag_geob
 
 FMT_VERSION = "BB"
 
@@ -341,11 +346,18 @@ class EntryModifyRule(TypedDict):
     func: Callable[[ValueType], ValueType | None]
 
 
-def change_entry(
+def modify_entry(
     entry: Entry,
     rules: list[EntryModifyRule],
     print_changes: bool = False,
 ):
+    """
+    Returns:
+        entry: entry if was modified. If was not changed, returns None.
+    """
+
+    change_made = False
+
     output = f"[{entry.NAME}]\n"
     for field in entry.FIELDS:
         value = getattr(entry, field)
@@ -355,14 +367,68 @@ def change_entry(
                 result = rule["func"](value)
                 if result is not None:
                     value = result
+                    change_made = True
                     if print_changes:
                         print(f"Set cue field {field} to {str(value)}")
 
         output += f"{field}: {value!r}\n"
     output += "\n"
 
+    if not change_made:
+        return None
+
     entry = parse_entries_file(output, assert_len_1=True)[0]
     return entry
+
+
+class EntryModifyRules(TypedDict):
+    cues: NotRequired[list[EntryModifyRule]]
+    color: NotRequired[list[EntryModifyRule]]
+
+
+def modify_file_entries(
+    file: str | MP3, rules: EntryModifyRules, print_changes: bool = False
+):
+    if isinstance(file, str):
+        try:
+            tags = MP3(file)
+        except:
+            logging.error("Mutagen error for file %s" % file)
+            raise
+    else:
+        tags = file
+
+    assert tags.filename, "must have filename"
+
+    try:
+        data = get_geob(tags, GEOB_KEY)
+    except KeyError:
+        logging.debug(
+            f'File is missing "{GEOB_KEY}" tag, no cue points set yet', tags.filename
+        )
+        return
+
+    entries = list(parse(data))
+
+    new_entries = []
+    change_made = False
+    for entry in entries:
+        maybe_new_entry = None
+        if "cues" in rules and isinstance(entry, CueEntry):
+            maybe_new_entry = modify_entry(entry, rules["cues"], print_changes)
+        if "color" in rules and isinstance(entry, ColorEntry):
+            maybe_new_entry = modify_entry(entry, rules["color"], print_changes)
+        if maybe_new_entry is not None:
+            entry = maybe_new_entry
+            change_made = True
+        new_entries.append(entry)
+
+    if not change_made:
+        return
+
+    new_data = dump(new_entries)
+    tag_geob(tags, GEOB_KEY, new_data)
+    tags.save()
 
 
 def is_beatgrid_locked(entries: list[Entry]):
@@ -380,8 +446,7 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from utils.tags import get_geob, tag_geob
-    from utils.ui import get_hex_editor, get_text_editor, ui_ask
+    from .utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")

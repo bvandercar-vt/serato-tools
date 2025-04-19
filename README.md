@@ -62,7 +62,7 @@ from mutagen.mp3 import MP3
 from mutagen.id3._frames import TIT1
 
 import serato_tools.track_cues_v1
-from serato_tools.track_cues_v2 import CUE_COLORS, TRACK_COLORS, ValueType
+from serato_tools.track_cues_v2 import CUE_COLORS, TRACK_COLORS, ValueType, modify_file_entries
 from serato_tools.utils.tags import del_geob
 
 tagfile = MP3(file)
@@ -77,10 +77,6 @@ def name_changes(value: ValueType):
     if (not isinstance(value, str)) or value == "":
         return
 
-    # remove "Energy" tag from MixedInKey
-    if "Energy" in value:
-        return ""
-
     # make cue names all caps
     value_caps = value.strip().upper()
     if value != value_caps:
@@ -92,7 +88,7 @@ def set_grouping_based_on_track_color(value: ValueType):
     elif value in [ TRACK_COLORS["white"], TRACK_COLORS["grey"], TRACK_COLORS["black"]]:
         tagfile.tags.setall("TIT1", [TIT1(text="UNTAGGED")])
 
-modify_cues(
+modify_file_entries(
     tagfile,
     {
         "cues": [
@@ -103,6 +99,7 @@ modify_cues(
             {"field": "color", "func": set_grouping_based_on_track_color},
         ],
     },
+    print_changes=True
 )
 ```
 

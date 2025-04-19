@@ -144,7 +144,7 @@ def modify(
         elif type_id in ("o", "r"):
             assert isinstance(value, tuple)
             nested_buffer = io.BytesIO()
-            modify(nested_buffer, value, rules)
+            modify(nested_buffer, value, rules, print_changes)
             data = nested_buffer.getvalue()
         elif type_id in ("p", "t"):
             new_data = str(value).encode("utf-16")[2:]

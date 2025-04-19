@@ -96,8 +96,8 @@ def write(
 def analyze_and_write(file: str):
     import mutagen._file
 
-    from utils.beatgrid_analyze import analyze_beatgrid
-    from utils.tags import tag_geob
+    from .utils.beatgrid_analyze import analyze_beatgrid
+    from .utils.tags import tag_geob
 
     tagfile = mutagen._file.File(file)
     assert tagfile, "file parse failed"

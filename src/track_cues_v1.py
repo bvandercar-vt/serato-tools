@@ -167,8 +167,8 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from utils.tags import get_geob, tag_geob
-    from utils.ui import get_hex_editor, get_text_editor, ui_ask
+    from .utils.tags import get_geob, tag_geob
+    from .utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
