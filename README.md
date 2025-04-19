@@ -57,16 +57,18 @@ serato_tools.database_v2.modify_file(
 
 ### Setting track color
 
-Is Buggy, sometimes doesn't show up in Serato. TODO: debug
+Must delete delete_tags_v1 in order to take affect in Serato. Not sure what tags v1 is even for, probably older versions of Serato. I have found no issues with deleting this. But be warned, in case you are running an older version.
 
 ```python
 from serato_tools.track_cues_v2 import TRACK_COLORS, set_track_color
 
-set_track_color('/Users/Username/Music/Techno/T78 - Acid Lick.mp3', TRACK_COLORS["purple"], print_changes=True)
+set_track_color('/Users/Username/Music/Techno/T78 - Acid Lick.mp3', TRACK_COLORS["purple"], print_changes=True, delete_tags_v1=True)
 
 ```
 
 ### Modifying track metadata / hot cues
+
+Must delete delete_tags_v1 in order to take affect in Serato. Not sure what tags v1 is even for, probably older versions of Serato. I have found no issues with deleting this. But be warned, in case you are running an older version.
 
 ```python
 from mutagen.mp3 import MP3
@@ -110,7 +112,8 @@ modify_file_entries(
             {"field": "color", "func": set_grouping_based_on_track_color},
         ],
     },
-    print_changes=True
+    print_changes=True,
+    delete_tags_v1=True
 )
 ```
 

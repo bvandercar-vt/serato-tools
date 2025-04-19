@@ -11,7 +11,8 @@ from typing import Any, Callable, NotRequired, Tuple, TypedDict
 
 from mutagen.mp3 import MP3
 
-from .utils.tags import get_geob, tag_geob
+from . import track_cues_v1
+from .utils.tags import del_geob, get_geob, tag_geob
 
 FMT_VERSION = "BB"
 
@@ -420,7 +421,10 @@ class EntryModifyRules(TypedDict):
 
 
 def modify_file_entries(
-    file: str | MP3, rules: EntryModifyRules, print_changes: bool = False
+    file: str | MP3,
+    rules: EntryModifyRules,
+    print_changes: bool = True,
+    delete_tags_v1: bool = True,
 ):
     if isinstance(file, str):
         try:
@@ -440,6 +444,9 @@ def modify_file_entries(
             f'File is missing "{GEOB_KEY}" tag, no cue points set yet', tags.filename
         )
         return
+
+    if delete_tags_v1:
+        del_geob(tags, track_cues_v1.GEOB_KEY)
 
     entries = list(parse(data))
 
@@ -465,10 +472,17 @@ def modify_file_entries(
 
 
 # TODO: allow color or key of colors dict
-# TODO: debug why sometimes doesn't show up in Serato?
-def set_track_color(file: str | MP3, color: bytes, print_changes: bool = False):
+def set_track_color(
+    file: str | MP3,
+    color: bytes,
+    print_changes: bool = True,
+    delete_tags_v1: bool = True,
+):
     modify_file_entries(
-        file, {"color": [{"field": "color", "func": lambda v: color}]}, print_changes
+        file,
+        {"color": [{"field": "color", "func": lambda v: color}]},
+        print_changes,
+        delete_tags_v1,
     )
 
 

@@ -1,7 +1,8 @@
 import mutagen.id3
 from mutagen.id3._frames import GEOB
+from mutagen.mp3 import MP3
 
-_MutagenTagFile = mutagen.id3.ID3FileType | mutagen.id3.ID3
+_MutagenTagFile = mutagen.id3.ID3FileType | mutagen.id3.ID3 
 
 
 def get_geob(tagfile: _MutagenTagFile, geob_key: str) -> bytes:
