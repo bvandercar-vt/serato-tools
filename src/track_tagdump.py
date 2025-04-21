@@ -7,7 +7,6 @@ import os
 import mutagen._file
 import mutagen.aiff
 import mutagen.flac
-import mutagen.id3
 import mutagen.mp3
 import mutagen.mp4
 import mutagen.oggvorbis
