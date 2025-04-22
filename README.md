@@ -31,7 +31,9 @@ The different file/tag formats that Serato uses to store the information are doc
 ### Modifying the database file
 
 ```python
-import serato_tools.database_v2
+from serato_tools.database_v2 import DatabaseV2
+
+db = DatabaseV2()
 
 now = int(time.time())
 
@@ -46,7 +48,7 @@ def remove_group(filename: str, value: Any):
     return " "
 
 # a list of field keys can be found in serato_tools.database_v2
-serato_tools.database_v2.modify_file(
+db.modify_file(
     rules=[
         {"field": "uadd", "files": files_set_date, "func": modify_uadd},
         {"field": "tadd", "files": files_set_date, "func": modify_tadd},

@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # This is from this repo: https://github.com/sharst/seratopy
+import logging
 import os
 import struct
 from typing import Tuple, overload
@@ -10,6 +11,19 @@ ValueType = StructType | str | bytes
 
 class Crate(object):
     TRACK_FIELD = "otrk"
+    DEFAULT_DATA = [
+        ("vrsn", "1.0/Serato ScratchLive Crate"),
+        ("osrt", [("tvcn", "key"), ("brev", "\x00")]),
+        ("ovct", [("tvcn", "song"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "playCount"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "artist"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "bpm"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "key"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "album"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "length"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "comment"), ("tvcw", "0")]),
+        ("ovct", [("tvcn", "added"), ("tvcw", "0")]),
+    ]
 
     def __init__(self, fname):
         self.data: StructType = []
@@ -23,19 +37,8 @@ class Crate(object):
         if os.path.exists(fname):
             self.load_from_file(fname)
         else:
-            self.data = [
-                ("vrsn", "1.0/Serato ScratchLive Crate"),
-                ("osrt", [("tvcn", "key"), ("brev", "\x00")]),
-                ("ovct", [("tvcn", "song"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "playCount"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "artist"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "bpm"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "key"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "album"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "length"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "comment"), ("tvcw", "0")]),
-                ("ovct", [("tvcn", "added"), ("tvcw", "0")]),
-            ]
+            logging.error(f"file does not exist: {fname}. Using default data.")
+            self.data = Crate.DEFAULT_DATA
 
     def __str__(self):
         tracks = self.tracks()
@@ -119,9 +122,9 @@ class Crate(object):
             self.add_track(mfile)
 
     class DataTypeError(Exception):
-        def __init__(self, data: ValueType, exp_type: type, tag: str | None):
+        def __init__(self, data: ValueType, expected_type: type, tag: str | None):
             super().__init__(
-                f"data must be {exp_type.__name__} when tag is {tag} (type: {type(data).__name__})"
+                f"data must be {expected_type.__name__} when tag is {tag} (type: {type(data).__name__})"
             )
 
     @staticmethod
