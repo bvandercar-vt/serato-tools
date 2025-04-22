@@ -127,15 +127,47 @@ class Crate(object):
                 f"data must be {expected_type.__name__} when tag is {tag} (type: {type(data).__name__})"
             )
 
+   
+
+    @overload
     @staticmethod
-    def _encode(data: ValueType, tag: str | None = None) -> bytes:
+    def _parse(data: bytes, tag: None = None) -> StructType: ...
+    @overload
+    @staticmethod
+    def _parse(data: bytes, tag: str) -> ValueType: ...
+    @staticmethod
+    def _parse(data: bytes, tag: str | None = None) -> ValueType | StructType:
+        if tag == None or tag[0] == "o":  #  struct
+            ret_data: StructType = []
+            i = 0
+            while i < len(data):
+                tag = data[i : i + 4].decode("ascii")
+                length = struct.unpack(">I", data[i + 4 : i + 8])[0]
+                value = data[i + 8 : i + 8 + length]
+                value = Crate._parse(value, tag=tag)
+                ret_data.append((tag, value))
+                i += 8 + length
+            return ret_data
+        elif tag == "vrsn" or tag[0] in ["t", "p"]:  # version or text
+            return data.decode("utf-16-be")
+        elif tag == "sbav" or tag[0] == "b":  # signed or bytes
+            return data
+        elif tag[0] == "u":  # unsigned
+            ret_val: bytes = struct.unpack(">I", data)[0]
+            return ret_val
+        else:
+            raise ValueError(f"unexpected value for tag: {tag}")
+
+
+    @staticmethod
+    def _dump(data: ValueType, tag: str | None = None) -> bytes:
         if tag == None or tag[0] == "o":  # struct
             if not isinstance(data, list):
                 raise Crate.DataTypeError(data, list, tag)
             ret_data = bytes()
             for dat in data:
                 tag = dat[0]
-                value = Crate._encode(dat[1], tag=tag)
+                value = Crate._dump(dat[1], tag=tag)
                 length = struct.pack(">I", len(value))
                 ret_data = ret_data + tag.encode("utf-8") + length + value
             return ret_data
@@ -155,44 +187,15 @@ class Crate(object):
         else:
             raise ValueError(f"unexpected value for tag: {tag}")
 
-    @overload
-    @staticmethod
-    def _decode(data: bytes, tag: None = None) -> StructType: ...
-    @overload
-    @staticmethod
-    def _decode(data: bytes, tag: str) -> ValueType: ...
-    @staticmethod
-    def _decode(data: bytes, tag: str | None = None) -> ValueType | StructType:
-        if tag == None or tag[0] == "o":  #  struct
-            ret_data: StructType = []
-            i = 0
-            while i < len(data):
-                tag = data[i : i + 4].decode("ascii")
-                length = struct.unpack(">I", data[i + 4 : i + 8])[0]
-                value = data[i + 8 : i + 8 + length]
-                value = Crate._decode(value, tag=tag)
-                ret_data.append((tag, value))
-                i += 8 + length
-            return ret_data
-        elif tag == "vrsn" or tag[0] in ["t", "p"]:  # version or text
-            return data.decode("utf-16-be")
-        elif tag == "sbav" or tag[0] == "b":  # signed or bytes
-            return data
-        elif tag[0] == "u":  # unsigned
-            ret_val: bytes = struct.unpack(">I", data)[0]
-            return ret_val
-        else:
-            raise ValueError(f"unexpected value for tag: {tag}")
-
     def load_from_file(self, fname: str):
         with open(fname, "rb") as mfile:
-            self.data = Crate._decode(mfile.read())
+            self.data = Crate._parse(mfile.read())
 
     def save_to_file(self, fname: str | None = None):
         if fname is None:
             fname = os.path.join(self.path, self.filename)
 
-        enc_data = Crate._encode(self.data)
+        enc_data = Crate._dump(self.data)
         with open(fname, "wb") as mfile:
             mfile.write(enc_data)
 

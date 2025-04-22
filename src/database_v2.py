@@ -5,7 +5,7 @@ import os
 import struct
 import sys
 from typing import (Any, Callable, Generator, Iterable, NotRequired, Tuple,
-                    TypedDict)
+                    TypedDict, cast)
 
 
 class DbEntry(TypedDict):
@@ -122,43 +122,27 @@ class DatabaseV2(object):
         fp: io.BytesIO | io.BufferedWriter,
         item: Iterable[ParsedType],
         rules: list[ModifyRule] = [],
-        print_changes: bool = False,
+        print_changes: bool = True,
     ):
+        all_field_names = [rule["field"] for rule in rules]
+        assert len(rules) == len(
+            list(set(all_field_names))
+        ), f"must only have 1 function per field. fields passed: {str(all_field_names)}"
+
         for rule in rules:
+            rule["field_found"] = False  # type: ignore
             if "files" in rule:
                 rule["files"] = [
                     os.path.normpath(os.path.splitdrive(file)[1]).lstrip("\\").upper()
                     for file in rule["files"]
                 ]
 
-        track_filename: str = ""
-        for name, length, value, data in item:
+        def _write(name: str, value: Any, data: bytes):
+            nonlocal rules, print_changes
             name_bytes = name.encode("ascii")
             assert len(name_bytes) == 4
 
             type_id: str = DatabaseV2._get_type(name)
-
-            if name == "pfil":
-                assert isinstance(value, str)
-                track_filename = os.path.normpath(value)
-
-            rule_has_been_done = False
-            for rule in rules:
-                if name == rule["field"] and (
-                    "files" not in rule or track_filename.upper() in rule["files"]
-                ):
-                    maybe_new_value = rule["func"](track_filename, value)
-                    if maybe_new_value is not None:
-                        assert (
-                            not rule_has_been_done
-                        ), f"Should only pass one rule per field (field: {name})"
-                        rule_has_been_done = True
-                        value = maybe_new_value
-                        if print_changes:
-                            print(
-                                f"Set {name} ({DatabaseV2._get_field_name(name)})={str(value)} in library"
-                            )
-
             if type_id == "b":
                 data = struct.pack("?", value)
             elif type_id in ("o", "r"):
@@ -176,16 +160,52 @@ class DatabaseV2(object):
                 data = struct.pack(">I", value)
 
             length = len(data)
-
             header = struct.pack(">4sI", name_bytes, length)
             fp.write(header)
             fp.write(data)
+
+        def _maybe_perform_rule(rule: DatabaseV2.ModifyRule, name: str, prev_val: Any):
+            nonlocal track_filename
+            if "files" in rule and track_filename.upper() not in rule["files"]:
+                return None
+
+            maybe_new_value = rule["func"](track_filename, prev_val)
+            if maybe_new_value is None or maybe_new_value == prev_val:
+                return None
+
+            if print_changes:
+                print(
+                    f"Set {name}({DatabaseV2._get_field_name(name)})={str(maybe_new_value)} in library ({track_filename})"
+                )
+            return maybe_new_value
+
+        track_filename: str = ""
+        for name, length, value, data in item:
+            if name == "pfil":
+                assert isinstance(value, str)
+                track_filename = os.path.normpath(value)
+
+            rule = next((r for r in rules if name == r["field"]), None)
+            if rule:
+                rule["field_found"] = True  # type: ignore
+                maybe_new_value = _maybe_perform_rule(rule, name, value)
+                if maybe_new_value is not None:
+                    value = maybe_new_value
+
+            _write(name, value, data)
+
+        for rule in rules:
+            if not rule["field_found"]:  # type: ignore
+                name = rule["field"]
+                maybe_new_value = _maybe_perform_rule(rule, name, None)
+                if maybe_new_value is not None:
+                    _write(name, maybe_new_value, b"\x00")
 
     def modify_file(
         self,
         rules: list[ModifyRule],
         out_file: str | None = None,
-        print_changes: bool = False,
+        print_changes: bool = True,
     ):
         if out_file is None:
             out_file = self.filepath

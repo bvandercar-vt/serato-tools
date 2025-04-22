@@ -364,46 +364,51 @@ class EntryModifyRule(TypedDict):
 def modify_entry(
     entry: Entry,
     rules: list[EntryModifyRule],
-    print_changes: bool = False,
+    print_changes: bool = True,
 ):
     """
     Returns:
         entry: entry if was modified. If was not changed, returns None.
     """
 
+    all_field_names = [rule["field"] for rule in rules]
+    assert len(rules) == len(
+        list(set(all_field_names))
+    ), f"must only have 1 function per field. fields passed: {str(all_field_names)}"
+
     change_made = False
 
     output = f"[{entry.NAME}]\n"
     for field in entry.FIELDS:
-        value = getattr(entry, field)
+        value: ValueType = getattr(entry, field)
 
-        for rule in rules:
-            if field == rule["field"]:
-                result = rule["func"](value)
-                if result is not None:
-                    value = result
-                    change_made = True
-                    if print_changes:
-                        if isinstance(entry, ColorEntry):
-                            print_val = (
-                                get_track_color_key(value)
-                                if isinstance(value, bytes)
-                                else None
-                            )
-                            if not print_val:
-                                print_val = f"Unknown Color ({str(value)})"
-                            print(f"Set Track Color to {print_val}")
-                        elif field == "color":
-                            print_val = (
-                                get_cue_color_key(value)
-                                if isinstance(value, bytes)
-                                else None
-                            )
-                            if not print_val:
-                                print_val = f"Unknown Color ({str(value)})"
-                            print(f"Set Cue Color to {print_val}")
-                        else:
-                            print(f'Set cue entry field "{field}" to {str(value)}')
+        rule = next((r for r in rules if field == r["field"]), None)
+        if rule:
+            maybe_new_val = rule["func"](value)
+            if maybe_new_val is not None and maybe_new_val != value:
+                value = maybe_new_val
+                change_made = True
+                if print_changes:
+                    if isinstance(entry, ColorEntry):
+                        print_val = (
+                            get_track_color_key(value)
+                            if isinstance(value, bytes)
+                            else None
+                        )
+                        if not print_val:
+                            print_val = f"Unknown Color ({str(value)})"
+                        print(f"Set Track Color to {print_val}")
+                    elif field == "color":
+                        print_val = (
+                            get_cue_color_key(value)
+                            if isinstance(value, bytes)
+                            else None
+                        )
+                        if not print_val:
+                            print_val = f"Unknown Color ({str(value)})"
+                        print(f"Set Cue Color to {print_val}")
+                    else:
+                        print(f'Set cue entry field "{field}" to {str(value)}')
 
         output += f"{field}: {value!r}\n"
     output += "\n"

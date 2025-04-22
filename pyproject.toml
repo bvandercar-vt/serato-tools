@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "1.15.0"
+version = "1.15.1"
 description = "Serato library and track metadata modification"
 readme = "README.md"
 authors = [
@@ -24,6 +24,9 @@ beatgrid_analysis = [
     "numpy"
 ]
 
+[project.scripts]
+analyze_beatgrid = "track_beatgrid:main"
+
 [tool.setuptools]
 packages = [
     "serato_tools",
@@ -32,6 +35,3 @@ packages = [
 
 [tool.setuptools.package-dir]
 serato_tools = "src"
-
-[project.scripts]
-analyze_beatgrid = "track_beatgrid:main"

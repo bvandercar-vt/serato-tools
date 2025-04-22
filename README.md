@@ -1,4 +1,5 @@
 Includes:
+
 - Serato file GEOB tag parsing and modification (from https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained)
 - Serato overall database parsing and modification
 - Serato Crate parsing and modification (from https://github.com/sharst/seratopy)
@@ -37,14 +38,14 @@ db = DatabaseV2()
 
 now = int(time.time())
 
-def modify_uadd(filename: str, value: Any):
+def modify_uadd(filename: str, prev_val: Any):
     print(f'Serato library change - Changed "date added" to today: {filename}')
     return now
 
-def modify_tadd(filename: str, value: Any):
+def modify_tadd(filename: str, prev_val: Any):
     return str(now)
 
-def remove_group(filename: str, value: Any):
+def remove_group(filename: str, prev_val: Any):
     return " "
 
 # a list of field keys can be found in serato_tools.database_v2
@@ -82,25 +83,25 @@ from serato_tools.utils.tags import del_geob
 
 tagfile = MP3(file)
 
-def red_fix(value: ValueType):
-    if value in [CUE_COLORS["pinkred"], CUE_COLORS["magenta"]]:
+def red_fix(prev_val: ValueType):
+    if prev_val in [CUE_COLORS["pinkred"], CUE_COLORS["magenta"]]:
         print("Cue changed to red")
         del_geob(tagfile, serato_tools.track_cues_v1.GEOB_KEY) # delete serato_markers, not sure if this field even takes effect in new versions of Serato, we just want serato_markers2
         return CUE_COLORS["red"]
 
-def name_changes(value: ValueType):
-    if (not isinstance(value, str)) or value == "":
+def name_changes(prev_val: ValueType):
+    if (not isinstance(prev_val, str)) or prev_val == "":
         return
 
     # make cue names all caps
-    value_caps = value.strip().upper()
-    if value != value_caps:
-        return value_caps
+    val_caps = prev_val.strip().upper()
+    if prev_val != val_caps:
+        return val_caps
 
-def set_grouping_based_on_track_color(value: ValueType):
-    if value == TRACK_COLORS["limegreen3"]:
+def set_grouping_based_on_track_color(prev_val: ValueType):
+    if prev_val == TRACK_COLORS["limegreen3"]:
         tagfile.tags.setall("TIT1", [TIT1(text="TAGGED")])
-    elif value in [ TRACK_COLORS["white"], TRACK_COLORS["grey"], TRACK_COLORS["black"]]:
+    elif prev_val in [ TRACK_COLORS["white"], TRACK_COLORS["grey"], TRACK_COLORS["black"]]:
         tagfile.tags.setall("TIT1", [TIT1(text="UNTAGGED")])
 
 modify_file_entries(
