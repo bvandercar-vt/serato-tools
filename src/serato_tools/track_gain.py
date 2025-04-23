@@ -1,4 +1,8 @@
+import os
 import sys
+
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 REPLAY_GAIN_GAIN_KEY = "replaygain_SeratoGain_gain"
 REPLAY_GAIN_PEAK_KEY = "replaygain_SeratoGain_peak"

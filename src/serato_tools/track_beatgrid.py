@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 import collections
 import io
+import os
 import struct
 import sys
+
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 FMT_VERSION = "BB"
 
@@ -96,8 +100,8 @@ def write(
 def analyze_and_write(file: str):
     import mutagen._file
 
-    from .utils.beatgrid_analyze import analyze_beatgrid
-    from .utils.tags import tag_geob
+    from serato_tools.utils.beatgrid_analyze import analyze_beatgrid
+    from serato_tools.utils.tags import tag_geob
 
     tagfile = mutagen._file.File(file)
     assert tagfile, "file parse failed"

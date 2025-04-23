@@ -3,6 +3,7 @@
 
 import base64
 import os
+import sys
 
 import mutagen._file
 import mutagen.aiff
@@ -11,6 +12,8 @@ import mutagen.mp3
 import mutagen.mp4
 import mutagen.oggvorbis
 
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 def get_serato_tagdata(tagfile, decode: bool = False):
     if tagfile and tagfile.tags:

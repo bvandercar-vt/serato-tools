@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 import enum
 import io
+import os
 import struct
 import sys
+
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 FMT_VERSION = "BB"
 
@@ -167,8 +171,8 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from .utils.tags import get_geob, tag_geob
-    from .utils.ui import get_hex_editor, get_text_editor, ui_ask
+    from serato_tools.utils.tags import get_geob, tag_geob
+    from serato_tools.utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")

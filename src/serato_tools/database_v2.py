@@ -7,6 +7,11 @@ import sys
 from typing import (Any, Callable, Generator, Iterable, NotRequired, Tuple,
                     TypedDict, cast)
 
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from serato_tools.utils import DataTypeError
+
 
 class DbEntry(TypedDict):
     field: str
@@ -15,7 +20,8 @@ class DbEntry(TypedDict):
     size_bytes: int
 
 
-ParsedType = Tuple[str, int, Any, bytes]
+ValueType = bytes | str | int | tuple  # TODO: improve the tuple
+ParsedType = Tuple[str, int, ValueType, bytes]
 
 
 class DatabaseV2(object):
@@ -69,13 +75,13 @@ class DatabaseV2(object):
         return str(list(self.to_objects()))
 
     @staticmethod
-    def _get_field_name(name: str):
-        return DatabaseV2.FIELDNAMES.get(name, "Unknown Field")
+    def _get_field_name(field: str):
+        return DatabaseV2.FIELDNAMES.get(field, "Unknown Field")
 
     @staticmethod
-    def _get_type(name: str) -> str:
-        # vrsn field has no type_id, but contains text
-        return "t" if name == "vrsn" else name[0]
+    def _get_type(field: str) -> str:
+        # vrsn field contains text but does not start with the "t" type_id
+        return "t" if field == "vrsn" else field[0]
 
     def _parse(
         self, fp: io.BytesIO | io.BufferedReader | str | None
@@ -87,30 +93,30 @@ class DatabaseV2(object):
 
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
-            name_ascii: bytes
+            field_ascii: bytes
             length: int
-            name_ascii, length = struct.unpack(">4sI", header)
-            name: str = name_ascii.decode("ascii")
-            type_id: str = DatabaseV2._get_type(name)
+            field_ascii, length = struct.unpack(">4sI", header)
+            field: str = field_ascii.decode("ascii")
+            type_id: str = DatabaseV2._get_type(field)
 
             data = fp.read(length)
             assert len(data) == length
 
             value: bytes | str | tuple
-            if type_id == "b":
-                value = struct.unpack("?", data)[0]
-            elif type_id in ("o", "r"):
+            if type_id in ("o", "r"):  #  struct
                 value = tuple(self._parse(io.BytesIO(data)))
-            elif type_id in ("p", "t"):
+            elif type_id in ("p", "t"):  # text
                 value = (data[1:] + b"\00").decode("utf-16")
-            elif type_id == "s":
+            elif type_id == "b":  # bytes
+                value = struct.unpack("?", data)[0]
+            elif type_id == "s":  # signed
                 value = struct.unpack(">H", data)[0]
-            elif type_id == "u":
+            elif type_id == "u":  # unsigned
                 value = struct.unpack(">I", data)[0]
             else:
                 value = data
 
-            yield name, length, value, data
+            yield field, length, value, data
 
     class ModifyRule(TypedDict):
         field: str
@@ -137,36 +143,45 @@ class DatabaseV2(object):
                     for file in rule["files"]
                 ]
 
-        def _write(name: str, value: Any, data: bytes):
+        def _dump(field: str, value: ValueType, data: bytes):
             nonlocal rules, print_changes
-            name_bytes = name.encode("ascii")
-            assert len(name_bytes) == 4
+            field_bytes = field.encode("ascii")
+            assert len(field_bytes) == 4
 
-            type_id: str = DatabaseV2._get_type(name)
-            if type_id == "b":
-                data = struct.pack("?", value)
-            elif type_id in ("o", "r"):
-                assert isinstance(value, tuple)
+            type_id: str = DatabaseV2._get_type(field)
+
+            if type_id in ("o", "r"):  #  struct
+                if not isinstance(value, tuple):
+                    raise DataTypeError(value, tuple, field)
                 nested_buffer = io.BytesIO()
                 DatabaseV2._modify_data(nested_buffer, value, rules, print_changes)
                 data = nested_buffer.getvalue()
-            elif type_id in ("p", "t"):
-                new_data = str(value).encode("utf-16")[2:]
+            elif type_id in ("p", "t"):  # text
+                if not isinstance(value, str):
+                    raise DataTypeError(value, str, field)
+                new_data = value.encode("utf-16")[2:]
                 assert new_data[-1:] == b"\x00"
                 data = data[:1] + new_data[:-1]
-            elif type_id == "s":
-                data = struct.pack(">H", value)
-            elif type_id == "u":
-                data = struct.pack(">I", value)
+            else:
+                if not isinstance(value, (bytes, int)):
+                    raise DataTypeError(value, (bytes, int), field)
+                if type_id == "s":  # signed
+                    data = struct.pack(">H", value)
+                elif type_id == "b":  # bytes
+                    data = struct.pack("?", value)
+                elif type_id == "u":  # unsigned
+                    data = struct.pack(">I", value)
 
             length = len(data)
-            header = struct.pack(">4sI", name_bytes, length)
+            header = struct.pack(">4sI", field_bytes, length)
             fp.write(header)
             fp.write(data)
 
-        def _maybe_perform_rule(rule: DatabaseV2.ModifyRule, name: str, prev_val: Any):
+        def _maybe_perform_rule(rule: DatabaseV2.ModifyRule, field: str, prev_val: Any):
             nonlocal track_filename
-            if "files" in rule and track_filename.upper() not in rule["files"]:
+            if track_filename == "" or (
+                "files" in rule and track_filename.upper() not in rule["files"]
+            ):
                 return None
 
             maybe_new_value = rule["func"](track_filename, prev_val)
@@ -175,31 +190,31 @@ class DatabaseV2(object):
 
             if print_changes:
                 print(
-                    f"Set {name}({DatabaseV2._get_field_name(name)})={str(maybe_new_value)} in library ({track_filename})"
+                    f"Set {field}({DatabaseV2._get_field_name(field)})={str(maybe_new_value)} in library ({track_filename})"
                 )
             return maybe_new_value
 
         track_filename: str = ""
-        for name, length, value, data in item:
-            if name == "pfil":
+        for field, length, value, data in item:
+            if field == "pfil":
                 assert isinstance(value, str)
                 track_filename = os.path.normpath(value)
 
-            rule = next((r for r in rules if name == r["field"]), None)
+            rule = next((r for r in rules if field == r["field"]), None)
             if rule:
                 rule["field_found"] = True  # type: ignore
-                maybe_new_value = _maybe_perform_rule(rule, name, value)
+                maybe_new_value = _maybe_perform_rule(rule, field, value)
                 if maybe_new_value is not None:
                     value = maybe_new_value
 
-            _write(name, value, data)
+            _dump(field, value, data)
 
         for rule in rules:
             if not rule["field_found"]:  # type: ignore
-                name = rule["field"]
-                maybe_new_value = _maybe_perform_rule(rule, name, None)
+                field = rule["field"]
+                maybe_new_value = _maybe_perform_rule(rule, field, None)
                 if maybe_new_value is not None:
-                    _write(name, maybe_new_value, b"\x00")
+                    _dump(field, maybe_new_value, b"\x00")
 
     def modify_file(
         self,
@@ -217,17 +232,17 @@ class DatabaseV2(object):
             write_file.write(output.getvalue())
 
     def to_objects(self) -> Generator[DbEntry]:
-        for name, length, value, data in self.data:
+        for field, length, value, data in self.data:
             if isinstance(value, tuple):
                 try:
                     new_val: list[DbEntry] = [
                         {
-                            "field": n,
-                            "field_name": DatabaseV2._get_field_name(n),
+                            "field": f,
+                            "field_name": DatabaseV2._get_field_name(f),
                             "size_bytes": l,
                             "value": v,
                         }
-                        for n, l, v, d in value
+                        for f, l, v, d in value
                     ]
                 except:
                     print(f"error on {value}")
@@ -237,8 +252,8 @@ class DatabaseV2(object):
                 value = repr(value)
 
             yield {
-                "field": name,
-                "field_name": DatabaseV2._get_field_name(name),
+                "field": field,
+                "field_name": DatabaseV2._get_field_name(field),
                 "size_bytes": length,
                 "value": value,
             }

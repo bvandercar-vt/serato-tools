@@ -3,7 +3,13 @@
 import logging
 import os
 import struct
+import sys
 from typing import Tuple, overload
+
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from serato_tools.utils import DataTypeError
 
 StructType = list[Tuple[str, "ValueType"]]
 ValueType = StructType | str | bytes
@@ -121,71 +127,75 @@ class Crate(object):
         for mfile in folder_tracks:
             self.add_track(mfile)
 
-    class DataTypeError(Exception):
-        def __init__(self, data: ValueType, expected_type: type, tag: str | None):
-            super().__init__(
-                f"data must be {expected_type.__name__} when tag is {tag} (type: {type(data).__name__})"
-            )
-
-   
+    @staticmethod
+    def _get_type(field: str) -> str:
+        # vrsn field has no type_id, but contains text
+        # sbav is probably signed, but we're just working off of the other code here...
+        return "t" if field == "vrsn" else "b" if field == "sbav" else field[0]
 
     @overload
     @staticmethod
-    def _parse(data: bytes, tag: None = None) -> StructType: ...
+    def _parse(data: bytes, field: None = None) -> StructType: ...
     @overload
     @staticmethod
-    def _parse(data: bytes, tag: str) -> ValueType: ...
+    def _parse(data: bytes, field: str) -> ValueType: ...
     @staticmethod
-    def _parse(data: bytes, tag: str | None = None) -> ValueType | StructType:
-        if tag == None or tag[0] == "o":  #  struct
+    def _parse(data: bytes, field: str | None = None) -> ValueType | StructType:
+        if not isinstance(data, bytes):
+            raise DataTypeError(data, bytes, field)
+
+        type_id: str | None = Crate._get_type(field) if field else "o"
+        if type_id == "o":  # struct
             ret_data: StructType = []
             i = 0
             while i < len(data):
-                tag = data[i : i + 4].decode("ascii")
+                field = data[i : i + 4].decode("ascii")
                 length = struct.unpack(">I", data[i + 4 : i + 8])[0]
                 value = data[i + 8 : i + 8 + length]
-                value = Crate._parse(value, tag=tag)
-                ret_data.append((tag, value))
+                value = Crate._parse(value, field=field)
+                ret_data.append((field, value))
                 i += 8 + length
             return ret_data
-        elif tag == "vrsn" or tag[0] in ["t", "p"]:  # version or text
+        elif type_id in ("p", "t"):  # text
             return data.decode("utf-16-be")
-        elif tag == "sbav" or tag[0] == "b":  # signed or bytes
+        elif type_id == "b":  # bytes
             return data
-        elif tag[0] == "u":  # unsigned
+        elif type_id == "u":  # unsigned
             ret_val: bytes = struct.unpack(">I", data)[0]
             return ret_val
         else:
-            raise ValueError(f"unexpected value for tag: {tag}")
-
+            raise ValueError(f"unexpected value for field: {field}")
 
     @staticmethod
-    def _dump(data: ValueType, tag: str | None = None) -> bytes:
-        if tag == None or tag[0] == "o":  # struct
+    def _dump(data: ValueType, field: str | None = None) -> bytes:
+        type_id: str | None = Crate._get_type(field) if field else "o"
+        if type_id == "o":  # struct
             if not isinstance(data, list):
-                raise Crate.DataTypeError(data, list, tag)
+                raise DataTypeError(data, list, field)
             ret_data = bytes()
             for dat in data:
-                tag = dat[0]
-                value = Crate._dump(dat[1], tag=tag)
+                field = dat[0]
+                value = Crate._dump(dat[1], field=field)
                 length = struct.pack(">I", len(value))
-                ret_data = ret_data + tag.encode("utf-8") + length + value
+                ret_data = ret_data + field.encode("utf-8") + length + value
             return ret_data
-        elif tag == "vrsn" or tag[0] in ["t", "p"]:  # version or text
+        elif type_id in ("p", "t"):  # text
             if not isinstance(data, str):
-                raise Crate.DataTypeError(data, str, tag)
+                raise DataTypeError(data, str, field)
             return data.encode("utf-16-be")
-        elif tag == "sbav" or tag[0] == "b":  # signed or bytes
+        elif type_id == "b":  # bytes
             if isinstance(data, str):
                 return data.encode("utf-8")
             else:
                 if not isinstance(data, bytes):
-                    raise Crate.DataTypeError(data, bytes, tag)
+                    raise DataTypeError(data, bytes, field)
                 return data
-        elif tag[0] == "u":  #  unsigned
+        elif type_id == "u":  #  unsigned
+            if not isinstance(data, bytes):
+                raise DataTypeError(data, bytes, field)
             return struct.pack(">I", data)
         else:
-            raise ValueError(f"unexpected value for tag: {tag}")
+            raise ValueError(f"unexpected value for field: {field}")
 
     def load_from_file(self, fname: str):
         with open(fname, "rb") as mfile:

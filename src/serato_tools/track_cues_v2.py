@@ -5,14 +5,19 @@ import base64
 import configparser
 import io
 import logging
+import os
 import struct
 import sys
 from typing import Any, Callable, NotRequired, Tuple, TypedDict
 
+if __package__ is None:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
 from mutagen.mp3 import MP3
 
+from serato_tools.utils.tags import del_geob, get_geob, tag_geob
+
 from . import track_cues_v1
-from .utils.tags import del_geob, get_geob, tag_geob
 
 FMT_VERSION = "BB"
 
@@ -506,7 +511,7 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from .utils.ui import get_hex_editor, get_text_editor, ui_ask
+    from serato_tools.utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
