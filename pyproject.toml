@@ -4,18 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "1.16.1"
+version = "1.16.4"
 description = "Serato library and track metadata modification"
 readme = "README.md"
 authors = [
     { name = "bvandercar-vt", email = "bvandercar@outlook.com" }
 ]
-license = { file = "LICENSE" }
+license = "MIT"
 dependencies = [
-    "mutagen"
 ]
 
+[project.urls]
+Homepage = "https://pypi.org/project/serato-tools/"
+Repository = "https://github.com/bvandercar-vt/serato-tools"
+Issues = "https://github.com/bvandercar-vt/serato-tools/issues"
+
 [project.optional-dependencies]
+track_tags = [
+    "mutagen"
+]
 waveform_drawing = [
     "pillow"
 ]

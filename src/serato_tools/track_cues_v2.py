@@ -15,13 +15,15 @@ if __package__ is None:
 
 from mutagen.mp3 import MP3
 
-from serato_tools.utils.tags import del_geob, get_geob, tag_geob
+from serato_tools.utils.track_tags import (VERSION_FORMAT, check_version,
+                                           del_geob, get_geob, pack_version,
+                                           tag_geob)
 
 from . import track_cues_v1
 
-FMT_VERSION = "BB"
-
 GEOB_KEY = "Serato Markers2"
+
+VERSION_BYTES = (0x01, 0x01)
 
 CUE_COLORS = {
     k: bytes.fromhex(v)
@@ -137,19 +139,19 @@ class UnknownEntry(Entry):
 class BpmLockEntry(Entry):
     NAME = "BPMLOCK"
     FIELDS = ("enabled",)
-    FMT = "?"
+    FORMAT = "?"
 
     @classmethod
     def load(cls, data: bytes):
-        return cls(*struct.unpack(cls.FMT, data))
+        return cls(*struct.unpack(cls.FORMAT, data))
 
     def dump(self):
-        return struct.pack(self.FMT, *(getattr(self, f) for f in self.FIELDS))
+        return struct.pack(self.FORMAT, *(getattr(self, f) for f in self.FIELDS))
 
 
 class ColorEntry(Entry):
     NAME = "COLOR"
-    FMT = "c3s"
+    FORMAT = "c3s"
     FIELDS = (
         "field1",
         "color",
@@ -157,15 +159,15 @@ class ColorEntry(Entry):
 
     @classmethod
     def load(cls, data: bytes):
-        return cls(*struct.unpack(cls.FMT, data))
+        return cls(*struct.unpack(cls.FORMAT, data))
 
     def dump(self):
-        return struct.pack(self.FMT, *(getattr(self, f) for f in self.FIELDS))
+        return struct.pack(self.FORMAT, *(getattr(self, f) for f in self.FIELDS))
 
 
 class CueEntry(Entry):
     NAME = "CUE"
-    FMT = ">cBIc3s2s"
+    FORMAT = ">cBIc3s2s"
     FIELDS = (
         "field1",
         "index",
@@ -179,8 +181,8 @@ class CueEntry(Entry):
 
     @classmethod
     def load(cls, data: bytes):
-        info_size = struct.calcsize(cls.FMT)
-        info = struct.unpack(cls.FMT, data[:info_size])
+        info_size = struct.calcsize(cls.FORMAT)
+        info = struct.unpack(cls.FORMAT, data[:info_size])
         name, nullbyte, other = data[info_size:].partition(b"\x00")
         assert nullbyte == b"\x00"
         assert other == b""
@@ -190,7 +192,7 @@ class CueEntry(Entry):
         struct_fields = self.FIELDS[:-1]
         return b"".join(
             (
-                struct.pack(self.FMT, *(getattr(self, f) for f in struct_fields)),
+                struct.pack(self.FORMAT, *(getattr(self, f) for f in struct_fields)),
                 self.name.encode("utf-8"),
                 b"\x00",
             )
@@ -199,7 +201,7 @@ class CueEntry(Entry):
 
 class LoopEntry(Entry):
     NAME = "LOOP"
-    FMT = ">cBII4s4sB?"
+    FORMAT = ">cBII4s4sB?"
     FIELDS = (
         "field1",
         "index",
@@ -215,8 +217,8 @@ class LoopEntry(Entry):
 
     @classmethod
     def load(cls, data: bytes):
-        info_size = struct.calcsize(cls.FMT)
-        info = struct.unpack(cls.FMT, data[:info_size])
+        info_size = struct.calcsize(cls.FORMAT)
+        info = struct.unpack(cls.FORMAT, data[:info_size])
         name, nullbyte, other = data[info_size:].partition(b"\x00")
         assert nullbyte == b"\x00"
         assert other == b""
@@ -226,7 +228,7 @@ class LoopEntry(Entry):
         struct_fields = self.FIELDS[:-1]
         return b"".join(
             (
-                struct.pack(self.FMT, *(getattr(self, f) for f in struct_fields)),
+                struct.pack(self.FORMAT, *(getattr(self, f) for f in struct_fields)),
                 self.name.encode("utf-8"),
                 b"\x00",
             )
@@ -235,24 +237,24 @@ class LoopEntry(Entry):
 
 class FlipEntry(Entry):
     NAME = "FLIP"
-    FMT1 = "cB?"
-    FMT2 = ">BI"
-    FMT3 = ">BI16s"
+    FORMAT1 = "cB?"
+    FORMAT2 = ">BI"
+    FORMAT3 = ">BI16s"
     FIELDS = ("field1", "index", "enabled", "name", "loop", "num_actions", "actions")
 
     @classmethod
     def load(cls, data):
-        info1_size = struct.calcsize(cls.FMT1)
-        info1 = struct.unpack(cls.FMT1, data[:info1_size])
+        info1_size = struct.calcsize(cls.FORMAT1)
+        info1 = struct.unpack(cls.FORMAT1, data[:info1_size])
         name, nullbyte, other = data[info1_size:].partition(b"\x00")
         assert nullbyte == b"\x00"
 
-        info2_size = struct.calcsize(cls.FMT2)
-        loop, num_actions = struct.unpack(cls.FMT2, other[:info2_size])
+        info2_size = struct.calcsize(cls.FORMAT2)
+        loop, num_actions = struct.unpack(cls.FORMAT2, other[:info2_size])
         action_data = other[info2_size:]
         actions = []
         for i in range(num_actions):
-            type_id, size = struct.unpack(cls.FMT2, action_data[:info2_size])
+            type_id, size = struct.unpack(cls.FORMAT2, action_data[:info2_size])
             action_data = action_data[info2_size:]
             if type_id == 0:
                 payload = struct.unpack(">dd", action_data[:size])
@@ -277,9 +279,8 @@ def get_entry_type(entry_name: str):
 
 
 def parse(data: bytes):
-    versionlen = struct.calcsize(FMT_VERSION)
-    version = struct.unpack(FMT_VERSION, data[:versionlen])
-    assert version == (0x01, 0x01)
+    versionlen = struct.calcsize(VERSION_FORMAT)
+    check_version(data[:versionlen], VERSION_BYTES)
 
     try:
         b64data = data[versionlen : data.index(b"\x00", versionlen)]
@@ -289,7 +290,7 @@ def parse(data: bytes):
     padding = b"A==" if len(b64data) % 4 == 1 else (b"=" * (-len(b64data) % 4))
     payload = base64.b64decode(b64data + padding)
     fp = io.BytesIO(payload)
-    assert struct.unpack(FMT_VERSION, fp.read(2)) == (0x01, 0x01)
+    check_version(fp.read(2), VERSION_BYTES)
     while True:
         entry_name = b"".join(readbytes(fp)).decode("utf-8")
         if not entry_name:
@@ -302,7 +303,7 @@ def parse(data: bytes):
 
 
 def dump(entries: list[Entry]):
-    version = struct.pack(FMT_VERSION, 0x01, 0x01)
+    version = pack_version(VERSION_BYTES)
 
     contents = [version]
     for entry in entries:
@@ -364,8 +365,7 @@ ValueType = bytes | str
 class EntryModifyRule(TypedDict):
     field: str
     func: Callable[[ValueType], ValueType | None]
-    ''' (filename: str, prev_value: ValueType) -> new_value: ValueType | None '''
-
+    """ (filename: str, prev_value: ValueType) -> new_value: ValueType | None """
 
 
 def modify_entry(
@@ -397,23 +397,23 @@ def modify_entry(
                 change_made = True
                 if print_changes:
                     if isinstance(entry, ColorEntry):
-                        print_val = (
+                        color_name = (
                             get_track_color_key(value)
                             if isinstance(value, bytes)
                             else None
                         )
-                        if not print_val:
-                            print_val = f"Unknown Color ({str(value)})"
-                        print(f"Set Track Color to {print_val}")
+                        print(
+                            f"Set Track Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
+                        )
                     elif field == "color":
-                        print_val = (
+                        color_name = (
                             get_cue_color_key(value)
                             if isinstance(value, bytes)
                             else None
                         )
-                        if not print_val:
-                            print_val = f"Unknown Color ({str(value)})"
-                        print(f"Set Cue Color to {print_val}")
+                        print(
+                            f"Set Cue Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
+                        )
                     else:
                         print(f'Set cue entry field "{field}" to {str(value)}')
 
@@ -438,6 +438,10 @@ def modify_file_entries(
     print_changes: bool = True,
     delete_tags_v1: bool = True,
 ):
+    """
+    Args:
+        delete_tags_v1: Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
+    """
     if isinstance(file, str):
         try:
             tags = MP3(file)
@@ -490,6 +494,10 @@ def set_track_color(
     print_changes: bool = True,
     delete_tags_v1: bool = True,
 ):
+    """
+    Args:
+        delete_tags_v1: Must delete delete_tags_v1 in order for track color change to appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
+    """
     modify_file_entries(
         file,
         {"color": [{"field": "color", "func": lambda v: color}]},

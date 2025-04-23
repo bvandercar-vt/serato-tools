@@ -9,9 +9,11 @@ import sys
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-FMT_VERSION = "BB"
+from serato_tools.utils.track_tags import check_version, pack_version
 
 GEOB_KEY = "Serato BeatGrid"
+
+VERSION_BYTES = (0x01, 0x00)
 
 NonTerminalBeatgridMarker = collections.namedtuple(
     "NonTerminalBeatgridMarker",
@@ -54,8 +56,7 @@ def _check_data(data: DataType):
 
 
 def parse(fp: io.BytesIO | io.BufferedReader):
-    version = struct.unpack(FMT_VERSION, fp.read(2))
-    assert version == (0x01, 0x00)
+    check_version(fp.read(2), VERSION_BYTES)
 
     num_markers = struct.unpack(">I", fp.read(4))[0]
     for i in range(num_markers):
@@ -80,7 +81,7 @@ def write(
     nonterminal_markers, terminal_markers, footer = _check_data(data)
     markers = nonterminal_markers + terminal_markers
     # Write version
-    fp.write(struct.pack(FMT_VERSION, 0x01, 0x00))
+    fp.write(pack_version(VERSION_BYTES))
 
     # Write markers
     fp.write(struct.pack(">I", len(markers)))
@@ -101,7 +102,7 @@ def analyze_and_write(file: str):
     import mutagen._file
 
     from serato_tools.utils.beatgrid_analyze import analyze_beatgrid
-    from serato_tools.utils.tags import tag_geob
+    from serato_tools.utils.track_tags import tag_geob
 
     tagfile = mutagen._file.File(file)
     assert tagfile, "file parse failed"

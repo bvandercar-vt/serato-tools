@@ -8,9 +8,11 @@ import sys
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-FMT_VERSION = "BB"
+from serato_tools.utils.track_tags import check_version, pack_version
 
 GEOB_KEY = "Serato Autotags"
+
+VERSION_BYTES = (0x01, 0x01)
 
 
 def readbytes(fp: io.BytesIO | io.BufferedReader):
@@ -21,8 +23,7 @@ def readbytes(fp: io.BytesIO | io.BufferedReader):
 
 
 def parse(fp: io.BytesIO | io.BufferedReader):
-    version = struct.unpack(FMT_VERSION, fp.read(2))
-    assert version == (0x01, 0x01)
+    check_version(fp.read(2), VERSION_BYTES)
 
     for i in range(3):
         data = b"".join(readbytes(fp))
@@ -30,7 +31,7 @@ def parse(fp: io.BytesIO | io.BufferedReader):
 
 
 def dump(bpm: float, autogain: float, gaindb: float):
-    data = struct.pack(FMT_VERSION, 0x01, 0x01)
+    data = pack_version(VERSION_BYTES)
     for value, decimals in ((bpm, 2), (autogain, 3), (gaindb, 3)):
         data += "{:.{}f}".format(value, decimals).encode("ascii")
         data += b"\x00"
@@ -45,7 +46,7 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from serato_tools.utils.tags import get_geob, tag_geob
+    from serato_tools.utils.track_tags import get_geob, tag_geob
     from serato_tools.utils.ui import get_text_editor
 
     parser = argparse.ArgumentParser()

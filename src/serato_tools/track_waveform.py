@@ -9,14 +9,15 @@ from typing import Generator
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-FMT_VERSION = "BB"
+from serato_tools.utils.track_tags import check_version
 
 GEOB_KEY = "Serato Overview"
 
+VERSION_BYTES = (0x01, 0x05)
+
 
 def parse(fp: io.BytesIO | io.BufferedReader):
-    version = struct.unpack(FMT_VERSION, fp.read(2))
-    assert version == (0x01, 0x05)
+    check_version(fp.read(2), VERSION_BYTES)
 
     for x in iter(lambda: fp.read(16), b""):
         assert len(x) == 16
@@ -52,7 +53,7 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from serato_tools.utils.tags import get_geob
+    from serato_tools.utils.track_tags import get_geob
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")

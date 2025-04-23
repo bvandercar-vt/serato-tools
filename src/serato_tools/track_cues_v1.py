@@ -9,9 +9,11 @@ import sys
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-FMT_VERSION = "BB"
+from serato_tools.utils.track_tags import check_version, pack_version
 
 GEOB_KEY = "Serato Markers_"
+
+VERSION_BYTES = (0x02, 0x05)
 
 
 class EntryType(enum.IntEnum):
@@ -40,7 +42,7 @@ def serato32decode(data: bytes):
 
 
 class Entry(object):
-    FMT = ">B4sB4s6s4sBB"
+    FORMAT = ">B4sB4s6s4sBB"
     FIELDS = (
         "start_position_set",
         "start_position",
@@ -68,8 +70,8 @@ class Entry(object):
 
     @classmethod
     def load(cls, data: bytes):
-        info_size = struct.calcsize(cls.FMT)
-        info = struct.unpack(cls.FMT, data[:info_size])
+        info_size = struct.calcsize(cls.FORMAT)
+        info = struct.unpack(cls.FORMAT, data[:info_size])
         entry_data = []
 
         start_position_set = None
@@ -130,16 +132,16 @@ class Entry(object):
             elif field == "type":
                 value = int(value)
             entry_data.append(value)
-        return struct.pack(self.FMT, *entry_data)
+        return struct.pack(self.FORMAT, *entry_data)
 
 
 class Color(Entry):
-    FMT = ">4s"
+    FORMAT = ">4s"
     FIELDS = ("color",)
 
 
 def parse(fp: io.BytesIO | io.BufferedReader):
-    assert struct.unpack(FMT_VERSION, fp.read(2)) == (0x02, 0x05)
+    check_version(fp.read(2), VERSION_BYTES)
 
     num_entries = struct.unpack(">I", fp.read(4))[0]
     for i in range(num_entries):
@@ -153,7 +155,7 @@ def parse(fp: io.BytesIO | io.BufferedReader):
 
 
 def dump(new_entries: list):
-    data = struct.pack(FMT_VERSION, 0x02, 0x05)
+    data = pack_version(VERSION_BYTES)
     num_entries = len(new_entries) - 1
     data += struct.pack(">I", num_entries)
     for entry_data in new_entries:
@@ -171,7 +173,7 @@ if __name__ == "__main__":
 
     import mutagen._file
 
-    from serato_tools.utils.tags import get_geob, tag_geob
+    from serato_tools.utils.track_tags import get_geob, tag_geob
     from serato_tools.utils.ui import get_hex_editor, get_text_editor, ui_ask
 
     parser = argparse.ArgumentParser()

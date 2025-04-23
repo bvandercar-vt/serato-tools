@@ -1,8 +1,10 @@
+import io
+import struct
+
 import mutagen.id3
 from mutagen.id3._frames import GEOB
-from mutagen.mp3 import MP3
 
-_MutagenTagFile = mutagen.id3.ID3FileType | mutagen.id3.ID3 
+_MutagenTagFile = mutagen.id3.ID3FileType | mutagen.id3.ID3
 
 
 def get_geob(tagfile: _MutagenTagFile, geob_key: str) -> bytes:
@@ -29,3 +31,19 @@ def del_tag(tagfile: _MutagenTagFile, key: str):
 
 def del_geob(tagfile: _MutagenTagFile, geob_key: str):
     del_tag(tagfile, f"GEOB:{geob_key}")
+
+
+VERSION_FORMAT = "BB"
+VersionType = tuple[int, int]
+
+
+def check_version(given: bytes, expected: VersionType):
+    given_version = struct.unpack(VERSION_FORMAT, given)
+    if given_version != expected:
+        raise ValueError(
+            f"Wrong version. Expected: {str(expected)} Given: {str(given_version)}"
+        )
+
+
+def pack_version(version: VersionType):
+    return struct.pack(VERSION_FORMAT, version)
