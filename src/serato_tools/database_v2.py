@@ -4,64 +4,21 @@ import io
 import os
 import struct
 import sys
-from typing import (Callable, Generator, Iterable, NotRequired, Tuple,
-                    TypedDict, cast)
+from typing import Callable, Generator, Iterable, NotRequired, TypedDict, Union
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils import DataTypeError
+from serato_tools.utils.database import SeratoBinDb
 
 
-class DbEntry(TypedDict):
-    field: str
-    field_name: str
-    value: str | int | bool | list["DbEntry"]
-    size_bytes: int
-
-
-ValueType = bytes | str | int | tuple  # TODO: improve the tuple
-ParsedType = Tuple[str, int, ValueType]
-
-
-class DatabaseV2(object):
-    FIELDNAMES = {
-        # Database
-        "vrsn": "Version",
-        "otrk": "Track",
-        "ttyp": "File Type",
-        "pfil": "File Path",
-        "tsng": "Song Title",
-        "tart": "Artist",
-        "talb": "Album",
-        "tgen": "Genre",
-        "tlen": "Length",
-        "tbit": "Bitrate",
-        "tsmp": "Sample Rate",
-        "tsiz": "Size",
-        "tbpm": "BPM",
-        "tkey": "Key",
-        "tart": "Artist",
-        "utme": "File Time",
-        "tgrp": "Grouping",
-        "tlbl": "Publisher",
-        "tcmp": "Composer",
-        "ttyr": "Year",
-        # Serato stuff
-        "tadd": "Date added",
-        "uadd": "Date added",
-        "bbgl": "Beatgrid Locked",
-        "bcrt": "Corrupt",
-        "bmis": "Missing",
-        # Crates
-        "osrt": "Sorting",
-        "brev": "Reverse Order",
-        "ovct": "Column Title",
-        "tvcn": "Column Name",
-        "tvcw": "Column Width",
-        "ptrk": "Track Path",
-    }
+class DatabaseV2(SeratoBinDb):
     DEFAULT_DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")  # type: ignore
+
+    ValueType = bytes | str | int | tuple  # TODO: improve the tuple
+    ParsedType = tuple[str, int, ValueType]
+
+    ValueOrNoneType = Union[ValueType, None]
 
     def __init__(self, filepath: str = DEFAULT_DATABASE_FILE):
         if not os.path.exists(filepath):
@@ -69,19 +26,10 @@ class DatabaseV2(object):
 
         self.filepath: str = os.path.abspath(filepath)
 
-        self.data: Iterable[ParsedType] = self._parse(self.filepath)
+        self.data: Iterable[DatabaseV2.ParsedType] = self._parse(self.filepath)
 
     def __str__(self):
-        return str(list(self.to_objects()))
-
-    @staticmethod
-    def _get_field_name(field: str):
-        return DatabaseV2.FIELDNAMES.get(field, "Unknown Field")
-
-    @staticmethod
-    def _get_type(field: str) -> str:
-        # vrsn field contains text but does not start with the "t" type_id
-        return "t" if field == "vrsn" else field[0]
+        return str(list(self.to_dicts()))
 
     def _parse(
         self, fp: io.BytesIO | io.BufferedReader | str | None
@@ -121,7 +69,9 @@ class DatabaseV2(object):
 
     class ModifyRule(TypedDict):
         field: str
-        func: Callable[[str, ValueType | None], ValueType | None]
+        func: Callable[
+            [str, "DatabaseV2.ValueOrNoneType"], "DatabaseV2.ValueOrNoneType"
+        ]
         """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
         files: NotRequired[list[str]]
 
@@ -145,7 +95,7 @@ class DatabaseV2(object):
                     for file in rule["files"]
                 ]
 
-        def _dump(field: str, value: ValueType):
+        def _dump(field: str, value: "DatabaseV2.ValueType"):
             nonlocal rules, print_changes
             field_bytes = field.encode("ascii")
             assert len(field_bytes) == 4
@@ -154,26 +104,26 @@ class DatabaseV2(object):
 
             if type_id in ("o", "r"):  #  struct
                 if not isinstance(value, tuple):
-                    raise DataTypeError(value, tuple, field)
+                    raise DatabaseV2.DataTypeError(value, tuple, field)
                 nested_buffer = io.BytesIO()
                 DatabaseV2._modify_data(nested_buffer, value, rules, print_changes)
                 data = nested_buffer.getvalue()
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
-                    raise DataTypeError(value, str, field)
+                    raise DatabaseV2.DataTypeError(value, str, field)
                 # if this ever fails, we did used to do this a different way, see old commits.
                 data = value.encode("utf-16-be")
             elif type_id == "b":  # single byte, is a boolean
                 if not isinstance(value, bool):
-                    raise DataTypeError(value, bool, field)
+                    raise DatabaseV2.DataTypeError(value, bool, field)
                 data = struct.pack("?", value)
             elif type_id == "s":  # signed int
                 if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
+                    raise DatabaseV2.DataTypeError(value, int, field)
                 data = struct.pack(">H", value)
             elif type_id == "u":  # unsigned int
                 if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
+                    raise DatabaseV2.DataTypeError(value, int, field)
                 data = struct.pack(">I", value)
             else:
                 raise ValueError(f"unexpected type for field: {field}")
@@ -184,7 +134,9 @@ class DatabaseV2(object):
             fp.write(data)
 
         def _maybe_perform_rule(
-            rule: DatabaseV2.ModifyRule, field: str, prev_val: ValueType | None
+            rule: DatabaseV2.ModifyRule,
+            field: str,
+            prev_val: "DatabaseV2.ValueOrNoneType",
         ):
             nonlocal track_filename
             if track_filename == "" or (
@@ -198,7 +150,7 @@ class DatabaseV2(object):
 
             if print_changes:
                 print(
-                    f"Set {field}({DatabaseV2._get_field_name(field)})={str(maybe_new_value)} in library ({track_filename})"
+                    f"Set {field}({DatabaseV2.get_field_name(field)})={str(maybe_new_value)} in library ({track_filename})"
                 )
             return maybe_new_value
 
@@ -239,14 +191,20 @@ class DatabaseV2(object):
         with open(out_file, "wb") as write_file:
             write_file.write(output.getvalue())
 
-    def to_objects(self) -> Generator[DbEntry]:
+    class EntryDict(TypedDict):
+        field: str
+        field_name: str
+        value: str | int | bool | list["DatabaseV2.EntryDict"]
+        size_bytes: int
+
+    def to_dicts(self) -> Generator[EntryDict, None, None]:
         for field, length, value in self.data:
             if isinstance(value, tuple):
                 try:
-                    new_val: list[DbEntry] = [
+                    new_val: list[DatabaseV2.EntryDict] = [
                         {
                             "field": f,
-                            "field_name": DatabaseV2._get_field_name(f),
+                            "field_name": DatabaseV2.get_field_name(f),
                             "size_bytes": l,
                             "value": v,
                         }
@@ -261,13 +219,13 @@ class DatabaseV2(object):
 
             yield {
                 "field": field,
-                "field_name": DatabaseV2._get_field_name(field),
+                "field_name": DatabaseV2.get_field_name(field),
                 "size_bytes": length,
                 "value": value,
             }
 
-    def print_items(self):
-        for entry in self.to_objects():
+    def print_data(self):
+        for entry in self.to_dicts():
             if isinstance(entry["value"], list):
                 print(
                     f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)"
@@ -290,4 +248,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     db = DatabaseV2(args.file)
-    db.modify_file([])
+    db.print_data()

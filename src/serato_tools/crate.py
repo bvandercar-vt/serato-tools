@@ -4,19 +4,15 @@ import logging
 import os
 import struct
 import sys
-from typing import Tuple, overload
+from typing import Generator, TypedDict, Union, overload
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils import DataTypeError
-
-StructType = list[Tuple[str, "ValueType"]]
-ValueType = StructType | str | bytes
+from serato_tools.utils.database import SeratoBinDb
 
 
-class Crate(object):
-    TRACK_FIELD = "otrk"
+class Crate(SeratoBinDb):
     DEFAULT_DATA = [
         ("vrsn", "1.0/Serato ScratchLive Crate"),
         ("osrt", [("tvcn", "key"), ("brev", "\x00")]),
@@ -31,8 +27,13 @@ class Crate(object):
         ("ovct", [("tvcn", "added"), ("tvcw", "0")]),
     ]
 
+    StructType = list[tuple[str, "ValueType"]]
+    ValueType = StructType | str | bytes
+
+    ValueOrNoneType = Union[ValueType, None]
+
     def __init__(self, fname):
-        self.data: StructType = []
+        self.data: Crate.StructType = []
 
         self.path: str = os.path.dirname(os.path.abspath(fname))
         self.filename: str = os.path.basename(fname)
@@ -49,11 +50,6 @@ class Crate(object):
     def __str__(self):
         tracks = self.tracks()
         return f"Crate containing {len(tracks)} tracks: \n{'\n'.join(tracks)}"
-
-    def print_data(self):
-        from pprint import pprint
-
-        pprint(self.data)
 
     @staticmethod
     def _split_path(path: str):
@@ -127,12 +123,6 @@ class Crate(object):
         for mfile in folder_tracks:
             self.add_track(mfile)
 
-    @staticmethod
-    def _get_type(field: str) -> str:
-        # vrsn field has no type_id, but contains text
-        # sbav is probably signed, but we're just working off of the other code here...
-        return "t" if field == "vrsn" else "b" if field == "sbav" else field[0]
-
     @overload
     @staticmethod
     def _parse(data: bytes, field: None = None) -> StructType: ...
@@ -142,11 +132,11 @@ class Crate(object):
     @staticmethod
     def _parse(data: bytes, field: str | None = None) -> ValueType | StructType:
         if not isinstance(data, bytes):
-            raise DataTypeError(data, bytes, field)
+            raise Crate.DataTypeError(data, bytes, field)
 
         type_id: str | None = Crate._get_type(field) if field else "o"
         if type_id == "o":  # struct
-            ret_data: StructType = []
+            ret_data: Crate.StructType = []
             i = 0
             while i < len(data):
                 field = data[i : i + 4].decode("ascii")
@@ -171,7 +161,7 @@ class Crate(object):
         type_id: str | None = Crate._get_type(field) if field else "o"
         if type_id == "o":  # struct
             if not isinstance(data, list):
-                raise DataTypeError(data, list, field)
+                raise Crate.DataTypeError(data, list, field)
             ret_data = bytes()
             for dat in data:
                 field = dat[0]
@@ -181,16 +171,16 @@ class Crate(object):
             return ret_data
         elif type_id in ("p", "t"):  # text
             if not isinstance(data, str):
-                raise DataTypeError(data, str, field)
+                raise Crate.DataTypeError(data, str, field)
             return data.encode("utf-16-be")
         elif type_id == "b":  # single byte, is a boolean
             # if isinstance(data, str) return data.encode("utf-8") # from imported code, but have never seen this happen.
             if not isinstance(data, bytes):
-                raise DataTypeError(data, bytes, field)
+                raise Crate.DataTypeError(data, bytes, field)
             return data
         elif type_id == "u":  #  unsigned
             if not isinstance(data, bytes):
-                raise DataTypeError(data, bytes, field)
+                raise Crate.DataTypeError(data, bytes, field)
             return struct.pack(">I", data)
         else:
             raise ValueError(f"unexpected type for field: {field}")
@@ -207,6 +197,52 @@ class Crate(object):
         with open(fname, "wb") as mfile:
             mfile.write(enc_data)
 
+    class EntryDict(TypedDict):
+        field: str
+        field_name: str
+        value: Union["Crate.ValueType", list["Crate.EntryDict"]]
+
+    def to_dicts(self) -> Generator[EntryDict, None, None]:
+        for field, value in self.data:
+            if isinstance(value, list):
+                try:
+                    new_val: list[Crate.EntryDict] = [
+                        {
+                            "field": f,
+                            "field_name": Crate.get_field_name(f),
+                            "value": v,
+                        }
+                        for f, v in value
+                    ]
+                except:
+                    print(f"error on {value}")
+                    raise
+                value = new_val
+            else:
+                value = repr(value)
+
+            yield {
+                "field": field,
+                "field_name": Crate.get_field_name(field),
+                "value": value,
+            }
+
+    def print_data(self):
+        for entry in self.to_dicts():
+            if isinstance(entry["value"], list):
+                line = f"{entry['field']} ({entry['field_name']}): "
+                field_lines = []
+                for e in entry["value"]:
+                    if isinstance(e, tuple):
+                        raise TypeError("unexpected type")
+                    field_lines.append(
+                        f"[ {e['field']} ({e['field_name']}): {e['value']} ]"
+                    )
+                line += ", ".join(field_lines)
+                print(line)
+            else:
+                print(f"{entry['field']} ({entry['field_name']}): {entry['value']}")
+
 
 if __name__ == "__main__":
     import argparse
@@ -214,6 +250,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
     parser.add_argument("-f", "--filenames_only", action="store_true")
+    parser.add_argument("-d", "--data", action="store_true")
     parser.add_argument(
         "-o", "--output", "--output_file", dest="output_file", default=None
     )
@@ -226,6 +263,8 @@ if __name__ == "__main__":
             os.path.splitext(os.path.basename(track))[0] for track in crate.tracks()
         ]
         print("\n".join(track_names))
+    elif args.data:
+        crate.print_data()
     else:
         print(crate)
 
