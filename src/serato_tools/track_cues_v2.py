@@ -8,7 +8,7 @@ import logging
 import os
 import struct
 import sys
-from typing import Any, Callable, NotRequired, Tuple, TypedDict
+from typing import Callable, NotRequired, Tuple, TypedDict
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -364,6 +364,8 @@ ValueType = bytes | str
 class EntryModifyRule(TypedDict):
     field: str
     func: Callable[[ValueType], ValueType | None]
+    ''' (filename: str, prev_value: ValueType) -> new_value: ValueType | None '''
+
 
 
 def modify_entry(

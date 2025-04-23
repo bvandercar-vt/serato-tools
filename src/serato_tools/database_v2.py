@@ -4,7 +4,7 @@ import io
 import os
 import struct
 import sys
-from typing import (Any, Callable, Generator, Iterable, NotRequired, Tuple,
+from typing import (Callable, Generator, Iterable, NotRequired, Tuple,
                     TypedDict, cast)
 
 if __package__ is None:
@@ -21,7 +21,7 @@ class DbEntry(TypedDict):
 
 
 ValueType = bytes | str | int | tuple  # TODO: improve the tuple
-ParsedType = Tuple[str, int, ValueType, bytes]
+ParsedType = Tuple[str, int, ValueType]
 
 
 class DatabaseV2(object):
@@ -106,21 +106,23 @@ class DatabaseV2(object):
             if type_id in ("o", "r"):  #  struct
                 value = tuple(self._parse(io.BytesIO(data)))
             elif type_id in ("p", "t"):  # text
-                value = (data[1:] + b"\00").decode("utf-16")
-            elif type_id == "b":  # bytes
+                # value = (data[1:] + b"\00").decode("utf-16") # from imported code
+                value = data.decode("utf-16-be")
+            elif type_id == "b":  # single byte, is a boolean
                 value = struct.unpack("?", data)[0]
-            elif type_id == "s":  # signed
+            elif type_id == "s":  # signed int
                 value = struct.unpack(">H", data)[0]
-            elif type_id == "u":  # unsigned
+            elif type_id == "u":  # unsigned int
                 value = struct.unpack(">I", data)[0]
             else:
-                value = data
+                raise ValueError(f"unexpected type for field: {field}")
 
-            yield field, length, value, data
+            yield field, length, value
 
     class ModifyRule(TypedDict):
         field: str
-        func: Callable[[str, Any], Any]
+        func: Callable[[str, ValueType | None], ValueType | None]
+        """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
         files: NotRequired[list[str]]
 
     @staticmethod
@@ -143,7 +145,7 @@ class DatabaseV2(object):
                     for file in rule["files"]
                 ]
 
-        def _dump(field: str, value: ValueType, data: bytes):
+        def _dump(field: str, value: ValueType):
             nonlocal rules, print_changes
             field_bytes = field.encode("ascii")
             assert len(field_bytes) == 4
@@ -159,25 +161,31 @@ class DatabaseV2(object):
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
                     raise DataTypeError(value, str, field)
-                new_data = value.encode("utf-16")[2:]
-                assert new_data[-1:] == b"\x00"
-                data = data[:1] + new_data[:-1]
+                # if this ever fails, we did used to do this a different way, see old commits.
+                data = value.encode("utf-16-be")
+            elif type_id == "b":  # single byte, is a boolean
+                if not isinstance(value, bool):
+                    raise DataTypeError(value, bool, field)
+                data = struct.pack("?", value)
+            elif type_id == "s":  # signed int
+                if not isinstance(value, int):
+                    raise DataTypeError(value, int, field)
+                data = struct.pack(">H", value)
+            elif type_id == "u":  # unsigned int
+                if not isinstance(value, int):
+                    raise DataTypeError(value, int, field)
+                data = struct.pack(">I", value)
             else:
-                if not isinstance(value, (bytes, int)):
-                    raise DataTypeError(value, (bytes, int), field)
-                if type_id == "s":  # signed
-                    data = struct.pack(">H", value)
-                elif type_id == "b":  # bytes
-                    data = struct.pack("?", value)
-                elif type_id == "u":  # unsigned
-                    data = struct.pack(">I", value)
+                raise ValueError(f"unexpected type for field: {field}")
 
             length = len(data)
             header = struct.pack(">4sI", field_bytes, length)
             fp.write(header)
             fp.write(data)
 
-        def _maybe_perform_rule(rule: DatabaseV2.ModifyRule, field: str, prev_val: Any):
+        def _maybe_perform_rule(
+            rule: DatabaseV2.ModifyRule, field: str, prev_val: ValueType | None
+        ):
             nonlocal track_filename
             if track_filename == "" or (
                 "files" in rule and track_filename.upper() not in rule["files"]
@@ -195,7 +203,7 @@ class DatabaseV2(object):
             return maybe_new_value
 
         track_filename: str = ""
-        for field, length, value, data in item:
+        for field, length, value in item:
             if field == "pfil":
                 assert isinstance(value, str)
                 track_filename = os.path.normpath(value)
@@ -207,14 +215,14 @@ class DatabaseV2(object):
                 if maybe_new_value is not None:
                     value = maybe_new_value
 
-            _dump(field, value, data)
+            _dump(field, value)
 
         for rule in rules:
             if not rule["field_found"]:  # type: ignore
                 field = rule["field"]
                 maybe_new_value = _maybe_perform_rule(rule, field, None)
                 if maybe_new_value is not None:
-                    _dump(field, maybe_new_value, b"\x00")
+                    _dump(field, maybe_new_value)
 
     def modify_file(
         self,
@@ -232,7 +240,7 @@ class DatabaseV2(object):
             write_file.write(output.getvalue())
 
     def to_objects(self) -> Generator[DbEntry]:
-        for field, length, value, data in self.data:
+        for field, length, value in self.data:
             if isinstance(value, tuple):
                 try:
                     new_val: list[DbEntry] = [
@@ -242,7 +250,7 @@ class DatabaseV2(object):
                             "size_bytes": l,
                             "value": v,
                         }
-                        for f, l, v, d in value
+                        for f, l, v in value
                     ]
                 except:
                     print(f"error on {value}")
@@ -282,4 +290,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     db = DatabaseV2(args.file)
-    db.print_items()
+    db.modify_file([])

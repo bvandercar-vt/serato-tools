@@ -158,13 +158,13 @@ class Crate(object):
             return ret_data
         elif type_id in ("p", "t"):  # text
             return data.decode("utf-16-be")
-        elif type_id == "b":  # bytes
+        elif type_id == "b":  # single byte
             return data
-        elif type_id == "u":  # unsigned
+        elif type_id == "u":  # unsigned int
             ret_val: bytes = struct.unpack(">I", data)[0]
             return ret_val
         else:
-            raise ValueError(f"unexpected value for field: {field}")
+            raise ValueError(f"unexpected type for field: {field}")
 
     @staticmethod
     def _dump(data: ValueType, field: str | None = None) -> bytes:
@@ -183,19 +183,17 @@ class Crate(object):
             if not isinstance(data, str):
                 raise DataTypeError(data, str, field)
             return data.encode("utf-16-be")
-        elif type_id == "b":  # bytes
-            if isinstance(data, str):
-                return data.encode("utf-8")
-            else:
-                if not isinstance(data, bytes):
-                    raise DataTypeError(data, bytes, field)
-                return data
+        elif type_id == "b":  # single byte, is a boolean
+            # if isinstance(data, str) return data.encode("utf-8") # from imported code, but have never seen this happen.
+            if not isinstance(data, bytes):
+                raise DataTypeError(data, bytes, field)
+            return data
         elif type_id == "u":  #  unsigned
             if not isinstance(data, bytes):
                 raise DataTypeError(data, bytes, field)
             return struct.pack(">I", data)
         else:
-            raise ValueError(f"unexpected value for field: {field}")
+            raise ValueError(f"unexpected type for field: {field}")
 
     def load_from_file(self, fname: str):
         with open(fname, "rb") as mfile:

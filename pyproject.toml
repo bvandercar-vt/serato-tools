@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "1.16.0"
+version = "1.16.1"
 description = "Serato library and track metadata modification"
 readme = "README.md"
 authors = [
