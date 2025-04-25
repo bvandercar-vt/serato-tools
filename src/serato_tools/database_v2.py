@@ -91,7 +91,7 @@ class DatabaseV2(SeratoBinDb):
             rule["field_found"] = False  # type: ignore
             if "files" in rule:
                 rule["files"] = [
-                    os.path.normpath(os.path.splitdrive(file)[1]).lstrip("\\").upper()
+                    DatabaseV2.remove_drive_from_filepath(file).upper()
                     for file in rule["files"]
                 ]
 
@@ -149,8 +149,9 @@ class DatabaseV2(SeratoBinDb):
                 return None
 
             if print_changes:
+                field_name = DatabaseV2.get_field_name(field)
                 print(
-                    f"Set {field}({DatabaseV2.get_field_name(field)})={str(maybe_new_value)} in library ({track_filename})"
+                    f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}"
                 )
             return maybe_new_value
 

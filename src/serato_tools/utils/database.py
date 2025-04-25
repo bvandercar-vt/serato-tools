@@ -1,3 +1,4 @@
+import os
 from typing import Any, Iterable
 
 from . import to_array
@@ -59,3 +60,7 @@ class SeratoBinDb:
     def _get_type(field: str) -> str:
         # vrsn field has no type_id, but contains text ("t")
         return "t" if field == "vrsn" else field[0]
+
+    @staticmethod
+    def remove_drive_from_filepath(filepath: str) -> str:
+        return os.path.normpath(os.path.splitdrive(filepath)[1]).lstrip("\\")
