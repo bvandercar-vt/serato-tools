@@ -46,4 +46,4 @@ def check_version(given: bytes, expected: VersionType):
 
 
 def pack_version(version: VersionType):
-    return struct.pack(VERSION_FORMAT, version)
+    return struct.pack(VERSION_FORMAT, *version)
