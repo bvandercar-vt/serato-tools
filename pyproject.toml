@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "1.16.7"
+version = "1.16.8"
 description = "Serato crate, library database, and track metadata (cues, beatgrid, etc.) modification"
 readme = "README.md"
 authors = [

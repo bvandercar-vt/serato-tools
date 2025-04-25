@@ -1,5 +1,5 @@
 import os
-from typing import Any, Iterable
+from typing import Any, Iterable, TypedDict
 
 from . import to_array
 
@@ -42,6 +42,7 @@ class SeratoBinDb:
         "tvcw": "Column Width",
         "ptrk": "Track Path",
     }
+    FIELDNAME_KEYS = list(FIELDNAMES.keys())
     TRACK_FIELD = "otrk"
 
     class DataTypeError(Exception):
@@ -62,5 +63,25 @@ class SeratoBinDb:
         return "t" if field == "vrsn" else field[0]
 
     @staticmethod
+    def _check_valid_field(field: str):
+        if field not in SeratoBinDb.FIELDNAME_KEYS:
+            raise ValueError(
+                f"invalid field: {field} must be one of: {str(SeratoBinDb.FIELDNAME_KEYS)}\n(see {__file__} for what these keys map to)"
+            )
+
+    @staticmethod
     def remove_drive_from_filepath(filepath: str) -> str:
         return os.path.normpath(os.path.splitdrive(filepath)[1]).lstrip("\\")
+
+    class FieldObj(TypedDict):
+        field: str
+
+    @staticmethod
+    def _check_rule_fields(rules: Iterable[FieldObj]):
+        all_field_names = [rule["field"] for rule in rules]
+        uniq_field_names = list(set(all_field_names))
+        assert len(list(rules)) == len(
+            uniq_field_names
+        ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
+        for field in uniq_field_names:
+            SeratoBinDb._check_valid_field(field)

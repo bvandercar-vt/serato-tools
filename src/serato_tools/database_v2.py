@@ -82,10 +82,7 @@ class DatabaseV2(SeratoBinDb):
         rules: list[ModifyRule] = [],
         print_changes: bool = True,
     ):
-        all_field_names = [rule["field"] for rule in rules]
-        assert len(rules) == len(
-            list(set(all_field_names))
-        ), f"must only have 1 function per field. fields passed: {str(all_field_names)}"
+        DatabaseV2._check_rule_fields(rules)
 
         for rule in rules:
             rule["field_found"] = False  # type: ignore

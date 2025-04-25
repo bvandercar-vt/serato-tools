@@ -381,7 +381,8 @@ def modify_entry(
     all_field_names = [rule["field"] for rule in rules]
     assert len(rules) == len(
         list(set(all_field_names))
-    ), f"must only have 1 function per field. fields passed: {str(all_field_names)}"
+    ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
+    # TODO: ensure field is valid else throw error!
 
     change_made = False
 
