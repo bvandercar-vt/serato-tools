@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import io
+import logging
 import os
 import struct
 import sys
@@ -103,7 +104,7 @@ class DatabaseV2(SeratoBinDb):
             rule["field_found"] = False  # type: ignore
             if "files" in rule:
                 rule["files"] = [
-                    DatabaseV2.remove_drive_from_filepath(file).upper()
+                    DatabaseV2.remove_drive_from_filepath(file)[0].upper()
                     for file in rule["files"]
                 ]
 
@@ -160,6 +161,17 @@ class DatabaseV2(SeratoBinDb):
             if maybe_new_value is None or maybe_new_value == prev_val:
                 return None
 
+            if rule["field"] == "pfil":
+                if not isinstance(maybe_new_value, str):
+                    raise DatabaseV2.DataTypeError(maybe_new_value, str, rule["field"])
+                if not os.path.exists(maybe_new_value):
+                    raise FileNotFoundError(
+                        f"set track location to {maybe_new_value}, but doesn't exist"
+                    )
+                maybe_new_value = DatabaseV2.remove_drive_from_filepath(
+                    maybe_new_value
+                )[0]
+
             if print_changes:
                 field_name = DatabaseV2.get_field_name(field)
                 print(
@@ -203,6 +215,24 @@ class DatabaseV2(SeratoBinDb):
             out_file = self.filepath
         with open(out_file, "wb") as write_file:
             write_file.write(self.data_bin)
+
+    def rename_track_file(self, src: str, dest: str, print_changes: bool = True):
+        """
+        This renames the file path, and also changes the path in the database to point to the new filename, so that
+        the renamed file is not missing in the library.
+        """
+        try:
+            os.rename(src=src, dst=dest)
+            if print_changes:
+                print(f"renamed {src} to {dest}")
+        except FileExistsError:
+            # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
+            logging.error("File already exists with change", src)
+            return
+        self.modify_file(
+            [{"field": "pfil", "files": [src], "func": lambda *args: dest}],
+            print_changes=print_changes,
+        )
 
     class EntryDict(TypedDict):
         field: str
@@ -261,4 +291,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     db = DatabaseV2(args.file)
-    db.print_data()
+    db.rename_track_file(
+        "C:\\Users\\bvand\\Music\\DJ Tracks\\5udo - Oneee.mp3",
+        "C:\\Users\\bvand\\Music\\DJ Tracks\\5udo - One.mp3",
+    )

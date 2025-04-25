@@ -1,16 +1,37 @@
-__Includes:__
+## Includes:
 
-- Serato track file tag parsing and modification, including cue points, beatgrid, waveform (from https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained)
+- Serato track tag parsing and modification, including cue points, track color, beatgrid, waveform, autogain, etc.
 - Serato library database parsing and modification
-- Serato crate parsing and modification (from https://github.com/sharst/seratopy)
-- Dynamic beatgrid analysis (from [https://github.com/heyitsmass/audio](https://github.com/heyitsmass/audio/blob/master/audio/beat_grid.py)) that can be saved to a track file. Rekordbox has this but Serato doesn't. This analyzes a non-consistent BPM across a track, such as a track with live drums, and snaps a beatgrid marker to each beat. Have only tested this on a few tracks, and requires some review on the generated grid markers in Serato-- but it seems to work pretty great!
+- Serato crate parsing and modification
+- Dynamic beatgrid analysis that can be saved to a track's beatgrid.
+
+## Example uses:
+
+**Tracks:**
+- Change hot cue's text (i.e. change to all caps; change "c" to "CHORUS", etc.)
+- Set a hot cue's text based on its color (i.e. if RED, set to "EXIT")
+- Set a track's color (i.e. if has hot cues, change to BLUE)
+- Set a piece of metadata due to a track's color (i.e. if track is green, set "grouping" to "TAGGED") (this is useful since can't create smart crates by track color in Serato)
+- Analyze a track's Dynamic Beatgrid and save it to the beatgrid Serato tag.
+
+**Database:**
+- Rename a file while changing its location in the database as well, so that it doesn't go missing.
+- After changing a track's metadata, modify database values for a specific track so that you don't have to "Reload Id3 Tags" in Serato, the change appears in Serato instantly.
+
+**Crate:**
+- Read a crate's tracks
+- Remove a track from a crate
+- Add a track to a crate
+
+_**Code examples are below.**_
 
 # Installation
 
 ```cmd
 pip install serato-tools
 ```
-The following deps are optional, but __must be installed based on what features you want to use__:
+
+The following deps are optional, but **must be installed based on what features you want to use**:
 
 - For getting/modifying track metadata including tags, cue points, beagrid, and waveform, must install `pip install mutagen`
 - For viewing a track's waveform, must install `pip install pillow`
@@ -20,15 +41,31 @@ The following deps are optional, but __must be installed based on what features 
 
 ### Analyzing and setting a dynamic beatgrid
 
-_NOTE: This feature has only been tested on a couple of tracks. Reccomend reviewing the resulting beatgrid in Serato— some grid markers may require adjustment._
+ Rekordbox has Dynamic Beatgrid Analysis but Serato doesn't. This analyzes a non-consistent BPM across a track, such as a track with live drums, and snaps a beatgrid marker to each beat.
+
+_NOTE: This feature has only been tested on a couple of tracks. Recommend reviewing the resulting beatgrid in Serato— some grid markers may require adjustment. It seems to be working pretty great though!_
 
 ```cmd
 >>> analyze_beatgrid "Music/Dubstep/Mind Splitter - YAPPIN'.mp3"
 ```
 
+### Renaming a file and changing its location in the database
+
+This renames the file path, and also changes the path in the database to point to the new filename, so that the renamed file is not missing in the library.
+
+_NOTE: Recommended to make a backup of the database file elsewhere, before modifying via this package, in case an unforseen bug appears._
+
+```python
+from serato_tools.database_v2 import DatabaseV2
+
+db = DatabaseV2()
+db.rename_track_file(src="5udo - One - Original Mix.mp3", dest="5udo - One.mp3")
+
+```
+
 ### Modifying the database file
 
-_NOTE: Reccomended to make a backup of the database file elsewhere, before modifying via this package, in case an unforseen bug appears._
+_NOTE: Recommended to make a backup of the database file elsewhere, before modifying via this package, in case an unforseen bug appears._
 
 ```python
 from serato_tools.database_v2 import DatabaseV2
@@ -117,6 +154,8 @@ modify_file_entries(
     delete_tags_v1=True
     # Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
 )
+
+tagfile.save()
 ```
 
 ### Crate details and adding a track
@@ -178,6 +217,12 @@ Original writeup on Serato GEOB tag discoveries: [blog post](https://homepage.ru
 | [`Serato Overview`](docs/serato_overview.md) | Done              | Waveform data                                                                   | [`track_waveform.py`](src/track_waveform.py) |
 
 The different file/tag formats that Serato uses to store the information are documented in [`docs/fileformats.md`](docs/fileformats.md), a script to dump the tag data can be found at [`track_tagdump.py`](src/track_tagdump.py).
+
+# Sources
+
+- Serato track file tag parsing and modification from https://github.com/Holzhaus/serato-tags , which appears to be no longer maintained
+- Serato crate parsing and modification from https://github.com/sharst/seratopy
+- Dynamic beatgrid analysis from [https://github.com/heyitsmass/audio](https://github.com/heyitsmass/audio/blob/master/audio/beat_grid.py)
 
 # Contributing
 
