@@ -282,16 +282,84 @@ class DatabaseV2(SeratoBinDb):
                     f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}"
                 )
 
+    def find_missing(self, drive_letter: str | None = None):
+        raise NotImplementedError("TODO: debug. This currently ruins the database.")
+        if drive_letter is None:
+            drive_letter = os.path.splitdrive(self.filepath)[0]
+
+        track_filepath: str = ""
+        missing_checked = False
+
+        def take_input_and_change_db(current_filepath: str):
+            while True:
+                new_filepath = input("Enter new filepath, or s to skip:")
+                new_filepath = new_filepath.strip().strip('"').strip()
+                if new_filepath.lower() == "s":
+                    return
+                if os.path.exists(new_filepath):
+                    break
+                else:
+                    print(f"entered file does not exist: {new_filepath}")
+
+            self.modify(
+                [
+                    {
+                        "field": "pfil",
+                        "files": [current_filepath],
+                        "func": lambda *args: new_filepath,
+                    },
+                    {
+                        "field": "bmis",
+                        "files": [current_filepath],
+                        "func": lambda *args: False,
+                    },
+                ],
+                print_changes=True,
+            )
+            print("\n")
+
+        def field_actions(entry: DatabaseV2.EntryDict):
+            nonlocal track_filepath
+            nonlocal missing_checked
+            if entry["field"] == "pfil":
+                if not isinstance(entry["value"], str):
+                    raise DatabaseV2.DataTypeError(entry["value"], str, entry["field"])
+
+                value = os.path.join(drive_letter + "//", entry["value"])
+                track_filepath = value
+                missing_checked = False
+
+                if not os.path.exists(value):
+                    print(f"file does not exist: {value}")
+                    take_input_and_change_db(current_filepath=entry["value"])
+                    missing_checked = True
+
+            elif (not missing_checked) and (entry["field"] == "bmis"):
+                missing_checked = True
+                if entry["value"]:
+                    print(f"serato says is missing: {track_filepath}")
+                    take_input_and_change_db(current_filepath=track_filepath)
+
+        for entry in list(self.to_dicts()):
+            if isinstance(entry["value"], list):
+                for e in entry["value"]:
+                    field_actions(e)
+            else:
+                field_actions(entry)
+
+        self.write_file()
+
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs="?", default=DatabaseV2.DEFAULT_DATABASE_FILE)
+    parser.add_argument("--find_missing", action="store_true")
     args = parser.parse_args()
 
     db = DatabaseV2(args.file)
-    db.rename_track_file(
-        "C:\\Users\\bvand\\Music\\DJ Tracks\\5udo - Oneee.mp3",
-        "C:\\Users\\bvand\\Music\\DJ Tracks\\5udo - One.mp3",
-    )
+    if args.find_missing:
+        db.find_missing()
+    else:
+        db.print_data()
