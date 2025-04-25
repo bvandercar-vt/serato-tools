@@ -26,19 +26,26 @@ class DatabaseV2(SeratoBinDb):
 
         self.filepath: str = os.path.abspath(filepath)
 
-        self.data: Iterable[DatabaseV2.ParsedType] = self._parse(self.filepath)
+        self.data_bin: bytes
+        self.data: Iterable[DatabaseV2.ParsedType]
+
+        self.parse()
 
     def __str__(self):
         return str(list(self.to_dicts()))
 
-    def _parse(
-        self, fp: io.BytesIO | io.BufferedReader | str | None
-    ) -> Generator[ParsedType]:
+    def parse(self, fp: io.BytesIO | io.BufferedReader | str | None = None):
         if fp is None:
             fp = self.filepath
         if isinstance(fp, str):
             fp = open(fp, "rb")
 
+        self.data_bin = fp.read()
+        fp.seek(0)
+        self.data = self._parse_data_item(fp)
+
+    @staticmethod
+    def _parse_data_item(fp: io.BytesIO | io.BufferedReader) -> Generator[ParsedType]:
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
             field_ascii: bytes
@@ -52,7 +59,7 @@ class DatabaseV2(SeratoBinDb):
 
             value: bytes | str | tuple
             if type_id in ("o", "r"):  #  struct
-                value = tuple(self._parse(io.BytesIO(data)))
+                value = tuple(DatabaseV2._parse_data_item(io.BytesIO(data)))
             elif type_id in ("p", "t"):  # text
                 # value = (data[1:] + b"\00").decode("utf-16") # from imported code
                 value = data.decode("utf-16-be")
@@ -75,11 +82,19 @@ class DatabaseV2(SeratoBinDb):
         """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
         files: NotRequired[list[str]]
 
+    def modify(self, rules: list[ModifyRule], print_changes: bool = True):
+        output = io.BytesIO()
+        DatabaseV2._modify_data_item(output, list(self.data), rules, print_changes)
+        output.seek(0)
+        self.data_bin = output.getvalue()
+        output.seek(0)
+        self.data = self._parse_data_item(output)
+
     @staticmethod
-    def _modify_data(
+    def _modify_data_item(
         fp: io.BytesIO | io.BufferedWriter,
         item: Iterable[ParsedType],
-        rules: list[ModifyRule] = [],
+        rules: list[ModifyRule],
         print_changes: bool = True,
     ):
         DatabaseV2._check_rule_fields(rules)
@@ -103,7 +118,7 @@ class DatabaseV2(SeratoBinDb):
                 if not isinstance(value, tuple):
                     raise DatabaseV2.DataTypeError(value, tuple, field)
                 nested_buffer = io.BytesIO()
-                DatabaseV2._modify_data(nested_buffer, value, rules, print_changes)
+                DatabaseV2._modify_data_item(nested_buffer, value, rules, print_changes)
                 data = nested_buffer.getvalue()
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
@@ -180,14 +195,14 @@ class DatabaseV2(SeratoBinDb):
         out_file: str | None = None,
         print_changes: bool = True,
     ):
+        self.modify(rules, print_changes)
+        self.write_file(out_file)
+
+    def write_file(self, out_file: str | None = None):
         if out_file is None:
             out_file = self.filepath
-
-        output = io.BytesIO()
-        DatabaseV2._modify_data(output, list(self.data), rules, print_changes)
-
         with open(out_file, "wb") as write_file:
-            write_file.write(output.getvalue())
+            write_file.write(self.data_bin)
 
     class EntryDict(TypedDict):
         field: str
