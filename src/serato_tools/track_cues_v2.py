@@ -15,11 +15,16 @@ if __package__ is None:
 
 from mutagen.mp3 import MP3
 
-from serato_tools.utils.track_tags import (VERSION_FORMAT, check_version,
-                                           del_geob, get_geob, pack_version,
-                                           tag_geob)
+from serato_tools.utils.track_tags import (
+    VERSION_FORMAT,
+    check_version,
+    del_geob,
+    get_geob,
+    pack_version,
+    tag_geob,
+)
 
-from . import track_cues_v1
+from serato_tools import track_cues_v1
 
 GEOB_KEY = "Serato Markers2"
 
