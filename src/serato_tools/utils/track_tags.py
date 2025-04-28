@@ -25,12 +25,20 @@ def tag_geob(tagfile: _MutagenTagFile, geob_key: str, data: bytes):
 
 
 def del_tag(tagfile: _MutagenTagFile, key: str):
+    """
+    Returns True if was deleted, False if no change
+    """
     if key in tagfile:
         del tagfile[key]
+        return True
+    return False
 
 
 def del_geob(tagfile: _MutagenTagFile, geob_key: str):
-    del_tag(tagfile, f"GEOB:{geob_key}")
+    """
+    Returns True if was deleted, False if no change
+    """
+    return del_tag(tagfile, f"GEOB:{geob_key}")
 
 
 VERSION_FORMAT = "BB"
