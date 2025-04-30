@@ -8,7 +8,7 @@ import logging
 import os
 import struct
 import sys
-from typing import Callable, NotRequired, Tuple, TypedDict
+from typing import Callable, NotRequired, Tuple, TypedDict, Literal, List, Sequence
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -23,8 +23,8 @@ from serato_tools.utils.track_tags import (
     pack_version,
     tag_geob,
 )
-
 from serato_tools import track_cues_v1
+from serato_tools.utils import DataTypeError
 
 GEOB_KEY = "Serato Markers2"
 
@@ -370,12 +370,42 @@ ValueType = bytes | str
 class EntryModifyRule(TypedDict):
     field: str
     func: Callable[[ValueType], ValueType | None]
-    """ (filename: str, prev_value: ValueType) -> new_value: ValueType | None """
+    """ (prev_value: ValueType) -> new_value: ValueType | None """
+
+
+class CueIndexModifyRule(EntryModifyRule):
+    field: Literal["index"]
+    func: Callable[[int], int | None]
+    """ (prev_value: ValueType) -> new_value: ValueType | None """
+
+
+class ColorModifyRule(EntryModifyRule):
+    field: Literal["color"]
+    func: Callable[[bytes], bytes | None]
+    """ (prev_value: ValueType) -> new_value: ValueType | None """
+
+
+class CueNameModifyRule(EntryModifyRule):
+    field: Literal["name"]
+    func: Callable[[str], str | None]
+    """ (prev_value: ValueType) -> new_value: ValueType | None """
+
+
+CueRules = CueIndexModifyRule | ColorModifyRule | CueNameModifyRule | EntryModifyRule
+TrackColorRules = ColorModifyRule | EntryModifyRule
+
+
+class EntryModifyRules(TypedDict):
+    cues: NotRequired[List[CueRules]]
+    color: NotRequired[List[TrackColorRules]]
+
+
+FIELD_TO_TYPE_MAP = {"color": bytes, "index": int, "name": str}
 
 
 def modify_entry(
     entry: Entry,
-    rules: list[EntryModifyRule],
+    rules: Sequence[CueRules | TrackColorRules],
     print_changes: bool = True,
 ):
     """
@@ -397,32 +427,35 @@ def modify_entry(
 
         rule = next((r for r in rules if field == r["field"]), None)
         if rule:
-            maybe_new_val = rule["func"](value)
+            ExpectedType = FIELD_TO_TYPE_MAP.get(field, None)
+            if ExpectedType and not isinstance(value, ExpectedType):
+                raise DataTypeError(value, ExpectedType, field)
+
+            maybe_new_val: ValueType = rule["func"](value)  # type: ignore
             if maybe_new_val is not None and maybe_new_val != value:
                 value = maybe_new_val
+
+                if ExpectedType and not isinstance(value, ExpectedType):
+                    raise DataTypeError(value, ExpectedType, field)
+
                 change_made = True
                 if print_changes:
-                    if isinstance(entry, ColorEntry):
+                    if field == "color":
+                        get_color_name, color_log_str = (
+                            (get_track_color_key, "Track")
+                            if isinstance(entry, ColorEntry)
+                            else (get_cue_color_key, "Cue")
+                        )
                         color_name = (
-                            get_track_color_key(value)
-                            if isinstance(value, bytes)
-                            else None
+                            get_color_name(value) if isinstance(value, bytes) else None
                         )
                         print(
-                            f"Set Track Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
-                        )
-                    elif field == "color":
-                        color_name = (
-                            get_cue_color_key(value)
-                            if isinstance(value, bytes)
-                            else None
-                        )
-                        print(
-                            f"Set Cue Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
+                            f"Set {color_log_str} Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
                         )
                     else:
-                        print(f'Set cue entry field "{field}" to {str(value)}')
-
+                        print(
+                            f'Set {type(entry).__name__} field "{field}" to {str(value)}'
+                        )
         output += f"{field}: {value!r}\n"
     output += "\n"
 
@@ -431,11 +464,6 @@ def modify_entry(
 
     entry = parse_entries_file(output, assert_len_1=True)[0]
     return entry
-
-
-class EntryModifyRules(TypedDict):
-    cues: NotRequired[list[EntryModifyRule]]
-    color: NotRequired[list[EntryModifyRule]]
 
 
 def modify_file_entries(

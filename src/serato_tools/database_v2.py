@@ -11,6 +11,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.database import SeratoBinDb
+from serato_tools.utils import DataTypeError
 
 
 class DatabaseV2(SeratoBinDb):
@@ -117,26 +118,26 @@ class DatabaseV2(SeratoBinDb):
 
             if type_id in ("o", "r"):  #  struct
                 if not isinstance(value, tuple):
-                    raise DatabaseV2.DataTypeError(value, tuple, field)
+                    raise DataTypeError(value, tuple, field)
                 nested_buffer = io.BytesIO()
                 DatabaseV2._modify_data_item(nested_buffer, value, rules, print_changes)
                 data = nested_buffer.getvalue()
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
-                    raise DatabaseV2.DataTypeError(value, str, field)
+                    raise DataTypeError(value, str, field)
                 # if this ever fails, we did used to do this a different way, see old commits.
                 data = value.encode("utf-16-be")
             elif type_id == "b":  # single byte, is a boolean
                 if not isinstance(value, bool):
-                    raise DatabaseV2.DataTypeError(value, bool, field)
+                    raise DataTypeError(value, bool, field)
                 data = struct.pack("?", value)
             elif type_id == "s":  # signed int
                 if not isinstance(value, int):
-                    raise DatabaseV2.DataTypeError(value, int, field)
+                    raise DataTypeError(value, int, field)
                 data = struct.pack(">H", value)
             elif type_id == "u":  # unsigned int
                 if not isinstance(value, int):
-                    raise DatabaseV2.DataTypeError(value, int, field)
+                    raise DataTypeError(value, int, field)
                 data = struct.pack(">I", value)
             else:
                 raise ValueError(f"unexpected type for field: {field}")
@@ -163,7 +164,7 @@ class DatabaseV2(SeratoBinDb):
 
             if rule["field"] == "pfil":
                 if not isinstance(maybe_new_value, str):
-                    raise DatabaseV2.DataTypeError(maybe_new_value, str, rule["field"])
+                    raise DataTypeError(maybe_new_value, str, rule["field"])
                 if not os.path.exists(maybe_new_value):
                     raise FileNotFoundError(
                         f"set track location to {maybe_new_value}, but doesn't exist"
@@ -323,7 +324,7 @@ class DatabaseV2(SeratoBinDb):
             nonlocal missing_checked
             if entry["field"] == "pfil":
                 if not isinstance(entry["value"], str):
-                    raise DatabaseV2.DataTypeError(entry["value"], str, entry["field"])
+                    raise DataTypeError(entry["value"], str, entry["field"])
 
                 value = os.path.join(drive_letter + "//", entry["value"])
                 track_filepath = value

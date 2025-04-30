@@ -1,4 +1,4 @@
-from typing import Iterable, TypeVar, Union, cast
+from typing import Iterable, TypeVar, Union, cast, Any
 
 T = TypeVar("T")
 
@@ -9,3 +9,12 @@ def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:
     if isinstance(x, Iterable):
         return x
     return [x]
+
+
+class DataTypeError(Exception):
+    def __init__(
+        self, value: Any, expected_type: type | Iterable[type], field: str | None
+    ):
+        super().__init__(
+            f"value must be {' or '.join(e.__name__ for e in to_array(expected_type))} when field is {field} (type: {type(value).__name__}) (value: {str(value)})"
+        )

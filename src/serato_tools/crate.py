@@ -10,6 +10,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.database import SeratoBinDb
+from serato_tools.utils import DataTypeError
 
 
 class Crate(SeratoBinDb):
@@ -132,7 +133,7 @@ class Crate(SeratoBinDb):
     @staticmethod
     def _parse(data: bytes, field: str | None = None) -> ValueType | StructType:
         if not isinstance(data, bytes):
-            raise Crate.DataTypeError(data, bytes, field)
+            raise DataTypeError(data, bytes, field)
 
         type_id: str | None = Crate._get_type(field) if field else "o"
         if type_id == "o":  # struct
@@ -161,7 +162,7 @@ class Crate(SeratoBinDb):
         type_id: str | None = Crate._get_type(field) if field else "o"
         if type_id == "o":  # struct
             if not isinstance(data, list):
-                raise Crate.DataTypeError(data, list, field)
+                raise DataTypeError(data, list, field)
             ret_data = bytes()
             for dat in data:
                 field = dat[0]
@@ -171,16 +172,16 @@ class Crate(SeratoBinDb):
             return ret_data
         elif type_id in ("p", "t"):  # text
             if not isinstance(data, str):
-                raise Crate.DataTypeError(data, str, field)
+                raise DataTypeError(data, str, field)
             return data.encode("utf-16-be")
         elif type_id == "b":  # single byte, is a boolean
             # if isinstance(data, str) return data.encode("utf-8") # from imported code, but have never seen this happen.
             if not isinstance(data, bytes):
-                raise Crate.DataTypeError(data, bytes, field)
+                raise DataTypeError(data, bytes, field)
             return data
         elif type_id == "u":  #  unsigned
             if not isinstance(data, bytes):
-                raise Crate.DataTypeError(data, bytes, field)
+                raise DataTypeError(data, bytes, field)
             return struct.pack(">I", data)
         else:
             raise ValueError(f"unexpected type for field: {field}")

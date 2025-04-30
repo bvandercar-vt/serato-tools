@@ -45,14 +45,6 @@ class SeratoBinDb:
     FIELDNAME_KEYS = list(FIELDNAMES.keys())
     TRACK_FIELD = "otrk"
 
-    class DataTypeError(Exception):
-        def __init__(
-            self, value: Any, expected_type: type | Iterable[type], field: str | None
-        ):
-            super().__init__(
-                f"value must be {' or '.join(e.__name__ for e in to_array(expected_type))} when field is {field} (type: {type(value).__name__}) (value: {str(value)})"
-            )
-
     @staticmethod
     def get_field_name(field: str):
         return SeratoBinDb.FIELDNAMES.get(field, "Unknown Field")
