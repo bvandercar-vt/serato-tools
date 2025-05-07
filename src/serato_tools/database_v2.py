@@ -28,7 +28,7 @@ class DatabaseV2(SeratoBinDb):
 
         self.filepath: str = os.path.abspath(filepath)
 
-        self.data_bin: bytes
+        self.raw_data: bytes
         self.data: Iterable[DatabaseV2.ParsedType]
 
         self.parse()
@@ -42,7 +42,7 @@ class DatabaseV2(SeratoBinDb):
         if isinstance(fp, str):
             fp = open(fp, "rb")
 
-        self.data_bin = fp.read()
+        self.raw_data = fp.read()
         fp.seek(0)
         self.data = self._parse_data_item(fp)
 
@@ -88,7 +88,7 @@ class DatabaseV2(SeratoBinDb):
         output = io.BytesIO()
         DatabaseV2._modify_data_item(output, list(self.data), rules, print_changes)
         output.seek(0)
-        self.data_bin = output.getvalue()
+        self.raw_data = output.getvalue()
         output.seek(0)
         self.data = self._parse_data_item(output)
 
@@ -215,7 +215,7 @@ class DatabaseV2(SeratoBinDb):
         if out_file is None:
             out_file = self.filepath
         with open(out_file, "wb") as write_file:
-            write_file.write(self.data_bin)
+            write_file.write(self.raw_data)
 
     def rename_track_file(self, src: str, dest: str, print_changes: bool = True):
         """
