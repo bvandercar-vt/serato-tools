@@ -2,149 +2,177 @@
 # -*- coding: utf-8 -*-
 import collections
 import io
-import os
 import struct
+import os
 import sys
+from typing import cast
+
+from mutagen.mp3 import HeaderNotFoundError
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.track_tags import check_version, pack_version
-
-GEOB_KEY = "Serato BeatGrid"
-
-VERSION_BYTES = (0x01, 0x00)
-
-NonTerminalBeatgridMarker = collections.namedtuple(
-    "NonTerminalBeatgridMarker",
-    ("position", "beats_till_next_marker"),
-)
-TerminalBeatgridMarker = collections.namedtuple(
-    "TerminalBeatgridMarker",
-    ("position", "bpm"),
-)
-
-Footer = collections.namedtuple("Footer", ("unknown",))
-
-EntryList = list[NonTerminalBeatgridMarker | TerminalBeatgridMarker | Footer]
+from serato_tools.utils.track_tags import SeratoTag
 
 
-def _check_data(entries: EntryList):
-    nonterminal_markers: list[NonTerminalBeatgridMarker] = []
-    terminal_markers: list[TerminalBeatgridMarker] = []
-    footers: list[Footer] = []
+class TrackBeatgrid(SeratoTag):
+    GEOB_KEY = "Serato BeatGrid"
+    VERSION = (0x01, 0x00)
 
-    for entry in entries:
-        if isinstance(entry, NonTerminalBeatgridMarker):
-            nonterminal_markers.append(entry)
-        elif isinstance(entry, TerminalBeatgridMarker):
-            terminal_markers.append(entry)
-        elif isinstance(entry, Footer):
-            footers.append(entry)
-        else:
-            raise TypeError(f"unexpected value type {entry}")
+    NonTerminalBeatgridMarker = collections.namedtuple(
+        "NonTerminalBeatgridMarker",
+        ("position", "beats_till_next_marker"),
+    )
+    TerminalBeatgridMarker = collections.namedtuple(
+        "TerminalBeatgridMarker",
+        ("position", "bpm"),
+    )
 
-    assert (
-        len(terminal_markers) == 1
-    ), f"should only be 1 terminal marker, but #: {len(terminal_markers)}"
-    assert len(footers) == 1, f"should only be 1 footer, but #: {len(footers)}"
-    assert isinstance(entries[-1], Footer), "last item should be a footer"
-    assert isinstance(
-        entries[-2], TerminalBeatgridMarker
-    ), "last item should be a terminal marker"
-    return nonterminal_markers, terminal_markers, footers[0]
+    Footer = collections.namedtuple("Footer", ("unknown",))
 
+    EntryList = list[TerminalBeatgridMarker | NonTerminalBeatgridMarker | Footer]
 
-def parse(fp: io.BytesIO | io.BufferedReader):
-    check_version(fp.read(2), VERSION_BYTES)
+    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+        super().__init__(file_or_data)
 
-    num_markers = struct.unpack(">I", fp.read(4))[0]
-    for i in range(num_markers):
-        position = struct.unpack(">f", fp.read(4))[0]
-        data = fp.read(4)
-        if i == num_markers - 1:
-            bpm = struct.unpack(">f", data)[0]
-            yield TerminalBeatgridMarker(position, bpm)
-        else:
-            beats_till_next_marker = struct.unpack(">I", data)[0]
-            yield NonTerminalBeatgridMarker(position, beats_till_next_marker)
+        self.entries: TrackBeatgrid.EntryList | None = None
 
-    # TODO: What's the meaning of the footer byte?
-    yield Footer(struct.unpack("B", fp.read(1))[0])
-    assert fp.read() == b""
+        if self.raw_data is not None:
+            self.entries = list(self._parse(self.raw_data))
 
+    def __str__(self):
+        nonterminal_markers, terminal_markers, footer = self._check_and_split()
+        markers = nonterminal_markers + terminal_markers
+        return f"Beatgrid with {len(markers)} markers"
 
-def dump(data: EntryList, fp: io.BytesIO | io.BufferedWriter):
-    nonterminal_markers, terminal_markers, footer = _check_data(data)
-    markers = nonterminal_markers + terminal_markers
-    # Write version
-    fp.write(pack_version(VERSION_BYTES))
+    def _parse(self, data: bytes):
+        fp = io.BytesIO(data)
+        self._check_version(fp.read(2))
 
-    # Write markers
-    fp.write(struct.pack(">I", len(markers)))
-    for marker in markers:
-        fp.write(struct.pack(">f", marker.position))
-        if isinstance(marker, TerminalBeatgridMarker):
-            fp.write(struct.pack(">f", marker.bpm))
-        elif isinstance(marker, NonTerminalBeatgridMarker):
-            fp.write(struct.pack(">I", marker.beats_till_next_marker))
-        else:
-            raise TypeError(f"Unexpected marker type: {type(marker)}")
+        num_markers = struct.unpack(">I", fp.read(4))[0]
+        for i in range(num_markers):
+            position = struct.unpack(">f", fp.read(4))[0]
+            data = fp.read(4)
+            if i == num_markers - 1:
+                bpm = struct.unpack(">f", data)[0]
+                yield TrackBeatgrid.TerminalBeatgridMarker(position, bpm)
+            else:
+                beats_till_next_marker = struct.unpack(">I", data)[0]
+                yield TrackBeatgrid.NonTerminalBeatgridMarker(
+                    position, beats_till_next_marker
+                )
 
-    # Write footer
-    fp.write(struct.pack("B", footer.unknown))
+        # TODO: What's the meaning of the footer byte?
+        yield TrackBeatgrid.Footer(struct.unpack("B", fp.read(1))[0])
+        assert fp.read() == b""
 
+    def _check_and_split(self):
+        if not self.entries:
+            raise ValueError("no entries set")
 
-def analyze_and_write(file: str):
-    import mutagen._file
+        nonterminal_markers: list[TrackBeatgrid.NonTerminalBeatgridMarker] = []
+        terminal_markers: list[TrackBeatgrid.TerminalBeatgridMarker] = []
+        footers: list[TrackBeatgrid.Footer] = []
 
-    from serato_tools.utils.beatgrid_analyze import analyze_beatgrid
-    from serato_tools.utils.track_tags import tag_geob
+        for entry in self.entries:
+            if isinstance(entry, TrackBeatgrid.NonTerminalBeatgridMarker):
+                nonterminal_markers.append(entry)
+            elif isinstance(entry, TrackBeatgrid.TerminalBeatgridMarker):
+                terminal_markers.append(entry)
+            elif isinstance(entry, TrackBeatgrid.Footer):
+                footers.append(entry)
+            else:
+                raise TypeError(f"unexpected value type {entry}")
 
-    tagfile = mutagen._file.File(file)
-    assert tagfile, "file parse failed"
-    bpm = float(str(tagfile["TBPM"]))
+        assert (
+            len(terminal_markers) == 1
+        ), f"should only be 1 terminal marker, but #: {len(terminal_markers)}"
+        assert len(footers) == 1, f"should only be 1 footer, but #: {len(footers)}"
+        assert isinstance(
+            self.entries[-1], TrackBeatgrid.Footer
+        ), "last item should be a footer"
+        assert isinstance(
+            self.entries[-2], TrackBeatgrid.TerminalBeatgridMarker
+        ), "last item should be a terminal marker"
+        return nonterminal_markers, terminal_markers, footers[0]
 
-    print("Analyzing beat grid...")
-    beat_analyzer = analyze_beatgrid(file, bpm_helper=bpm)
+    def _dump(self):
+        nonterminal_markers, terminal_markers, footer = self._check_and_split()
+        markers = nonterminal_markers + terminal_markers
 
-    print("Writing tags...")
-    markers: EntryList = [
-        NonTerminalBeatgridMarker(position, 4)
-        for position in beat_analyzer.downbeats[:-1]
-    ] + [
-        TerminalBeatgridMarker(
-            beat_analyzer.downbeats[-1], bpm=bpm or beat_analyzer.bpm
-        ),
-        Footer(0),
-    ]
+        fp = io.BytesIO()
+        # Write version
+        fp.write(self._pack_version())
 
-    fpw = io.BytesIO()
-    dump(markers, fpw)
-    fpw.seek(0)
-    new_data = fpw.read()
+        # Write markers
+        fp.write(struct.pack(">I", len(markers)))
+        for marker in markers:
+            fp.write(struct.pack(">f", marker.position))
+            if isinstance(marker, TrackBeatgrid.TerminalBeatgridMarker):
+                fp.write(struct.pack(">f", marker.bpm))
+            elif isinstance(marker, TrackBeatgrid.NonTerminalBeatgridMarker):
+                fp.write(struct.pack(">I", marker.beats_till_next_marker))
+            else:
+                raise TypeError(f"Unexpected marker type: {type(marker)}")
 
-    tag_geob(tagfile, GEOB_KEY, new_data)
-    tagfile.save()
+        # Write footer
+        fp.write(struct.pack("B", footer.unknown))
+
+        # Set to self.raw_data
+        fp.seek(0)
+        self.raw_data = fp.getvalue()
+
+    def analyze_and_write(self):
+        if not self.tagfile:
+            raise Exception("No tagfile set")
+
+        from serato_tools.utils.beatgrid_analyze import analyze_beatgrid
+
+        bpm = float(str(self.tagfile["TBPM"]))
+        filename = cast(str, self.tagfile.filename)
+
+        print("Analyzing beat grid...")
+        analyzed_breatgrid = analyze_beatgrid(filename, bpm_helper=bpm)
+
+        print("Writing tags...")
+        entries: TrackBeatgrid.EntryList = [
+            TrackBeatgrid.NonTerminalBeatgridMarker(position, 4)
+            for position in analyzed_breatgrid.downbeats[:-1]
+        ] + [
+            TrackBeatgrid.TerminalBeatgridMarker(
+                analyzed_breatgrid.downbeats[-1], bpm=bpm or analyzed_breatgrid.bpm
+            ),
+            TrackBeatgrid.Footer(0),
+        ]
+
+        self.entries = entries
+
+        self._dump()
+        self.save()
 
 
 def main():
     import argparse
 
-    import mutagen._file
-
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
+    parser.add_argument("-e", "--analyze", action="store_true")
     args = parser.parse_args()
 
-    tagfile = mutagen._file.File(args.file)
-    if tagfile is not None:
-        analyze_and_write(args.file)
+    try:
+        tags = TrackBeatgrid(args.file)
+    except HeaderNotFoundError:
+        with open(args.file, mode="rb") as fp:
+            data = fp.read()
+        tags = TrackBeatgrid(data)
+
+    if args.analyze and tags.tagfile:
+        tags.analyze_and_write()
     else:
-        fp = open(args.file, mode="rb")
-        with fp:
-            for marker in parse(fp):
-                print(marker)
+        if not tags.entries:
+            raise ValueError("no entries")
+        for entry in tags.entries:
+            print(entry)
 
 
 if __name__ == "__main__":

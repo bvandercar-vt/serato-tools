@@ -70,8 +70,6 @@ _NOTE: Recommended to make a backup of the database file elsewhere, before modif
 ```python
 from serato_tools.database_v2 import DatabaseV2
 
-db = DatabaseV2()
-
 now = int(time.time())
 
 def modify_uadd(filename: str, prev_val: Any):
@@ -84,6 +82,7 @@ def modify_tadd(filename: str, prev_val: Any):
 def remove_group(filename: str, prev_val: Any):
     return " "
 
+db = DatabaseV2()
 # a list of field keys can be found in serato_tools.database_v2
 db.modify_file(
     rules=[
@@ -97,27 +96,24 @@ db.modify_file(
 ### Setting track color
 
 ```python
-from serato_tools.track_cues_v2 import TRACK_COLORS, set_track_color
+from serato_tools.track_cues_v2 import TrackCuesV2, TRACK_COLORS
 
-set_track_color('/Users/Username/Music/Dubstep/Raaket - ILL.mp3',
+tags = TrackCuesV2(file)
+tags.set_track_color('/Users/Username/Music/Dubstep/Raaket - ILL.mp3',
     TRACK_COLORS["purple"],
     print_changes=True,
     delete_tags_v1=True
     # Must delete delete_tags_v1 in order for track color change to appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
 )
-
+tags.save()
 ```
 
 ### Modifying track metadata / hot cues
 
 ```python
-from mutagen.mp3 import MP3
 from mutagen.id3._frames import TIT1
-
-from serato_tools.track_cues_v2 import CUE_COLORS, TRACK_COLORS, ValueType, modify_file_entries
+from serato_tools.track_cues_v2 import TrackCuesV2, CUE_COLORS, TRACK_COLORS
 from serato_tools.utils.track_tags import del_geob
-
-tagfile = MP3(file)
 
 def red_fix(prev_val: ValueType):
     if prev_val in [CUE_COLORS["pinkred"], CUE_COLORS["magenta"]]:
@@ -139,8 +135,8 @@ def set_grouping_based_on_track_color(prev_val: ValueType):
     elif prev_val in [ TRACK_COLORS["white"], TRACK_COLORS["grey"], TRACK_COLORS["black"]]:
         tagfile.tags.setall("TIT1", [TIT1(text="UNTAGGED")])
 
-modify_file_entries(
-    tagfile,
+tags = TrackCuesV2(file)
+tags.modify_entries(
     {
         "cues": [
             {"field": "color", "func": red_fix},
@@ -154,8 +150,7 @@ modify_file_entries(
     delete_tags_v1=True
     # Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
 )
-
-tagfile.save()
+tags.save()
 ```
 
 ### Crate details and adding a track

@@ -4,320 +4,332 @@ import ast
 import base64
 import configparser
 import io
-import logging
 import os
 import struct
 import sys
-from typing import Callable, NotRequired, Tuple, TypedDict, Literal, List, Sequence
+from typing import (
+    Callable,
+    NotRequired,
+    Tuple,
+    TypedDict,
+    Literal,
+    List,
+    Sequence,
+    Union,
+)
+
+from mutagen.mp3 import HeaderNotFoundError
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from mutagen.mp3 import MP3
-
-from serato_tools.utils.track_tags import (
-    VERSION_FORMAT,
-    check_version,
-    del_geob,
-    get_geob,
-    pack_version,
-    tag_geob,
-)
-from serato_tools import track_cues_v1
+from serato_tools.track_cues_v1 import TrackCuesV1
 from serato_tools.utils import DataTypeError
-
-GEOB_KEY = "Serato Markers2"
-
-VERSION_BYTES = (0x01, 0x01)
-
-CUE_COLORS = {
-    k: bytes.fromhex(v)
-    for k, v in {
-        "red": "CC0000",  # Hot Cue 1
-        "orange": "CC4400",
-        "yelloworange": "CC8800",  # Hot Cue 2
-        "yellow": "CCCC00",  # Hot Cue 4
-        "limegreen1": "88CC00",
-        "darkgreen": "44CC00",
-        "limegreen2": "00CC00",  # Hot Cue 5
-        "limegreen3": "00CC44",
-        "seafoam": "00CC88",
-        "cyan": "00CCCC",  # Hot Cue 7
-        "lightblue": "0088CC",
-        "blue1": "0044CC",
-        "blue2": "0000CC",  # Hot Cue 3
-        "purple1": "4400CC",
-        "purple2": "8800CC",  # Hot Cue 8
-        "pink": "CC00CC",  # Hot Cue 6
-        "magenta": "CC0088",
-        "pinkred": "CC0044",
-    }.items()
-}
-
-TRACK_COLORS = {
-    k: bytes.fromhex(v)
-    for k, v in {
-        "pink": "FF99FF",
-        "darkpink": "FF99DD",
-        "pinkred": "FF99BB",
-        "red": "FF9999",
-        "orange": "FFBB99",
-        "yelloworange": "FFDD99",
-        "yellow": "FFFF99",
-        "limegreen1": "DDFF99",
-        "limegreen2": "BBFF99",
-        "limegreen3": "99FF99",
-        "limegreen4": "99FFBB",
-        "seafoam": "99FFDD",
-        "cyan": "99FFFF",
-        "lightblue": "99DDFF",
-        "blue1": "99BBFF",
-        "blue2": "9999FF",
-        "purple": "BB99FF",
-        "magenta": "DD99FF",
-        "white": "FFFFFF",
-        "grey": "BBBBBB",
-        "black": "999999",
-    }.items()
-}
+from serato_tools.utils.track_tags import SeratoTag
 
 
-def get_cue_color_key(value: bytes) -> str | None:
-    for key, v in CUE_COLORS.items():
-        if v == value:
-            return key
-    return None
+class TrackCuesV2(SeratoTag):
+    GEOB_KEY = "Serato Markers2"
+    VERSION = (0x01, 0x01)
 
+    CUE_COLORS = {
+        k: bytes.fromhex(v)
+        for k, v in {
+            "red": "CC0000",  # Hot Cue 1
+            "orange": "CC4400",
+            "yelloworange": "CC8800",  # Hot Cue 2
+            "yellow": "CCCC00",  # Hot Cue 4
+            "limegreen1": "88CC00",
+            "darkgreen": "44CC00",
+            "limegreen2": "00CC00",  # Hot Cue 5
+            "limegreen3": "00CC44",
+            "seafoam": "00CC88",
+            "cyan": "00CCCC",  # Hot Cue 7
+            "lightblue": "0088CC",
+            "blue1": "0044CC",
+            "blue2": "0000CC",  # Hot Cue 3
+            "purple1": "4400CC",
+            "purple2": "8800CC",  # Hot Cue 8
+            "pink": "CC00CC",  # Hot Cue 6
+            "magenta": "CC0088",
+            "pinkred": "CC0044",
+        }.items()
+    }
 
-def get_track_color_key(value: bytes) -> str | None:
-    for key, v in TRACK_COLORS.items():
-        if v == value:
-            return key
-    return None
+    TRACK_COLORS = {
+        k: bytes.fromhex(v)
+        for k, v in {
+            "pink": "FF99FF",
+            "darkpink": "FF99DD",
+            "pinkred": "FF99BB",
+            "red": "FF9999",
+            "orange": "FFBB99",
+            "yelloworange": "FFDD99",
+            "yellow": "FFFF99",
+            "limegreen1": "DDFF99",
+            "limegreen2": "BBFF99",
+            "limegreen3": "99FF99",
+            "limegreen4": "99FFBB",
+            "seafoam": "99FFDD",
+            "cyan": "99FFFF",
+            "lightblue": "99DDFF",
+            "blue1": "99BBFF",
+            "blue2": "9999FF",
+            "purple": "BB99FF",
+            "magenta": "DD99FF",
+            "white": "FFFFFF",
+            "grey": "BBBBBB",
+            "black": "999999",
+        }.items()
+    }
 
+    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+        super().__init__(file_or_data)
 
-def readbytes(fp: io.BytesIO):
-    for x in iter(lambda: fp.read(1), b""):
-        if x == b"\00":
-            break
-        yield x
+        self.entries: list[TrackCuesV2.Entry] = []
+        if self.raw_data is not None:
+            self.entries = list(self._parse(self.raw_data))
+        self.modified: bool = False
 
+    @staticmethod
+    def _get_cue_color_key(value: bytes) -> str | None:
+        for key, v in TrackCuesV2.CUE_COLORS.items():
+            if v == value:
+                return key
+        return None
 
-class Entry(object):
-    NAME: str | None
-    FIELDS: Tuple[str, ...]
-    data: bytes
+    @staticmethod
+    def _get_track_color_key(value: bytes) -> str | None:
+        for key, v in TrackCuesV2.TRACK_COLORS.items():
+            if v == value:
+                return key
+        return None
 
-    def __init__(self, *args):
-        assert len(args) == len(self.FIELDS)
-        for field, value in zip(self.FIELDS, args):
-            setattr(self, field, value)
-
-    def __repr__(self):
-        return "{name}({data})".format(
-            name=self.__class__.__name__,
-            data=", ".join(
-                "{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS
+    @staticmethod
+    def _get_entry_class(entry_name: str):
+        return next(
+            (
+                cls
+                for cls in (
+                    TrackCuesV2.BpmLockEntry,
+                    TrackCuesV2.ColorEntry,
+                    TrackCuesV2.CueEntry,
+                    TrackCuesV2.LoopEntry,
+                    TrackCuesV2.FlipEntry,
+                )
+                if cls.NAME == entry_name
             ),
+            TrackCuesV2.UnknownEntry,
         )
 
-    @classmethod
-    def load(cls, data: bytes):
-        return cls(data)
+    class Entry(object):
+        NAME: str | None
+        FIELDS: Tuple[str, ...]
+        data: bytes
 
-    def dump(self) -> bytes:
-        return self.data
+        def __init__(self, *args):
+            assert len(args) == len(self.FIELDS)
+            for field, value in zip(self.FIELDS, args):
+                setattr(self, field, value)
 
-
-class UnknownEntry(Entry):
-    NAME = None
-    FIELDS = ("data",)
-
-    @classmethod
-    def load(cls, data: bytes):
-        return cls(data)
-
-    def dump(self):
-        return self.data
-
-
-class BpmLockEntry(Entry):
-    NAME = "BPMLOCK"
-    FIELDS = ("enabled",)
-    FORMAT = "?"
-
-    @classmethod
-    def load(cls, data: bytes):
-        return cls(*struct.unpack(cls.FORMAT, data))
-
-    def dump(self):
-        return struct.pack(self.FORMAT, *(getattr(self, f) for f in self.FIELDS))
-
-
-class ColorEntry(Entry):
-    NAME = "COLOR"
-    FORMAT = "c3s"
-    FIELDS = (
-        "field1",
-        "color",
-    )
-
-    @classmethod
-    def load(cls, data: bytes):
-        return cls(*struct.unpack(cls.FORMAT, data))
-
-    def dump(self):
-        return struct.pack(self.FORMAT, *(getattr(self, f) for f in self.FIELDS))
-
-
-class CueEntry(Entry):
-    NAME = "CUE"
-    FORMAT = ">cBIc3s2s"
-    FIELDS = (
-        "field1",
-        "index",
-        "position",
-        "field4",
-        "color",
-        "field6",
-        "name",
-    )
-    name: str
-
-    @classmethod
-    def load(cls, data: bytes):
-        info_size = struct.calcsize(cls.FORMAT)
-        info = struct.unpack(cls.FORMAT, data[:info_size])
-        name, nullbyte, other = data[info_size:].partition(b"\x00")
-        assert nullbyte == b"\x00"
-        assert other == b""
-        return cls(*info, name.decode("utf-8"))
-
-    def dump(self):
-        struct_fields = self.FIELDS[:-1]
-        return b"".join(
-            (
-                struct.pack(self.FORMAT, *(getattr(self, f) for f in struct_fields)),
-                self.name.encode("utf-8"),
-                b"\x00",
+        def __repr__(self):
+            return "{name}({data})".format(
+                name=self.__class__.__name__,
+                data=", ".join(
+                    "{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS
+                ),
             )
+
+        @classmethod
+        def load(cls, data: bytes):
+            return cls(data)
+
+        def dump(self) -> bytes:
+            return self.data
+
+    class UnknownEntry(Entry):
+        NAME = None
+        FIELDS = ("data",)
+
+        @classmethod
+        def load(cls, data: bytes):
+            return cls(data)
+
+        def dump(self):
+            return self.data
+
+    class BpmLockEntry(Entry):
+        NAME = "BPMLOCK"
+        FIELDS = ("enabled",)
+        FORMAT = "?"
+
+        @classmethod
+        def load(cls, data: bytes):
+            return cls(*struct.unpack(cls.FORMAT, data))
+
+        def dump(self):
+            return struct.pack(self.FORMAT, *(getattr(self, f) for f in self.FIELDS))
+
+    class ColorEntry(Entry):
+        NAME = "COLOR"
+        FORMAT = "c3s"
+        FIELDS = (
+            "field1",
+            "color",
         )
 
+        @classmethod
+        def load(cls, data: bytes):
+            return cls(*struct.unpack(cls.FORMAT, data))
 
-class LoopEntry(Entry):
-    NAME = "LOOP"
-    FORMAT = ">cBII4s4sB?"
-    FIELDS = (
-        "field1",
-        "index",
-        "startposition",
-        "endposition",
-        "field5",
-        "field6",
-        "color",
-        "locked",
-        "name",
-    )
-    name: str
+        def dump(self):
+            return struct.pack(self.FORMAT, *(getattr(self, f) for f in self.FIELDS))
 
-    @classmethod
-    def load(cls, data: bytes):
-        info_size = struct.calcsize(cls.FORMAT)
-        info = struct.unpack(cls.FORMAT, data[:info_size])
-        name, nullbyte, other = data[info_size:].partition(b"\x00")
-        assert nullbyte == b"\x00"
-        assert other == b""
-        return cls(*info, name.decode("utf-8"))
+    class CueEntry(Entry):
+        NAME = "CUE"
+        FORMAT = ">cBIc3s2s"
+        FIELDS = (
+            "field1",
+            "index",
+            "position",
+            "field4",
+            "color",
+            "field6",
+            "name",
+        )
+        name: str
 
-    def dump(self):
-        struct_fields = self.FIELDS[:-1]
-        return b"".join(
-            (
-                struct.pack(self.FORMAT, *(getattr(self, f) for f in struct_fields)),
-                self.name.encode("utf-8"),
-                b"\x00",
+        @classmethod
+        def load(cls, data: bytes):
+            info_size = struct.calcsize(cls.FORMAT)
+            info = struct.unpack(cls.FORMAT, data[:info_size])
+            name, nullbyte, other = data[info_size:].partition(b"\x00")
+            assert nullbyte == b"\x00"
+            assert other == b""
+            return cls(*info, name.decode("utf-8"))
+
+        def dump(self):
+            struct_fields = self.FIELDS[:-1]
+            return b"".join(
+                (
+                    struct.pack(
+                        self.FORMAT, *(getattr(self, f) for f in struct_fields)
+                    ),
+                    self.name.encode("utf-8"),
+                    b"\x00",
+                )
             )
+
+    class LoopEntry(Entry):
+        NAME = "LOOP"
+        FORMAT = ">cBII4s4sB?"
+        FIELDS = (
+            "field1",
+            "index",
+            "startposition",
+            "endposition",
+            "field5",
+            "field6",
+            "color",
+            "locked",
+            "name",
+        )
+        name: str
+
+        @classmethod
+        def load(cls, data: bytes):
+            info_size = struct.calcsize(cls.FORMAT)
+            info = struct.unpack(cls.FORMAT, data[:info_size])
+            name, nullbyte, other = data[info_size:].partition(b"\x00")
+            assert nullbyte == b"\x00"
+            assert other == b""
+            return cls(*info, name.decode("utf-8"))
+
+        def dump(self):
+            struct_fields = self.FIELDS[:-1]
+            return b"".join(
+                (
+                    struct.pack(
+                        self.FORMAT, *(getattr(self, f) for f in struct_fields)
+                    ),
+                    self.name.encode("utf-8"),
+                    b"\x00",
+                )
+            )
+
+    class FlipEntry(Entry):
+        NAME = "FLIP"
+        FORMAT1 = "cB?"
+        FORMAT2 = ">BI"
+        FORMAT3 = ">BI16s"
+        FIELDS = (
+            "field1",
+            "index",
+            "enabled",
+            "name",
+            "loop",
+            "num_actions",
+            "actions",
         )
 
+        @classmethod
+        def load(cls, data):
+            info1_size = struct.calcsize(cls.FORMAT1)
+            info1 = struct.unpack(cls.FORMAT1, data[:info1_size])
+            name, nullbyte, other = data[info1_size:].partition(b"\x00")
+            assert nullbyte == b"\x00"
 
-class FlipEntry(Entry):
-    NAME = "FLIP"
-    FORMAT1 = "cB?"
-    FORMAT2 = ">BI"
-    FORMAT3 = ">BI16s"
-    FIELDS = ("field1", "index", "enabled", "name", "loop", "num_actions", "actions")
+            info2_size = struct.calcsize(cls.FORMAT2)
+            loop, num_actions = struct.unpack(cls.FORMAT2, other[:info2_size])
+            action_data = other[info2_size:]
+            actions = []
+            for i in range(num_actions):
+                type_id, size = struct.unpack(cls.FORMAT2, action_data[:info2_size])
+                action_data = action_data[info2_size:]
+                if type_id == 0:
+                    payload = struct.unpack(">dd", action_data[:size])
+                    actions.append(("JUMP", *payload))
+                elif type_id == 1:
+                    payload = struct.unpack(">ddd", action_data[:size])
+                    actions.append(("CENSOR", *payload))
+                action_data = action_data[size:]
+            assert action_data == b""
 
-    @classmethod
-    def load(cls, data):
-        info1_size = struct.calcsize(cls.FORMAT1)
-        info1 = struct.unpack(cls.FORMAT1, data[:info1_size])
-        name, nullbyte, other = data[info1_size:].partition(b"\x00")
-        assert nullbyte == b"\x00"
+            return cls(*info1, name.decode("utf-8"), loop, num_actions, actions)
 
-        info2_size = struct.calcsize(cls.FORMAT2)
-        loop, num_actions = struct.unpack(cls.FORMAT2, other[:info2_size])
-        action_data = other[info2_size:]
-        actions = []
-        for i in range(num_actions):
-            type_id, size = struct.unpack(cls.FORMAT2, action_data[:info2_size])
-            action_data = action_data[info2_size:]
-            if type_id == 0:
-                payload = struct.unpack(">dd", action_data[:size])
-                actions.append(("JUMP", *payload))
-            elif type_id == 1:
-                payload = struct.unpack(">ddd", action_data[:size])
-                actions.append(("CENSOR", *payload))
-            action_data = action_data[size:]
-        assert action_data == b""
+        def dump(self):
+            raise NotImplementedError("FLIP entry dumps are not implemented!")
 
-        return cls(*info1, name.decode("utf-8"), loop, num_actions, actions)
+    def _parse(self, data: bytes):
+        self._check_version(data[: self.VERSION_LEN])
 
-    def dump(self):
-        raise NotImplementedError("FLIP entry dumps are not implemented!")
+        try:
+            b64data = data[self.VERSION_LEN : data.index(b"\x00", self.VERSION_LEN)]
+        except:
+            b64data = data[self.VERSION_LEN :]
+        b64data = b64data.replace(b"\n", b"")
+        padding = b"A==" if len(b64data) % 4 == 1 else (b"=" * (-len(b64data) % 4))
+        payload = base64.b64decode(b64data + padding)
+        fp = io.BytesIO(payload)
+        self._check_version(fp.read(2))
+        while True:
+            entry_name = b"".join(SeratoTag._readbytes(fp)).decode("utf-8")
+            if not entry_name:
+                break
+            entry_len = struct.unpack(">I", fp.read(4))[0]
+            assert entry_len > 0
 
+            entry_class = TrackCuesV2._get_entry_class(entry_name)
+            yield entry_class.load(fp.read(entry_len))
 
-def get_entry_class(entry_name: str):
-    for entry_class in (BpmLockEntry, ColorEntry, CueEntry, LoopEntry, FlipEntry):
-        if entry_class.NAME == entry_name:
-            return entry_class
-    return UnknownEntry
+    def _dump(self):
+        version = self._pack_version()
 
-
-def parse(data: bytes):
-    versionlen = struct.calcsize(VERSION_FORMAT)
-    check_version(data[:versionlen], VERSION_BYTES)
-
-    try:
-        b64data = data[versionlen : data.index(b"\x00", versionlen)]
-    except:
-        b64data = data[versionlen:]
-    b64data = b64data.replace(b"\n", b"")
-    padding = b"A==" if len(b64data) % 4 == 1 else (b"=" * (-len(b64data) % 4))
-    payload = base64.b64decode(b64data + padding)
-    fp = io.BytesIO(payload)
-    check_version(fp.read(2), VERSION_BYTES)
-    while True:
-        entry_name = b"".join(readbytes(fp)).decode("utf-8")
-        if not entry_name:
-            break
-        entry_len = struct.unpack(">I", fp.read(4))[0]
-        assert entry_len > 0
-
-        entry_class = get_entry_class(entry_name)
-        yield entry_class.load(fp.read(entry_len))
-
-
-def dump(entries: Sequence[Entry]):
-    version = pack_version(VERSION_BYTES)
-
-    contents = [version]
-    for entry in entries:
-        if entry.NAME is None:
-            contents.append(entry.dump())
-        else:
+        contents: list[bytes] = [version]
+        for entry in self.entries:
             data = entry.dump()
-            contents.append(
-                b"".join(
+            if entry.NAME is not None:
+                data = b"".join(
                     (
                         entry.NAME.encode("utf-8"),
                         b"\x00",
@@ -325,235 +337,217 @@ def dump(entries: Sequence[Entry]):
                         data,
                     )
                 )
-            )
+            contents.append(data)
 
-    payload = b"".join(contents)
-    payload_base64 = bytearray(base64.b64encode(payload).replace(b"=", b"A"))
+        payload = b"".join(contents)
+        payload_base64 = bytearray(base64.b64encode(payload).replace(b"=", b"A"))
 
-    i = 72
-    while i < len(payload_base64):
-        payload_base64.insert(i, 0x0A)
-        i += 73
+        i = 72
+        while i < len(payload_base64):
+            payload_base64.insert(i, 0x0A)
+            i += 73
 
-    data = version
-    data += payload_base64
-    return data.ljust(470, b"\x00")
+        data = version
+        data += payload_base64
 
+        new_raw_data = data.ljust(470, b"\x00")
 
-def parse_entries_file(contents: str, assert_len_1: bool):
-    cp = configparser.ConfigParser()
-    cp.read_string(contents)
-    sections = tuple(sorted(cp.sections()))
-    if assert_len_1:
-        assert len(sections) == 1
+        self.modified = new_raw_data != self.raw_data
+        self.raw_data = new_raw_data
 
-    results: list[Entry] = []
-    for section in sections:
-        l, s, r = section.partition(": ")
-        entry_class = get_entry_class(r if s else l)
+    @staticmethod
+    def parse_entries_file(contents: str, assert_len_1: bool):
+        cp = configparser.ConfigParser()
+        cp.read_string(contents)
+        sections: Sequence[str] = tuple(sorted(cp.sections()))
+        if assert_len_1:
+            assert len(sections) == 1
 
-        e = entry_class(
-            *(
-                ast.literal_eval(
-                    cp.get(section, field),
+        results: list[TrackCuesV2.Entry] = []
+        for section in sections:
+            l, s, r = section.partition(": ")
+            entry_class = TrackCuesV2._get_entry_class(r if s else l)
+
+            e = entry_class(
+                *(
+                    ast.literal_eval(
+                        cp.get(section, field),
+                    )
+                    for field in entry_class.FIELDS
                 )
-                for field in entry_class.FIELDS
             )
-        )
-        results.append(entry_class.load(e.dump()))
-    return results
+            results.append(entry_class.load(e.dump()))
+        return results
 
+    ValueType = bytes | str | int
 
-ValueType = bytes | str
+    class EntryModifyRule(TypedDict):
+        field: str
+        func: Callable[["TrackCuesV2.ValueType"], Union["TrackCuesV2.ValueType", None]]
+        """ (prev_value: ValueType) -> new_value: ValueType | None """
 
+    class CueIndexModifyRule(EntryModifyRule):
+        field: Literal["index"]
+        func: Callable[[int], int | None]
+        """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-class EntryModifyRule(TypedDict):
-    field: str
-    func: Callable[[ValueType], ValueType | None]
-    """ (prev_value: ValueType) -> new_value: ValueType | None """
+    class ColorModifyRule(EntryModifyRule):
+        field: Literal["color"]
+        func: Callable[[bytes], bytes | None]
+        """ (prev_value: ValueType) -> new_value: ValueType | None """
 
+    class CueNameModifyRule(EntryModifyRule):
+        field: Literal["name"]
+        func: Callable[[str], str | None]
+        """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-class CueIndexModifyRule(EntryModifyRule):
-    field: Literal["index"]
-    func: Callable[[int], int | None]
-    """ (prev_value: ValueType) -> new_value: ValueType | None """
+    CueRules = (
+        CueIndexModifyRule | ColorModifyRule | CueNameModifyRule | EntryModifyRule
+    )
+    TrackColorRules = ColorModifyRule | EntryModifyRule
 
+    class EntryModifyRules(TypedDict):
+        cues: NotRequired[List["TrackCuesV2.CueRules"]]
+        color: NotRequired[List["TrackCuesV2.TrackColorRules"]]
 
-class ColorModifyRule(EntryModifyRule):
-    field: Literal["color"]
-    func: Callable[[bytes], bytes | None]
-    """ (prev_value: ValueType) -> new_value: ValueType | None """
+    FIELD_TO_TYPE_MAP = {"color": bytes, "index": int, "name": str}
 
+    @staticmethod
+    def _modify_entry(
+        entry: Entry,
+        rules: Sequence[CueRules | TrackColorRules],
+        print_changes: bool = True,
+    ):
+        """
+        Returns:
+            entry: entry if was modified. If was not changed, returns None.
+        """
 
-class CueNameModifyRule(EntryModifyRule):
-    field: Literal["name"]
-    func: Callable[[str], str | None]
-    """ (prev_value: ValueType) -> new_value: ValueType | None """
+        all_field_names = [rule["field"] for rule in rules]
+        assert len(rules) == len(
+            list(set(all_field_names))
+        ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
+        # TODO: ensure field is valid else throw error!
 
+        change_made = False
 
-CueRules = CueIndexModifyRule | ColorModifyRule | CueNameModifyRule | EntryModifyRule
-TrackColorRules = ColorModifyRule | EntryModifyRule
+        output = f"[{entry.NAME}]\n"
+        for field in entry.FIELDS:
+            value: TrackCuesV2.ValueType = getattr(entry, field)
 
-
-class EntryModifyRules(TypedDict):
-    cues: NotRequired[List[CueRules]]
-    color: NotRequired[List[TrackColorRules]]
-
-
-FIELD_TO_TYPE_MAP = {"color": bytes, "index": int, "name": str}
-
-
-def modify_entry(
-    entry: Entry,
-    rules: Sequence[CueRules | TrackColorRules],
-    print_changes: bool = True,
-):
-    """
-    Returns:
-        entry: entry if was modified. If was not changed, returns None.
-    """
-
-    all_field_names = [rule["field"] for rule in rules]
-    assert len(rules) == len(
-        list(set(all_field_names))
-    ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
-    # TODO: ensure field is valid else throw error!
-
-    change_made = False
-
-    output = f"[{entry.NAME}]\n"
-    for field in entry.FIELDS:
-        value: ValueType = getattr(entry, field)
-
-        rule = next((r for r in rules if field == r["field"]), None)
-        if rule:
-            ExpectedType = FIELD_TO_TYPE_MAP.get(field, None)
-            if ExpectedType and not isinstance(value, ExpectedType):
-                raise DataTypeError(value, ExpectedType, field)
-
-            maybe_new_val: ValueType = rule["func"](value)  # type: ignore
-            if maybe_new_val is not None and maybe_new_val != value:
-                value = maybe_new_val
-
+            rule = next((r for r in rules if field == r["field"]), None)
+            if rule:
+                ExpectedType: type | None = TrackCuesV2.FIELD_TO_TYPE_MAP.get(
+                    field, None
+                )
                 if ExpectedType and not isinstance(value, ExpectedType):
                     raise DataTypeError(value, ExpectedType, field)
 
+                maybe_new_val: ValueType = rule["func"](value)  # type: ignore
+                if maybe_new_val is not None and maybe_new_val != value:
+                    value = maybe_new_val
+
+                    if ExpectedType and not isinstance(value, ExpectedType):
+                        raise DataTypeError(value, ExpectedType, field)
+
+                    change_made = True
+                    if print_changes:
+                        if field == "color":
+                            get_color_name, color_log_str = (
+                                (TrackCuesV2._get_track_color_key, "Track")
+                                if isinstance(entry, TrackCuesV2.ColorEntry)
+                                else (TrackCuesV2._get_cue_color_key, "Cue")
+                            )
+                            color_name = (
+                                get_color_name(value)
+                                if isinstance(value, bytes)
+                                else None
+                            )
+                            print(
+                                f"Set {color_log_str} Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
+                            )
+                        else:
+                            print(
+                                f'Set {type(entry).__name__} field "{field}" to {str(value)}'
+                            )
+            output += f"{field}: {value!r}\n"
+        output += "\n"
+
+        if not change_made:
+            return None
+
+        entry = TrackCuesV2.parse_entries_file(output, assert_len_1=True)[0]
+        return entry
+
+    def modify_entries(
+        self,
+        rules: EntryModifyRules,
+        print_changes: bool = True,
+        delete_tags_v1: bool = True,
+    ):
+        """
+        Args:
+            delete_tags_v1: Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
+        """
+        if delete_tags_v1 and self.tagfile:
+            super(SeratoTag, self)._del_geob(TrackCuesV1.GEOB_KEY)
+
+        new_entries = []
+        change_made = False
+        for entry in self.entries:
+            maybe_new_entry = None
+            if "cues" in rules and isinstance(entry, TrackCuesV2.CueEntry):
+                maybe_new_entry = TrackCuesV2._modify_entry(
+                    entry, rules["cues"], print_changes
+                )
+            elif "color" in rules and isinstance(entry, TrackCuesV2.ColorEntry):
+                maybe_new_entry = TrackCuesV2._modify_entry(
+                    entry, rules["color"], print_changes
+                )
+            if maybe_new_entry is not None:
+                entry = maybe_new_entry
                 change_made = True
-                if print_changes:
-                    if field == "color":
-                        get_color_name, color_log_str = (
-                            (get_track_color_key, "Track")
-                            if isinstance(entry, ColorEntry)
-                            else (get_cue_color_key, "Cue")
-                        )
-                        color_name = (
-                            get_color_name(value) if isinstance(value, bytes) else None
-                        )
-                        print(
-                            f"Set {color_log_str} Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
-                        )
-                    else:
-                        print(
-                            f'Set {type(entry).__name__} field "{field}" to {str(value)}'
-                        )
-        output += f"{field}: {value!r}\n"
-    output += "\n"
+            new_entries.append(entry)
 
-    if not change_made:
-        return None
+        if not change_made:
+            return
 
-    entry = parse_entries_file(output, assert_len_1=True)[0]
-    return entry
+        self.entries = new_entries
+        self._dump()
 
+    def save(self, force: bool = False):
+        if self.modified or force:
+            super().save()
 
-def modify_entries(
-    entries: Sequence[Entry], rules: EntryModifyRules, print_changes: bool = True
-):
-    new_entries = []
-    change_made = False
-    for entry in entries:
-        maybe_new_entry = None
-        if "cues" in rules and isinstance(entry, CueEntry):
-            maybe_new_entry = modify_entry(entry, rules["cues"], print_changes)
-        elif "color" in rules and isinstance(entry, ColorEntry):
-            maybe_new_entry = modify_entry(entry, rules["color"], print_changes)
-        if maybe_new_entry is not None:
-            entry = maybe_new_entry
-            change_made = True
-        new_entries.append(entry)
+    def set_track_color(
+        self,
+        color: bytes | str,
+        print_changes: bool = True,
+        delete_tags_v1: bool = True,
+    ):
+        """
+        Args:
+            color: bytes or key of TRACK_COLORS
+            delete_tags_v1: Must delete delete_tags_v1 in order for track color change to appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
+        """
+        if isinstance(color, str):
+            if color not in TrackCuesV2.TRACK_COLORS:
+                raise ValueError(
+                    f"Track color {color} must be one of: {str(list(TrackCuesV2.TRACK_COLORS.keys()))}"
+                )
+            color = TrackCuesV2.TRACK_COLORS[color]
 
-    if not change_made:
-        return
-
-    return new_entries
-
-
-def modify_file_entries(
-    file: str | MP3,
-    rules: EntryModifyRules,
-    print_changes: bool = True,
-    delete_tags_v1: bool = True,
-):
-    """
-    Args:
-        delete_tags_v1: Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
-    """
-    if isinstance(file, str):
-        try:
-            tags = MP3(file)
-        except:
-            logging.error("Mutagen error for file %s" % file)
-            raise
-    else:
-        tags = file
-
-    assert tags.filename, "must have filename"
-
-    try:
-        data = get_geob(tags, GEOB_KEY)
-    except KeyError:
-        logging.debug(
-            f'File is missing "{GEOB_KEY}" tag, no cue points set yet', tags.filename
+        self.modify_entries(
+            {"color": [{"field": "color", "func": lambda v: color}]},
+            print_changes,
+            delete_tags_v1,
         )
-        return
 
-    if delete_tags_v1:
-        del_geob(tags, track_cues_v1.GEOB_KEY)
-
-    entries = list(parse(data))
-    new_entries = modify_entries(entries, rules, print_changes)
-    if new_entries is None:
-        return
-
-    new_data = dump(new_entries)
-    tag_geob(tags, GEOB_KEY, new_data)
-    tags.save()
-
-
-# TODO: allow color or key of colors dict
-def set_track_color(
-    file: str | MP3,
-    color: bytes,
-    print_changes: bool = True,
-    delete_tags_v1: bool = True,
-):
-    """
-    Args:
-        delete_tags_v1: Must delete delete_tags_v1 in order for track color change to appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
-    """
-    modify_file_entries(
-        file,
-        {"color": [{"field": "color", "func": lambda v: color}]},
-        print_changes,
-        delete_tags_v1,
-    )
-
-
-def is_beatgrid_locked(entries: list[Entry]):
-    any(
-        (isinstance(entry, BpmLockEntry) and getattr(entry, "enabled"))
-        for entry in entries
-    )
+    def is_beatgrid_locked(self):
+        return any(
+            (isinstance(entry, TrackCuesV2.BpmLockEntry) and getattr(entry, "enabled"))
+            for entry in self.entries
+        )
 
 
 if __name__ == "__main__":
@@ -561,8 +555,6 @@ if __name__ == "__main__":
     import math
     import subprocess
     import tempfile
-
-    import mutagen._file
 
     from serato_tools.utils.ui import get_hex_editor, get_text_editor, ui_ask
 
@@ -577,29 +569,26 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--edit", action="store_true")
     args = parser.parse_args()
 
+    try:
+        tags = TrackCuesV2(args.file)
+    except HeaderNotFoundError:
+        with open(args.file, mode="rb") as fp:
+            data = fp.read()
+        tags = TrackCuesV2(data)
+
     if args.set_color:
-        if args.set_color in TRACK_COLORS:
-            set_track_color(args.file, TRACK_COLORS[args.set_color], print_changes=True)
-        else:
-            print(f"Track color must be one of: {str(list(TRACK_COLORS.keys()))}")
+        tags.set_track_color(args.set_color, print_changes=True)
+        tags.save()
         sys.exit()
 
     if args.edit:
         text_editor = get_text_editor()
         hex_editor = get_hex_editor()
 
-    tagfile = mutagen._file.File(args.file)
-    if tagfile is not None:
-        data = get_geob(tagfile, GEOB_KEY)
-    else:
-        with open(args.file, mode="rb") as fp:
-            data = fp.read()
-
-    entries = list(parse(data))
-    new_entries: list[Entry] = []
-    action = None
-
+    entries: list[TrackCuesV2.Entry] = list(tags.entries)
+    new_entries: list[TrackCuesV2.Entry] = []
     width = math.floor(math.log10(len(entries))) + 1
+    action = None
     for entry_index, entry in enumerate(entries):
         if args.edit:
             if action not in ("q", "_"):
@@ -671,7 +660,7 @@ if __name__ == "__main__":
                     else:
                         try:
                             if action != "b":
-                                results = parse_entries_file(
+                                results = TrackCuesV2.parse_entries_file(
                                     output.decode(), assert_len_1=action != "a"
                                 )
                             else:
@@ -722,11 +711,10 @@ if __name__ == "__main__":
         if new_entries == entries:
             print("No changes made.")
         else:
-            new_data = dump(new_entries)
-
-            if tagfile is not None:
-                tag_geob(tagfile, GEOB_KEY, new_data)
-                tagfile.save()
+            tags.entries = new_entries
+            tags._dump()
+            if tags.tagfile:
+                tags.save()
             else:
                 with open(args.file, mode="wb") as fp:
-                    fp.write(new_data)
+                    fp.write(tags.raw_data or b"")

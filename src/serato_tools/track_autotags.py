@@ -2,40 +2,66 @@
 # -*- coding: utf-8 -*-
 import io
 import os
-import struct
 import sys
+
+from mutagen.mp3 import HeaderNotFoundError
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.track_tags import check_version, pack_version
-
-GEOB_KEY = "Serato Autotags"
-
-VERSION_BYTES = (0x01, 0x01)
+from serato_tools.utils.track_tags import SeratoTag
 
 
-def readbytes(fp: io.BytesIO | io.BufferedReader):
-    for x in iter(lambda: fp.read(1), b""):
-        if x == b"\00":
-            break
-        yield x
+class TrackAutotags(SeratoTag):
+    GEOB_KEY = "Serato Autotags"
+    VERSION = (0x01, 0x01)
 
+    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+        super().__init__(file_or_data)
 
-def parse(fp: io.BytesIO | io.BufferedReader):
-    check_version(fp.read(2), VERSION_BYTES)
+        self.bpm: float | None
+        self.autogain: float | None
+        self.gaindb: float | None
 
-    for i in range(3):
-        data = b"".join(readbytes(fp))
-        yield float(data.decode("ascii"))
+        if self.raw_data is not None:
+            self.bpm, self.autogain, self.gaindb = self._parse(self.raw_data)
 
+    def __str__(self):
+        return f"bpm: {self.bpm}\nautogain: {self.autogain}\ngaindb: {self.gaindb}"
 
-def dump(bpm: float, autogain: float, gaindb: float):
-    data = pack_version(VERSION_BYTES)
-    for value, decimals in ((bpm, 2), (autogain, 3), (gaindb, 3)):
-        data += "{:.{}f}".format(value, decimals).encode("ascii")
-        data += b"\x00"
-    return data
+    def _parse(self, data: bytes):
+        fp = io.BytesIO(data)
+        self._check_version(fp.read(2))
+
+        def get_data():
+            data = b"".join(self._readbytes(fp))
+            return float(data.decode("ascii"))
+
+        bpm = get_data()
+        autogain = get_data()
+        gaindb = get_data()
+        return bpm, autogain, gaindb
+
+    def _dump(self):
+        data: bytes = self._pack_version()
+        for value, decimals in ((self.bpm, 2), (self.autogain, 3), (self.gaindb, 3)):
+            data += "{:.{}f}".format(value, decimals).encode("ascii")
+            data += b"\x00"
+        self.raw_data = data
+
+    def set(
+        self,
+        bpm: float | None = None,
+        autogain: float | None = None,
+        gaindb: float | None = None,
+    ):
+        if bpm is not None:
+            self.bpm = bpm
+        if autogain is not None:
+            self.autogain = autogain
+        if gaindb is not None:
+            self.gaindb = gaindb
+        self._dump()
 
 
 if __name__ == "__main__":
@@ -44,9 +70,6 @@ if __name__ == "__main__":
     import subprocess
     import tempfile
 
-    import mutagen._file
-
-    from serato_tools.utils.track_tags import get_geob, tag_geob
     from serato_tools.utils.ui import get_text_editor
 
     parser = argparse.ArgumentParser()
@@ -54,24 +77,18 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--edit", action="store_true")
     args = parser.parse_args()
 
-    tagfile = mutagen._file.File(args.file)
-    if tagfile is not None:
-        fp = io.BytesIO(get_geob(tagfile, GEOB_KEY))
-    else:
-        fp = open(args.file, mode="rb")
-
-    with fp:
-        bpm, autogain, gaindb = parse(fp)
+    try:
+        tags = TrackAutotags(args.file)
+    except HeaderNotFoundError:
+        with open(args.file, mode="rb") as fp:
+            data = fp.read()
+        tags = TrackAutotags(data)
 
     if args.edit:
         editor = get_text_editor()
 
         with tempfile.NamedTemporaryFile() as f:
-            f.write(
-                (f"bpm: {bpm}\n" "autogain: {autogain}\n" "gaindb: {gaindb}\n").encode(
-                    "ascii"
-                )
-            )
+            f.write(str(tags).encode("ascii"))
             f.flush()
             status = subprocess.call((editor, f.name))
             f.seek(0)
@@ -84,23 +101,20 @@ if __name__ == "__main__":
 
         cp = configparser.ConfigParser()
         try:
-            cp.read_string("[Autotags]\n" + output.decode())
-            bpm = cp.getfloat("Autotags", "bpm")
-            autogain = cp.getfloat("Autotags", "autogain")
-            gaindb = cp.getfloat("Autotags", "gaindb")
+            SECTION = "Autotags"
+            cp.read_string(f"[{SECTION}]\n" + output.decode())
+            bpm = cp.getfloat(SECTION, "bpm")
+            autogain = cp.getfloat(SECTION, "autogain")
+            gaindb = cp.getfloat(SECTION, "gaindb")
         except Exception:
             print("Invalid input, no changes made", file=sys.stderr)
             raise
 
-        new_data = dump(bpm, autogain, gaindb)
-        if tagfile:
-            if tagfile is not None:
-                tag_geob(tagfile, GEOB_KEY, new_data)
-                tagfile.save()
+        tags.set(bpm=bpm, autogain=autogain, gaindb=gaindb)
+        if tags.tagfile:
+            tags.save()
         else:
             with open(args.file, mode="wb") as fp:
-                fp.write(new_data)
+                fp.write(tags.raw_data or b"")
     else:
-        print(f"BPM: {bpm}")
-        print(f"Auto Gain: {autogain}")
-        print(f"Gain dB: {gaindb}")
+        print(str(tags))

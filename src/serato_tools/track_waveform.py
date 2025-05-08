@@ -2,71 +2,75 @@
 # -*- coding: utf-8 -*-
 import io
 import os
-import struct
 import sys
-from typing import Generator
+
+from mutagen.mp3 import HeaderNotFoundError
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.track_tags import check_version
-
-GEOB_KEY = "Serato Overview"
-
-VERSION_BYTES = (0x01, 0x05)
+from serato_tools.utils.track_tags import SeratoTag
 
 
-def parse(fp: io.BytesIO | io.BufferedReader):
-    check_version(fp.read(2), VERSION_BYTES)
+class TrackWaveform(SeratoTag):
+    GEOB_KEY = "Serato Overview"
+    VERSION = (0x01, 0x05)
 
-    for x in iter(lambda: fp.read(16), b""):
-        assert len(x) == 16
-        yield bytearray(x)
+    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+        super().__init__(file_or_data)
 
+        if self.raw_data is None:
+            raise ValueError("no waveform yet set")
 
-def draw_waveform(data: Generator[bytearray, None, None]):
-    from PIL import Image, ImageColor
+        self.data = self._parse(self.raw_data)
 
-    img = Image.new("RGB", (240, 16), "black")
-    pixels = img.load()
+    def _parse(self, data: bytes):
+        fp = io.BytesIO(data)
+        self._check_version(fp.read(2))
 
-    for i in range(img.size[0]):
-        rowdata = next(data)
-        factor = len([x for x in rowdata if x < 0x80]) / len(rowdata)
+        for x in iter(lambda: fp.read(16), b""):
+            assert len(x) == 16
+            yield bytearray(x)
 
-        for j, value in enumerate(rowdata):
-            # The algorithm to derive the colors from the data has no real
-            # mathematical background and was found by experimenting with
-            # different values.
-            color = "hsl({hue:.2f}, {saturation:d}%, {luminance:.2f}%)".format(
-                hue=(factor * 1.5 * 360) % 360,
-                saturation=40,
-                luminance=(value / 0xFF) * 100,
-            )
-            pixels[i, j] = ImageColor.getrgb(color)  # type: ignore
+    def draw_image(self):
+        try:
+            from PIL import Image, ImageColor
+        except:
+            print('must install package "pillow"')
+            raise
 
-    return img
+        img = Image.new("RGB", (240, 16), "black")
+        pixels = img.load()
+
+        for i in range(img.size[0]):
+            rowdata = next(self.data)
+            factor = len([x for x in rowdata if x < 0x80]) / len(rowdata)
+
+            for j, value in enumerate(rowdata):
+                # The algorithm to derive the colors from the data has no real mathematical background and was found by experimenting with different values.
+                color = "hsl({hue:.2f}, {saturation:d}%, {luminance:.2f}%)".format(
+                    hue=(factor * 1.5 * 360) % 360,
+                    saturation=40,
+                    luminance=(value / 0xFF) * 100,
+                )
+                pixels[i, j] = ImageColor.getrgb(color)  # type: ignore
+
+        return img
 
 
 if __name__ == "__main__":
     import argparse
 
-    import mutagen._file
-
-    from serato_tools.utils.track_tags import get_geob
-
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
     args = parser.parse_args()
 
-    tagfile = mutagen._file.File(args.file)
-    if tagfile is not None:
-        fp = io.BytesIO(get_geob(tagfile, GEOB_KEY))
-    else:
-        fp = open(args.file, mode="rb")
+    try:
+        tags = TrackWaveform(args.file)
+    except HeaderNotFoundError:
+        with open(args.file, mode="rb") as fp:
+            data = fp.read()
+        tags = TrackWaveform(data)
 
-    with fp:
-        data = parse(fp)
-        img = draw_waveform(data)
-
+    img = tags.draw_image()
     img.show()

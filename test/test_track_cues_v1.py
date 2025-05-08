@@ -1,17 +1,21 @@
 import unittest
 import os
-import io
 
-from serato_tools.track_cues_v1 import parse, dump
+from serato_tools.track_cues_v1 import TrackCuesV1
 
 
-class WidgetTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     def setUp(self):
         with open(os.path.abspath("test/data/track_cues_v1.bin"), mode="rb") as fp:
             self.data = fp.read()
 
+    def test_parse(self):
+        tags = TrackCuesV1(self.data)
+        self.assertEqual(tags.raw_data, self.data, "raw_data read")
+
+    @unittest.skip("doesn't work with old data")
     def test_parse_and_dump(self):
-        entries = list(parse(io.BytesIO(self.data)))
-        # DUMP never worked even in original package
-        # new_data = dump(entries)
-        # self.assertEqual(new_data, self.data, "dump")
+        tags = TrackCuesV1(self.data)
+        self.assertEqual(tags.raw_data, self.data, "raw_data read")
+        tags._dump()
+        self.assertEqual(tags.raw_data, self.data, "dump")
