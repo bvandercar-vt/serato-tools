@@ -26,31 +26,31 @@ TerminalBeatgridMarker = collections.namedtuple(
 
 Footer = collections.namedtuple("Footer", ("unknown",))
 
-DataType = list[NonTerminalBeatgridMarker | TerminalBeatgridMarker | Footer]
+EntryList = list[NonTerminalBeatgridMarker | TerminalBeatgridMarker | Footer]
 
 
-def _check_data(data: DataType):
+def _check_data(entries: EntryList):
     nonterminal_markers: list[NonTerminalBeatgridMarker] = []
     terminal_markers: list[TerminalBeatgridMarker] = []
     footers: list[Footer] = []
 
-    for d in data:
-        if isinstance(d, NonTerminalBeatgridMarker):
-            nonterminal_markers.append(d)
-        elif isinstance(d, TerminalBeatgridMarker):
-            terminal_markers.append(d)
-        elif isinstance(d, Footer):
-            footers.append(d)
+    for entry in entries:
+        if isinstance(entry, NonTerminalBeatgridMarker):
+            nonterminal_markers.append(entry)
+        elif isinstance(entry, TerminalBeatgridMarker):
+            terminal_markers.append(entry)
+        elif isinstance(entry, Footer):
+            footers.append(entry)
         else:
-            raise TypeError(f"unexpected value type {d}")
+            raise TypeError(f"unexpected value type {entry}")
 
     assert (
         len(terminal_markers) == 1
     ), f"should only be 1 terminal marker, but #: {len(terminal_markers)}"
     assert len(footers) == 1, f"should only be 1 footer, but #: {len(footers)}"
-    assert isinstance(data[-1], Footer), "last item should be a footer"
+    assert isinstance(entries[-1], Footer), "last item should be a footer"
     assert isinstance(
-        data[-2], TerminalBeatgridMarker
+        entries[-2], TerminalBeatgridMarker
     ), "last item should be a terminal marker"
     return nonterminal_markers, terminal_markers, footers[0]
 
@@ -74,10 +74,7 @@ def parse(fp: io.BytesIO | io.BufferedReader):
     assert fp.read() == b""
 
 
-def write(
-    data: DataType,
-    fp: io.BytesIO | io.BufferedWriter,
-):
+def dump(data: EntryList, fp: io.BytesIO | io.BufferedWriter):
     nonterminal_markers, terminal_markers, footer = _check_data(data)
     markers = nonterminal_markers + terminal_markers
     # Write version
@@ -112,7 +109,7 @@ def analyze_and_write(file: str):
     beat_analyzer = analyze_beatgrid(file, bpm_helper=bpm)
 
     print("Writing tags...")
-    markers: DataType = [
+    markers: EntryList = [
         NonTerminalBeatgridMarker(position, 4)
         for position in beat_analyzer.downbeats[:-1]
     ] + [
@@ -123,7 +120,7 @@ def analyze_and_write(file: str):
     ]
 
     fpw = io.BytesIO()
-    write(markers, fpw)
+    dump(markers, fpw)
     fpw.seek(0)
     new_data = fpw.read()
 
@@ -145,7 +142,6 @@ def main():
         analyze_and_write(args.file)
     else:
         fp = open(args.file, mode="rb")
-
         with fp:
             for marker in parse(fp):
                 print(marker)

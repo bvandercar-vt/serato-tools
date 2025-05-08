@@ -276,10 +276,10 @@ class FlipEntry(Entry):
         raise NotImplementedError("FLIP entry dumps are not implemented!")
 
 
-def get_entry_type(entry_name: str):
-    for entry_cls in (BpmLockEntry, ColorEntry, CueEntry, LoopEntry, FlipEntry):
-        if entry_cls.NAME == entry_name:
-            return entry_cls
+def get_entry_class(entry_name: str):
+    for entry_class in (BpmLockEntry, ColorEntry, CueEntry, LoopEntry, FlipEntry):
+        if entry_class.NAME == entry_name:
+            return entry_class
     return UnknownEntry
 
 
@@ -303,11 +303,11 @@ def parse(data: bytes):
         entry_len = struct.unpack(">I", fp.read(4))[0]
         assert entry_len > 0
 
-        entry_type = get_entry_type(entry_name)
-        yield entry_type.load(fp.read(entry_len))
+        entry_class = get_entry_class(entry_name)
+        yield entry_class.load(fp.read(entry_len))
 
 
-def dump(entries: list[Entry]):
+def dump(entries: Sequence[Entry]):
     version = pack_version(VERSION_BYTES)
 
     contents = [version]
@@ -350,17 +350,17 @@ def parse_entries_file(contents: str, assert_len_1: bool):
     results: list[Entry] = []
     for section in sections:
         l, s, r = section.partition(": ")
-        entry_type = get_entry_type(r if s else l)
+        entry_class = get_entry_class(r if s else l)
 
-        e = entry_type(
+        e = entry_class(
             *(
                 ast.literal_eval(
                     cp.get(section, field),
                 )
-                for field in entry_type.FIELDS
+                for field in entry_class.FIELDS
             )
         )
-        results.append(entry_type.load(e.dump()))
+        results.append(entry_class.load(e.dump()))
     return results
 
 
@@ -466,6 +466,28 @@ def modify_entry(
     return entry
 
 
+def modify_entries(
+    entries: Sequence[Entry], rules: EntryModifyRules, print_changes: bool = True
+):
+    new_entries = []
+    change_made = False
+    for entry in entries:
+        maybe_new_entry = None
+        if "cues" in rules and isinstance(entry, CueEntry):
+            maybe_new_entry = modify_entry(entry, rules["cues"], print_changes)
+        elif "color" in rules and isinstance(entry, ColorEntry):
+            maybe_new_entry = modify_entry(entry, rules["color"], print_changes)
+        if maybe_new_entry is not None:
+            entry = maybe_new_entry
+            change_made = True
+        new_entries.append(entry)
+
+    if not change_made:
+        return
+
+    return new_entries
+
+
 def modify_file_entries(
     file: str | MP3,
     rules: EntryModifyRules,
@@ -499,21 +521,8 @@ def modify_file_entries(
         del_geob(tags, track_cues_v1.GEOB_KEY)
 
     entries = list(parse(data))
-
-    new_entries = []
-    change_made = False
-    for entry in entries:
-        maybe_new_entry = None
-        if "cues" in rules and isinstance(entry, CueEntry):
-            maybe_new_entry = modify_entry(entry, rules["cues"], print_changes)
-        elif "color" in rules and isinstance(entry, ColorEntry):
-            maybe_new_entry = modify_entry(entry, rules["color"], print_changes)
-        if maybe_new_entry is not None:
-            entry = maybe_new_entry
-            change_made = True
-        new_entries.append(entry)
-
-    if not change_made:
+    new_entries = modify_entries(entries, rules, print_changes)
+    if new_entries is None:
         return
 
     new_data = dump(new_entries)

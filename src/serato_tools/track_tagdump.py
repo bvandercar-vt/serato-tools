@@ -19,16 +19,20 @@ if __package__ is None:
 
 def get_serato_tagdata(
     tagfile, decode: bool = False
-) -> Generator[tuple[str, bytes | str], None, None]:
+) -> Generator[tuple[str, bytes], None, None]:
     if tagfile and tagfile.tags:
         if isinstance(tagfile, (mutagen.mp3.MP3, mutagen.aiff.AIFF)):
             for tagname, tagvalue in tagfile.tags.items():
+                tagname = str(tagname)
                 if tagname.startswith("GEOB:Serato "):
                     yield tagname[5:], tagvalue.data
+
         elif isinstance(tagfile, (mutagen.flac.FLAC, mutagen.mp4.MP4)):
             for tagname, tagvalue in tagfile.tags.items():  # type: ignore
-                if not tagname.startswith("serato_") and not tagname.startswith(
-                    "----:com.serato.dj:"
+                tagname = str(tagname)
+                if not (
+                    tagname.startswith("serato_")
+                    or tagname.startswith("----:com.serato.dj:")
                 ):
                     continue
 
@@ -55,8 +59,10 @@ def get_serato_tagdata(
                 fieldname = data[26:fieldname_endpos].decode()
                 fielddata = data[fieldname_endpos + 1 :]
                 yield fieldname, fielddata if decode else encoded_data
+
         elif isinstance(tagfile, mutagen.oggvorbis.OggVorbis):
             for tagname, tagvalue in tagfile.tags.items():  # type: ignore
+                tagname = str(tagname)
                 if not tagname.startswith("serato_"):
                     continue
                 yield tagname, tagvalue[0].encode("utf-8")
@@ -68,7 +74,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("input_file")
-    parser.add_argument("output_dir", nargs='?')
+    parser.add_argument("output_dir", nargs="?")
     parser.add_argument("-d", "--decode", action="store_true")
     args = parser.parse_args()
 
@@ -77,11 +83,7 @@ if __name__ == "__main__":
     for field, value in get_serato_tagdata(tagfile, decode=args.decode):
         log_str = f'field {field} { "decoded " if args.decode else "" }value: {value}'
         if args.output_dir:
-            filename = f"{field}.octet-stream"
-            filepath: str | None = (
-                os.path.join(args.output_dir, filename) if args.output_dir else None
-            )
-
+            filepath = os.path.join(args.output_dir, f"{field}.octet-stream")
             print(log_str + f" (written to file {filepath})")
             with open(filepath, mode="wb") as fp:
                 fp.write(value)
