@@ -36,6 +36,9 @@ class DatabaseV2(SeratoBinDb):
     def __str__(self):
         return str(list(self.to_dicts()))
 
+    def __repr__(self):
+        return str(list(self.data))
+
     def parse(self, fp: io.BytesIO | io.BufferedReader | str | None = None):
         if fp is None:
             fp = self.filepath

@@ -52,6 +52,10 @@ class Crate(SeratoBinDb):
         tracks = self.tracks()
         return f"Crate containing {len(tracks)} tracks: \n{'\n'.join(tracks)}"
 
+    def __repr__(self):
+        tracks = self.tracks()
+        return "\n".join(tracks)
+
     @staticmethod
     def _split_path(path: str):
         allparts = []
