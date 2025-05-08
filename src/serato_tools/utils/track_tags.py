@@ -116,6 +116,9 @@ class SeratoTag(SeratoTrack):
     def _pack_version(self):
         return super()._pack_version(self.VERSION)
 
+    def delete(self):
+        return self._del_geob()
+
     def save(self):
         if not self.tagfile:
             raise Exception("no tagfile, no saving")

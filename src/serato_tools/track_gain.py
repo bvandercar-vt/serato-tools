@@ -29,6 +29,11 @@ class TrackGain(SeratoTrack):
         self.tagfile[TrackGain.REPLAY_GAIN_PEAK_KEY] = self.peak
         self.tagfile.save()
 
+    def delete(self):
+        for key in [TrackGain.REPLAY_GAIN_GAIN_KEY, TrackGain.REPLAY_GAIN_PEAK_KEY]:
+            if key in self.tagfile:
+                del self.tagfile[key]
+
 
 if __name__ == "__main__":
     import argparse
