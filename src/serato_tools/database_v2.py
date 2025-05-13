@@ -85,8 +85,7 @@ class DatabaseV2(SeratoBinDb):
             rule["field_found"] = False  # type: ignore
             if "files" in rule:
                 rule["files"] = [
-                    DatabaseV2.remove_drive_from_filepath(file)[0].upper()
-                    for file in rule["files"]
+                    DatabaseV2.format_filepath(file).upper() for file in rule["files"]
                 ]
 
         fp = io.BytesIO()
@@ -149,9 +148,7 @@ class DatabaseV2(SeratoBinDb):
                     raise FileNotFoundError(
                         f"set track location to {maybe_new_value}, but doesn't exist"
                     )
-                maybe_new_value = DatabaseV2.remove_drive_from_filepath(
-                    maybe_new_value
-                )[0]
+                maybe_new_value = DatabaseV2.format_filepath(maybe_new_value)
 
             field_name = DatabaseV2.get_field_name(field)
             logger.info(
@@ -162,8 +159,9 @@ class DatabaseV2(SeratoBinDb):
         track_filename: str = ""
         for field, length, value in item:
             if field == "pfil":
-                assert isinstance(value, str)
-                track_filename = os.path.normpath(value)
+                if not isinstance(value, str):
+                    raise DataTypeError(value, str, "pfil")
+                track_filename = value
 
             rule = next((r for r in rules if field == r["field"]), None)
             if rule:
@@ -250,11 +248,11 @@ class DatabaseV2(SeratoBinDb):
                 )
                 for e in entry["value"]:
                     print(
-                        f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {e['value']}"
+                        f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {str(e['value'])}"
                     )
             else:
                 print(
-                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}"
+                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {str(entry['value'])}"
                 )
 
     def find_missing(self, drive_letter: str | None = None):

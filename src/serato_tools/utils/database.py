@@ -65,9 +65,9 @@ class SeratoBinDb:
             )
 
     @staticmethod
-    def remove_drive_from_filepath(filepath: str) -> tuple[str, str]:
+    def format_filepath(filepath: str) -> str:
         drive, filepath = os.path.splitdrive(filepath)
-        return os.path.normpath(filepath).lstrip("\\"), drive
+        return os.path.normpath(filepath).replace(os.path.sep, "/").lstrip("/")
 
     class FieldObj(TypedDict):
         field: str
