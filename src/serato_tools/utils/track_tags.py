@@ -78,11 +78,15 @@ class SeratoTrack:
         return struct.pack(SeratoTrack.VERSION_FORMAT, *version)
 
     @staticmethod
-    def _readbytes(fp: io.BytesIO):
+    def _readbytes_gen(fp: io.BytesIO):
         for x in iter(lambda: fp.read(1), b""):
             if x == b"\00":
                 break
             yield x
+
+    @staticmethod
+    def _readbytes(fp: io.BytesIO):
+        return b"".join(SeratoTrack._readbytes_gen(fp))
 
 
 class SeratoTag(SeratoTrack):

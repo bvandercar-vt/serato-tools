@@ -32,43 +32,93 @@ class Crate(SeratoBinDb):
 
     ValueOrNoneType = Union[ValueType, None]
 
-    def __init__(self, fname):
-        self.data: Crate.StructType = []
-
-        self.path: str = os.path.dirname(os.path.abspath(fname))
-        self.filename: str = os.path.basename(fname)
+    def __init__(self, file: str):
+        self.filepath = os.path.abspath(file)
+        self.dir = os.path.dirname(self.filepath)
 
         # Omit the _Serato_ and Subcrates folders at the end
-        self.track_path: str = os.path.join(*Crate._split_path(self.path)[:-2])
+        self.track_dir: str = os.path.join(*Crate._split_path(self.dir)[:-2])
 
-        if os.path.exists(fname):
-            self.load_from_file(fname)
+        self.raw_data: bytes
+        self.data: Crate.StructType
+        if os.path.exists(file):
+            with open(file, "rb") as f:
+                self.raw_data = f.read()
+                self.data = self._parse_item(self.raw_data)
         else:
-            logger.error(f"file does not exist: {fname}. Using default data.")
+            logger.warning(
+                f"File does not exist: {file}. Using default data for an empty crate."
+            )
             self.data = Crate.DEFAULT_DATA
+            self.raw_data = b""
 
     def __str__(self):
         tracks = self.tracks()
         return f"Crate containing {len(tracks)} tracks: \n{'\n'.join(tracks)}"
 
-    def __repr__(self):
-        ret_val = ""
-        for entry in self.to_dicts():
-            if isinstance(entry["value"], list):
-                ret_val += f"{entry['field']} ({entry['field_name']}): "
-                field_lines = []
-                for e in entry["value"]:
-                    if isinstance(e, tuple):
-                        raise TypeError("unexpected type")
-                    field_lines.append(
-                        f"[ {e['field']} ({e['field_name']}): {e['value']} ]"
-                    )
-                ret_val += ", ".join(field_lines) + "\n"
+    @overload
+    @staticmethod
+    def _parse_item(data: bytes, field: None = None) -> StructType: ...
+    @overload
+    @staticmethod
+    def _parse_item(data: bytes, field: str) -> ValueType: ...
+    @staticmethod
+    def _parse_item(data: bytes, field: str | None = None) -> ValueType | StructType:
+        if not isinstance(data, bytes):
+            raise DataTypeError(data, bytes, field)
+
+        type_id: str = Crate._get_type(field) if field else "o"
+        if type_id == "o":  # struct
+            ret_data: Crate.StructType = []
+            i = 0
+            while i < len(data):
+                field = data[i : i + 4].decode("ascii")
+                length = struct.unpack(">I", data[i + 4 : i + 8])[0]
+                value = data[i + 8 : i + 8 + length]
+                value = Crate._parse_item(value, field=field)
+                ret_data.append((field, value))
+                i += 8 + length
+            return ret_data
+        elif type_id in ("p", "t"):  # text
+            return data.decode("utf-16-be")
+        elif type_id == "b":  # single byte
+            return data
+        elif type_id == "u":  # unsigned int
+            ret_val: bytes = struct.unpack(">I", data)[0]
+            return ret_val
+        else:
+            raise ValueError(f"unexpected type for field: {field}")
+
+    def _dump(self) -> bytes:
+        def _dump_item(data: Crate.ValueType, field: str | None = None) -> bytes:
+            type_id: str = Crate._get_type(field) if field else "o"
+            if type_id == "o":  # struct
+                if not isinstance(data, list):
+                    raise DataTypeError(data, list, field)
+                ret_data = bytes()
+                for dat in data:
+                    field = dat[0]
+                    value = _dump_item(dat[1], field=field)
+                    length = struct.pack(">I", len(value))
+                    ret_data = ret_data + field.encode("utf-8") + length + value
+                return ret_data
+            elif type_id in ("p", "t"):  # text
+                if not isinstance(data, str):
+                    raise DataTypeError(data, str, field)
+                return data.encode("utf-16-be")
+            elif type_id == "b":  # single byte, is a boolean
+                # if isinstance(data, str) return data.encode("utf-8") # from imported code, but have never seen this happen.
+                if not isinstance(data, bytes):
+                    raise DataTypeError(data, bytes, field)
+                return data
+            elif type_id == "u":  #  unsigned
+                if not isinstance(data, bytes):
+                    raise DataTypeError(data, bytes, field)
+                return struct.pack(">I", data)
             else:
-                ret_val += (
-                    f"{entry['field']} ({entry['field_name']}): {entry['value']}\n"
-                )
-        return ret_val
+                raise ValueError(f"unexpected type for field: {field}")
+
+        return _dump_item(self.data, None)
 
     @staticmethod
     def _split_path(path: str):
@@ -119,7 +169,7 @@ class Crate(SeratoBinDb):
     def add_track(self, track_name: str):
         # track name must include the containing folder name
         track_name = os.path.relpath(
-            os.path.join(self.track_path, track_name), self.track_path
+            os.path.join(self.track_dir, track_name), self.track_dir
         )
 
         if track_name in self.tracks():
@@ -142,79 +192,14 @@ class Crate(SeratoBinDb):
         for mfile in folder_tracks:
             self.add_track(mfile)
 
-    @overload
-    @staticmethod
-    def _parse(data: bytes, field: None = None) -> StructType: ...
-    @overload
-    @staticmethod
-    def _parse(data: bytes, field: str) -> ValueType: ...
-    @staticmethod
-    def _parse(data: bytes, field: str | None = None) -> ValueType | StructType:
-        if not isinstance(data, bytes):
-            raise DataTypeError(data, bytes, field)
+    def save(self, file: str | None = None):
+        if file is None:
+            file = self.filepath
 
-        type_id: str | None = Crate._get_type(field) if field else "o"
-        if type_id == "o":  # struct
-            ret_data: Crate.StructType = []
-            i = 0
-            while i < len(data):
-                field = data[i : i + 4].decode("ascii")
-                length = struct.unpack(">I", data[i + 4 : i + 8])[0]
-                value = data[i + 8 : i + 8 + length]
-                value = Crate._parse(value, field=field)
-                ret_data.append((field, value))
-                i += 8 + length
-            return ret_data
-        elif type_id in ("p", "t"):  # text
-            return data.decode("utf-16-be")
-        elif type_id == "b":  # single byte
-            return data
-        elif type_id == "u":  # unsigned int
-            ret_val: bytes = struct.unpack(">I", data)[0]
-            return ret_val
-        else:
-            raise ValueError(f"unexpected type for field: {field}")
-
-    @staticmethod
-    def _dump(data: ValueType, field: str | None = None) -> bytes:
-        type_id: str | None = Crate._get_type(field) if field else "o"
-        if type_id == "o":  # struct
-            if not isinstance(data, list):
-                raise DataTypeError(data, list, field)
-            ret_data = bytes()
-            for dat in data:
-                field = dat[0]
-                value = Crate._dump(dat[1], field=field)
-                length = struct.pack(">I", len(value))
-                ret_data = ret_data + field.encode("utf-8") + length + value
-            return ret_data
-        elif type_id in ("p", "t"):  # text
-            if not isinstance(data, str):
-                raise DataTypeError(data, str, field)
-            return data.encode("utf-16-be")
-        elif type_id == "b":  # single byte, is a boolean
-            # if isinstance(data, str) return data.encode("utf-8") # from imported code, but have never seen this happen.
-            if not isinstance(data, bytes):
-                raise DataTypeError(data, bytes, field)
-            return data
-        elif type_id == "u":  #  unsigned
-            if not isinstance(data, bytes):
-                raise DataTypeError(data, bytes, field)
-            return struct.pack(">I", data)
-        else:
-            raise ValueError(f"unexpected type for field: {field}")
-
-    def load_from_file(self, fname: str):
-        with open(fname, "rb") as mfile:
-            self.data = Crate._parse(mfile.read())
-
-    def save_to_file(self, fname: str | None = None):
-        if fname is None:
-            fname = os.path.join(self.path, self.filename)
-
-        enc_data = Crate._dump(self.data)
-        with open(fname, "wb") as mfile:
-            mfile.write(enc_data)
+        raw_data = self._dump()
+        with open(file, "wb") as f:
+            f.write(raw_data)
+        self.raw_data = raw_data
 
     class EntryDict(TypedDict):
         field: str
@@ -246,6 +231,21 @@ class Crate(SeratoBinDb):
                 "value": value,
             }
 
+    def print(self):
+        for entry in self.to_dicts():
+            if isinstance(entry["value"], list):
+                field_lines = []
+                for e in entry["value"]:
+                    if isinstance(e, tuple):
+                        raise TypeError("unexpected type")
+                    field_lines.append(
+                        f"[ {e['field']} ({e['field_name']}): {e['value']} ]"
+                    )
+                print_val = ", ".join(field_lines)
+            else:
+                print_val = entry["value"]
+            print(f"{entry['field']} ({entry['field_name']}): {print_val}")
+
 
 if __name__ == "__main__":
     import argparse
@@ -267,9 +267,9 @@ if __name__ == "__main__":
         ]
         print("\n".join(track_names))
     elif args.data:
-        print(repr(crate))
+        crate.print()
     else:
         print(crate)
 
     if args.output_file:
-        crate.save_to_file(args.output_file)
+        crate.save(args.output_file)

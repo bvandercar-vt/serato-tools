@@ -27,37 +27,16 @@ class DatabaseV2(SeratoBinDb):
 
         self.filepath: str = os.path.abspath(filepath)
 
-        self.raw_data: bytes
-        self.data: Iterable[DatabaseV2.ParsedType]
-
-        self.parse()
+        with open(self.filepath, "rb") as fp:
+            self.raw_data: bytes = fp.read()
+            self.data: Iterable[DatabaseV2.ParsedType] = self._parse_item(self.raw_data)
 
     def __str__(self):
         return str(list(self.to_dicts()))
 
-    def __repr__(self):
-        ret_val = ""
-        for entry in self.to_dicts():
-            if isinstance(entry["value"], list):
-                ret_val += f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)\n"
-                for e in entry["value"]:
-                    ret_val += f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {e['value']}\n"
-            else:
-                ret_val += f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}\n"
-        return ret_val
-
-    def parse(self, fp: io.BytesIO | io.BufferedReader | str | None = None):
-        if fp is None:
-            fp = self.filepath
-        if isinstance(fp, str):
-            fp = open(fp, "rb")
-
-        self.raw_data = fp.read()
-        fp.seek(0)
-        self.data = self._parse_data_item(fp)
-
     @staticmethod
-    def _parse_data_item(fp: io.BytesIO | io.BufferedReader) -> Generator[ParsedType]:
+    def _parse_item(item_data: bytes) -> Generator[ParsedType]:
+        fp = io.BytesIO(item_data)
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
             field_ascii: bytes
@@ -71,7 +50,7 @@ class DatabaseV2(SeratoBinDb):
 
             value: bytes | str | tuple
             if type_id in ("o", "r"):  #  struct
-                value = tuple(DatabaseV2._parse_data_item(io.BytesIO(data)))
+                value = tuple(DatabaseV2._parse_item(data))
             elif type_id in ("p", "t"):  # text
                 # value = (data[1:] + b"\00").decode("utf-16") # from imported code
                 value = data.decode("utf-16-be")
@@ -95,19 +74,11 @@ class DatabaseV2(SeratoBinDb):
         files: NotRequired[list[str]]
 
     def modify(self, rules: list[ModifyRule]):
-        output = io.BytesIO()
-        DatabaseV2._modify_data_item(output, list(self.data), rules)
-        output.seek(0)
-        self.raw_data = output.getvalue()
-        output.seek(0)
-        self.data = self._parse_data_item(output)
+        self.raw_data = DatabaseV2._modify_data_item(list(self.data), rules)
+        self.data = self._parse_item(self.raw_data)
 
     @staticmethod
-    def _modify_data_item(
-        fp: io.BytesIO | io.BufferedWriter,
-        item: Iterable[ParsedType],
-        rules: list[ModifyRule],
-    ):
+    def _modify_data_item(item: Iterable[ParsedType], rules: list[ModifyRule]):
         DatabaseV2._check_rule_fields(rules)
 
         for rule in rules:
@@ -117,6 +88,8 @@ class DatabaseV2(SeratoBinDb):
                     DatabaseV2.remove_drive_from_filepath(file)[0].upper()
                     for file in rule["files"]
                 ]
+
+        fp = io.BytesIO()
 
         def _dump(field: str, value: "DatabaseV2.ValueType"):
             nonlocal rules
@@ -128,9 +101,7 @@ class DatabaseV2(SeratoBinDb):
             if type_id in ("o", "r"):  #  struct
                 if not isinstance(value, tuple):
                     raise DataTypeError(value, tuple, field)
-                nested_buffer = io.BytesIO()
-                DatabaseV2._modify_data_item(nested_buffer, value, rules)
-                data = nested_buffer.getvalue()
+                data = DatabaseV2._modify_data_item(value, rules)
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
                     raise DataTypeError(value, str, field)
@@ -210,14 +181,16 @@ class DatabaseV2(SeratoBinDb):
                 if maybe_new_value is not None:
                     _dump(field, maybe_new_value)
 
-    def modify_file(self, rules: list[ModifyRule], out_file: str | None = None):
-        self.modify(rules)
-        self.write_file(out_file)
+        return fp.getvalue()
 
-    def write_file(self, out_file: str | None = None):
-        if out_file is None:
-            out_file = self.filepath
-        with open(out_file, "wb") as write_file:
+    def modify_and_save(self, rules: list[ModifyRule], file: str | None = None):
+        self.modify(rules)
+        self.save(file)
+
+    def save(self, file: str | None = None):
+        if file is None:
+            file = self.filepath
+        with open(file, "wb") as write_file:
             write_file.write(self.raw_data)
 
     def rename_track_file(self, src: str, dest: str):
@@ -232,7 +205,7 @@ class DatabaseV2(SeratoBinDb):
             # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
             logger.error("File already exists with change", src)
             return
-        self.modify_file(
+        self.modify_and_save(
             [{"field": "pfil", "files": [src], "func": lambda *args: dest}]
         )
 
@@ -268,6 +241,21 @@ class DatabaseV2(SeratoBinDb):
                 "size_bytes": length,
                 "value": value,
             }
+
+    def print(self):
+        for entry in self.to_dicts():
+            if isinstance(entry["value"], list):
+                print(
+                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)"
+                )
+                for e in entry["value"]:
+                    print(
+                        f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {e['value']}"
+                    )
+            else:
+                print(
+                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}"
+                )
 
     def find_missing(self, drive_letter: str | None = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")
@@ -332,7 +320,7 @@ class DatabaseV2(SeratoBinDb):
             else:
                 field_actions(entry)
 
-        self.write_file()
+        self.save()
 
 
 if __name__ == "__main__":
@@ -347,4 +335,4 @@ if __name__ == "__main__":
     if args.find_missing:
         db.find_missing()
     else:
-        print(repr(db))
+        db.print()

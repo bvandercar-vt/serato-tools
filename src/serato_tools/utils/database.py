@@ -43,6 +43,11 @@ class SeratoBinDb:
     FIELDNAME_KEYS = list(FIELDNAMES.keys())
     TRACK_FIELD = "otrk"
 
+    raw_data: bytes
+
+    def __repr__(self):
+        return self.raw_data
+
     @staticmethod
     def get_field_name(field: str):
         return SeratoBinDb.FIELDNAMES.get(field, "Unknown Field")

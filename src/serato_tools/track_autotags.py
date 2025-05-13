@@ -34,13 +34,13 @@ class TrackAutotags(SeratoTag):
         fp = io.BytesIO(data)
         self._check_version(fp.read(2))
 
-        def get_data():
-            data = b"".join(self._readbytes(fp))
-            return float(data.decode("ascii"))
+        def get_value():
+            value = self._readbytes(fp).decode("ascii")
+            return float(value)
 
-        bpm = get_data()
-        autogain = get_data()
-        gaindb = get_data()
+        bpm = get_value()
+        autogain = get_value()
+        gaindb = get_value()
         return bpm, autogain, gaindb
 
     def _dump(self):

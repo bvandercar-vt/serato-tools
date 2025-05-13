@@ -313,7 +313,7 @@ class TrackCuesV2(SeratoTag):
         fp = io.BytesIO(payload)
         self._check_version(fp.read(2))
         while True:
-            entry_name = b"".join(SeratoTag._readbytes(fp)).decode("utf-8")
+            entry_name = SeratoTag._readbytes(fp).decode("utf-8")
             if not entry_name:
                 break
             entry_len = struct.unpack(">I", fp.read(4))[0]
