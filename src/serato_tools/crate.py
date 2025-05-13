@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # This is from this repo: https://github.com/sharst/seratopy
-import logging
 import os
 import struct
 import sys
@@ -10,7 +9,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.database import SeratoBinDb
-from serato_tools.utils import DataTypeError
+from serato_tools.utils import logger, DataTypeError
 
 
 class Crate(SeratoBinDb):
@@ -45,7 +44,7 @@ class Crate(SeratoBinDb):
         if os.path.exists(fname):
             self.load_from_file(fname)
         else:
-            logging.error(f"file does not exist: {fname}. Using default data.")
+            logger.error(f"file does not exist: {fname}. Using default data.")
             self.data = Crate.DEFAULT_DATA
 
     def __str__(self):
@@ -53,8 +52,23 @@ class Crate(SeratoBinDb):
         return f"Crate containing {len(tracks)} tracks: \n{'\n'.join(tracks)}"
 
     def __repr__(self):
-        tracks = self.tracks()
-        return "\n".join(tracks)
+        ret_val = ""
+        for entry in self.to_dicts():
+            if isinstance(entry["value"], list):
+                ret_val += f"{entry['field']} ({entry['field_name']}): "
+                field_lines = []
+                for e in entry["value"]:
+                    if isinstance(e, tuple):
+                        raise TypeError("unexpected type")
+                    field_lines.append(
+                        f"[ {e['field']} ({e['field_name']}): {e['value']} ]"
+                    )
+                ret_val += ", ".join(field_lines) + "\n"
+            else:
+                ret_val += (
+                    f"{entry['field']} ({entry['field_name']}): {entry['value']}\n"
+                )
+        return ret_val
 
     @staticmethod
     def _split_path(path: str):
@@ -220,7 +234,7 @@ class Crate(SeratoBinDb):
                         for f, v in value
                     ]
                 except:
-                    print(f"error on {value}")
+                    logger.error(f"error on {value}")
                     raise
                 value = new_val
             else:
@@ -231,22 +245,6 @@ class Crate(SeratoBinDb):
                 "field_name": Crate.get_field_name(field),
                 "value": value,
             }
-
-    def print_data(self):
-        for entry in self.to_dicts():
-            if isinstance(entry["value"], list):
-                line = f"{entry['field']} ({entry['field_name']}): "
-                field_lines = []
-                for e in entry["value"]:
-                    if isinstance(e, tuple):
-                        raise TypeError("unexpected type")
-                    field_lines.append(
-                        f"[ {e['field']} ({e['field_name']}): {e['value']} ]"
-                    )
-                line += ", ".join(field_lines)
-                print(line)
-            else:
-                print(f"{entry['field']} ({entry['field_name']}): {entry['value']}")
 
 
 if __name__ == "__main__":
@@ -269,7 +267,7 @@ if __name__ == "__main__":
         ]
         print("\n".join(track_names))
     elif args.data:
-        crate.print_data()
+        print(repr(crate))
     else:
         print(crate)
 

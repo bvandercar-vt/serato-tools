@@ -10,6 +10,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.track_tags import SeratoTag
+from serato_tools.utils import logger
 
 
 class TrackWaveform(SeratoTag):
@@ -36,7 +37,7 @@ class TrackWaveform(SeratoTag):
         try:
             from PIL import Image, ImageColor
         except:
-            print('must install package "pillow"')
+            logger.error('must install package "pillow"')
             raise
 
         img = Image.new("RGB", (240, 16), "black")

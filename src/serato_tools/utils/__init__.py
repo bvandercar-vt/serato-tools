@@ -1,6 +1,9 @@
+import logging
 from typing import Iterable, TypeVar, Union, cast, Any
 
 T = TypeVar("T")
+
+logger = logging.getLogger("serato-tools")
 
 
 def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:

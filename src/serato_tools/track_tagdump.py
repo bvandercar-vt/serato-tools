@@ -16,6 +16,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.track_tags import SeratoTrack
+from serato_tools.utils import logger
 
 
 def get_serato_tagdata(tagfile: mutagen._file.FileType, decode: bool = False):
@@ -64,7 +65,7 @@ def get_serato_tagdata(tagfile: mutagen._file.FileType, decode: bool = False):
             data = base64.b64decode(fixed_data)
 
             if not data.startswith(b"application/octet-stream\0"):
-                print(f"Failed to parse tag: {tagname}")
+                logger.error(f"Failed to parse tag: {tagname}")
                 continue
             fieldname_endpos = data.index(b"\0", 26)
             fieldname = data[26:fieldname_endpos].decode()

@@ -46,7 +46,6 @@ class TestCase(unittest.TestCase):
                     },
                 ],
             },
-            print_changes=False,
         )
 
         self.assertEqual(

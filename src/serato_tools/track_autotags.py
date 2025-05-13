@@ -10,6 +10,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.track_tags import SeratoTag
+from serato_tools.utils import logger
 
 
 class TrackAutotags(SeratoTag):
@@ -95,8 +96,9 @@ if __name__ == "__main__":
             output = f.read()
 
         if status != 0:
-            error_str = (f"Command executation failed with status: {status}",)
+            error_str = f"Command executation failed with status: {status}"
             print(error_str, file=sys.stderr)
+            logger.error(error_str)
             raise Exception(error_str)
 
         cp = configparser.ConfigParser()
@@ -107,7 +109,9 @@ if __name__ == "__main__":
             autogain = cp.getfloat(SECTION, "autogain")
             gaindb = cp.getfloat(SECTION, "gaindb")
         except Exception:
-            print("Invalid input, no changes made", file=sys.stderr)
+            error_str = "Invalid input, no changes made"
+            print(error_str, file=sys.stderr)
+            logger.error(error_str)
             raise
 
         tags.set(bpm=bpm, autogain=autogain, gaindb=gaindb)

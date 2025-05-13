@@ -1,23 +1,28 @@
 import struct
-import logging
 import io
 
 from mutagen.mp3 import MP3
+from mutagen.id3 import ID3FileType, ID3
 from mutagen.aiff import AIFF
 from mutagen.id3._frames import GEOB
 
+from serato_tools.utils import logger
+
 
 class SeratoTrack:
-    TagfileType = MP3 | AIFF
+    TagfileType = ID3FileType | ID3 | AIFF
     FileArgType = str | TagfileType
 
     def __init__(self, file: FileArgType):
         self.tagfile: SeratoTrack.TagfileType
         if isinstance(file, str):
             try:
-                self.tagfile = MP3(file)
+                if file.lower().endswith(".mp3"):
+                    self.tagfile = MP3(file)
+                elif file.lower().endswith(".aiff"):
+                    self.tagfile = AIFF(file)
             except:
-                logging.error("Mutagen error for file %s" % file)
+                logger.error("Mutagen error for file %s" % file)
                 raise
         else:
             self.tagfile = file
@@ -27,7 +32,7 @@ class SeratoTrack:
         try:
             return self.tagfile[geob_key].data
         except KeyError:
-            logging.debug(
+            logger.debug(
                 f'File is missing "{geob_key}" tag, not yet set',
                 self.tagfile.filename,
             )

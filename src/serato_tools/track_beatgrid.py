@@ -13,6 +13,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.track_tags import SeratoTag
+from serato_tools.utils import logger
 
 
 class TrackBeatgrid(SeratoTag):
@@ -131,10 +132,10 @@ class TrackBeatgrid(SeratoTag):
         bpm = float(str(self.tagfile["TBPM"]))
         filename = cast(str, self.tagfile.filename)
 
-        print("Analyzing beat grid...")
+        logger.info("Analyzing beat grid...")
         analyzed_breatgrid = analyze_beatgrid(filename, bpm_helper=bpm)
 
-        print("Writing tags...")
+        logger.info("Writing tags...")
         entries: TrackBeatgrid.EntryList = [
             TrackBeatgrid.NonTerminalBeatgridMarker(position, 4)
             for position in analyzed_breatgrid.downbeats[:-1]

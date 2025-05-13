@@ -101,7 +101,6 @@ from serato_tools.track_cues_v2 import TrackCuesV2, TRACK_COLORS
 tags = TrackCuesV2(file)
 tags.set_track_color('/Users/Username/Music/Dubstep/Raaket - ILL.mp3',
     TRACK_COLORS["purple"],
-    print_changes=True,
     delete_tags_v1=True
     # Must delete delete_tags_v1 in order for track color change to appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
 )
@@ -146,7 +145,6 @@ tags.modify_entries(
             {"field": "color", "func": set_grouping_based_on_track_color},
         ],
     },
-    print_changes=True,
     delete_tags_v1=True
     # Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
 )
@@ -195,6 +193,14 @@ crate.print_data()
 # Example: Add a track to the crate and save it as a new crate
 crate.add_track('/Users/Username/Music/Dubstep/Chozen - I Wanna Dance.mp3')
 crate.save_to_file('/Users/Username/Music/Dubstep/New Crate.crate')
+```
+
+### Hiding console output
+
+```python
+import logging
+
+logging.getLogger("serato-tools").setLevel(logging.ERROR)  # or logging.WARN
 ```
 
 # Serato Tags

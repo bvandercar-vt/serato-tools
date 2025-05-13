@@ -24,7 +24,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.track_cues_v1 import TrackCuesV1
-from serato_tools.utils import DataTypeError
+from serato_tools.utils import logger, DataTypeError
 from serato_tools.utils.track_tags import SeratoTag
 
 
@@ -96,14 +96,14 @@ class TrackCuesV2(SeratoTag):
         for key, v in TrackCuesV2.CUE_COLORS.items():
             if v == value:
                 return key
-        return None
+        raise ValueError(f"no color key for value {value}")
 
     @staticmethod
     def _get_track_color_key(value: bytes) -> str | None:
         for key, v in TrackCuesV2.TRACK_COLORS.items():
             if v == value:
                 return key
-        return None
+        raise ValueError(f"no color key for value {value}")
 
     @staticmethod
     def _get_entry_class(entry_name: str):
@@ -413,11 +413,7 @@ class TrackCuesV2(SeratoTag):
     FIELD_TO_TYPE_MAP = {"color": bytes, "index": int, "name": str}
 
     @staticmethod
-    def _modify_entry(
-        entry: Entry,
-        rules: Sequence[CueRules | TrackColorRules],
-        print_changes: bool = True,
-    ):
+    def _modify_entry(entry: Entry, rules: Sequence[CueRules | TrackColorRules]):
         """
         Returns:
             entry: entry if was modified. If was not changed, returns None.
@@ -451,25 +447,28 @@ class TrackCuesV2(SeratoTag):
                         raise DataTypeError(value, ExpectedType, field)
 
                     change_made = True
-                    if print_changes:
-                        if field == "color":
-                            get_color_name, color_log_str = (
-                                (TrackCuesV2._get_track_color_key, "Track")
-                                if isinstance(entry, TrackCuesV2.ColorEntry)
-                                else (TrackCuesV2._get_cue_color_key, "Cue")
+
+                    if field == "color":
+                        is_track_color = isinstance(entry, TrackCuesV2.ColorEntry)
+                        color_name: str | None = None
+                        if isinstance(value, bytes):
+                            get_color_name = (
+                                TrackCuesV2._get_track_color_key
+                                if is_track_color
+                                else TrackCuesV2._get_cue_color_key
                             )
-                            color_name = (
-                                get_color_name(value)
-                                if isinstance(value, bytes)
-                                else None
-                            )
-                            print(
-                                f"Set {color_log_str} Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
-                            )
-                        else:
-                            print(
-                                f'Set {type(entry).__name__} field "{field}" to {str(value)}'
-                            )
+                            try:
+                                color_name = get_color_name(value)
+                            except ValueError:
+                                color_name = None
+                        color_log_str = "Track" if is_track_color else "Cue"
+                        logger.info(
+                            f"Set {color_log_str} Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
+                        )
+                    else:
+                        logger.info(
+                            f'Set {type(entry).__name__} field "{field}" to {str(value)}'
+                        )
             output += f"{field}: {value!r}\n"
         output += "\n"
 
@@ -479,12 +478,7 @@ class TrackCuesV2(SeratoTag):
         entry = TrackCuesV2.parse_entries_file(output, assert_len_1=True)[0]
         return entry
 
-    def modify_entries(
-        self,
-        rules: EntryModifyRules,
-        print_changes: bool = True,
-        delete_tags_v1: bool = True,
-    ):
+    def modify_entries(self, rules: EntryModifyRules, delete_tags_v1: bool = True):
         """
         Args:
             delete_tags_v1: Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
@@ -497,13 +491,9 @@ class TrackCuesV2(SeratoTag):
         for entry in self.entries:
             maybe_new_entry = None
             if "cues" in rules and isinstance(entry, TrackCuesV2.CueEntry):
-                maybe_new_entry = TrackCuesV2._modify_entry(
-                    entry, rules["cues"], print_changes
-                )
+                maybe_new_entry = TrackCuesV2._modify_entry(entry, rules["cues"])
             elif "color" in rules and isinstance(entry, TrackCuesV2.ColorEntry):
-                maybe_new_entry = TrackCuesV2._modify_entry(
-                    entry, rules["color"], print_changes
-                )
+                maybe_new_entry = TrackCuesV2._modify_entry(entry, rules["color"])
             if maybe_new_entry is not None:
                 entry = maybe_new_entry
                 change_made = True
@@ -519,12 +509,26 @@ class TrackCuesV2(SeratoTag):
         if self.modified or force:
             super().save()
 
-    def set_track_color(
-        self,
-        color: bytes | str,
-        print_changes: bool = True,
-        delete_tags_v1: bool = True,
-    ):
+    def get_track_color(self) -> bytes | None:
+        color_entry = next(
+            (
+                entry
+                for entry in self.entries
+                if isinstance(entry, TrackCuesV2.ColorEntry)
+            ),
+            None,
+        )
+        if color_entry is None:
+            return None
+        return getattr(color_entry, "color")
+
+    def get_track_color_name(self) -> str | None:
+        color_bytes = self.get_track_color()
+        if color_bytes is None:
+            return None
+        return self._get_track_color_key(color_bytes)
+
+    def set_track_color(self, color: bytes | str, delete_tags_v1: bool = True):
         """
         Args:
             color: bytes or key of TRACK_COLORS
@@ -538,12 +542,10 @@ class TrackCuesV2(SeratoTag):
             color = TrackCuesV2.TRACK_COLORS[color]
 
         self.modify_entries(
-            {"color": [{"field": "color", "func": lambda v: color}]},
-            print_changes,
-            delete_tags_v1,
+            {"color": [{"field": "color", "func": lambda v: color}]}, delete_tags_v1
         )
 
-    def is_beatgrid_locked(self):
+    def is_beatgrid_locked(self) -> bool:
         return any(
             (isinstance(entry, TrackCuesV2.BpmLockEntry) and getattr(entry, "enabled"))
             for entry in self.entries
@@ -577,7 +579,7 @@ if __name__ == "__main__":
         tags = TrackCuesV2(data)
 
     if args.set_color:
-        tags.set_track_color(args.set_color, print_changes=True)
+        tags.set_track_color(args.set_color)
         tags.save()
         sys.exit()
 

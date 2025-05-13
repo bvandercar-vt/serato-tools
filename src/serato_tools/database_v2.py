@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import io
-import logging
 import os
 import struct
 import sys
@@ -11,7 +10,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.database import SeratoBinDb
-from serato_tools.utils import DataTypeError
+from serato_tools.utils import logger, DataTypeError
 
 
 class DatabaseV2(SeratoBinDb):
@@ -37,7 +36,15 @@ class DatabaseV2(SeratoBinDb):
         return str(list(self.to_dicts()))
 
     def __repr__(self):
-        return str(list(self.data))
+        ret_val = ""
+        for entry in self.to_dicts():
+            if isinstance(entry["value"], list):
+                ret_val += f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)\n"
+                for e in entry["value"]:
+                    ret_val += f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {e['value']}\n"
+            else:
+                ret_val += f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}\n"
+        return ret_val
 
     def parse(self, fp: io.BytesIO | io.BufferedReader | str | None = None):
         if fp is None:
@@ -87,9 +94,9 @@ class DatabaseV2(SeratoBinDb):
         """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
         files: NotRequired[list[str]]
 
-    def modify(self, rules: list[ModifyRule], print_changes: bool = True):
+    def modify(self, rules: list[ModifyRule]):
         output = io.BytesIO()
-        DatabaseV2._modify_data_item(output, list(self.data), rules, print_changes)
+        DatabaseV2._modify_data_item(output, list(self.data), rules)
         output.seek(0)
         self.raw_data = output.getvalue()
         output.seek(0)
@@ -100,7 +107,6 @@ class DatabaseV2(SeratoBinDb):
         fp: io.BytesIO | io.BufferedWriter,
         item: Iterable[ParsedType],
         rules: list[ModifyRule],
-        print_changes: bool = True,
     ):
         DatabaseV2._check_rule_fields(rules)
 
@@ -113,7 +119,7 @@ class DatabaseV2(SeratoBinDb):
                 ]
 
         def _dump(field: str, value: "DatabaseV2.ValueType"):
-            nonlocal rules, print_changes
+            nonlocal rules
             field_bytes = field.encode("ascii")
             assert len(field_bytes) == 4
 
@@ -123,7 +129,7 @@ class DatabaseV2(SeratoBinDb):
                 if not isinstance(value, tuple):
                     raise DataTypeError(value, tuple, field)
                 nested_buffer = io.BytesIO()
-                DatabaseV2._modify_data_item(nested_buffer, value, rules, print_changes)
+                DatabaseV2._modify_data_item(nested_buffer, value, rules)
                 data = nested_buffer.getvalue()
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
@@ -176,11 +182,10 @@ class DatabaseV2(SeratoBinDb):
                     maybe_new_value
                 )[0]
 
-            if print_changes:
-                field_name = DatabaseV2.get_field_name(field)
-                print(
-                    f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}"
-                )
+            field_name = DatabaseV2.get_field_name(field)
+            logger.info(
+                f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}"
+            )
             return maybe_new_value
 
         track_filename: str = ""
@@ -205,13 +210,8 @@ class DatabaseV2(SeratoBinDb):
                 if maybe_new_value is not None:
                     _dump(field, maybe_new_value)
 
-    def modify_file(
-        self,
-        rules: list[ModifyRule],
-        out_file: str | None = None,
-        print_changes: bool = True,
-    ):
-        self.modify(rules, print_changes)
+    def modify_file(self, rules: list[ModifyRule], out_file: str | None = None):
+        self.modify(rules)
         self.write_file(out_file)
 
     def write_file(self, out_file: str | None = None):
@@ -220,22 +220,20 @@ class DatabaseV2(SeratoBinDb):
         with open(out_file, "wb") as write_file:
             write_file.write(self.raw_data)
 
-    def rename_track_file(self, src: str, dest: str, print_changes: bool = True):
+    def rename_track_file(self, src: str, dest: str):
         """
         This renames the file path, and also changes the path in the database to point to the new filename, so that
         the renamed file is not missing in the library.
         """
         try:
             os.rename(src=src, dst=dest)
-            if print_changes:
-                print(f"renamed {src} to {dest}")
+            logger.info(f"renamed {src} to {dest}")
         except FileExistsError:
             # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
-            logging.error("File already exists with change", src)
+            logger.error("File already exists with change", src)
             return
         self.modify_file(
-            [{"field": "pfil", "files": [src], "func": lambda *args: dest}],
-            print_changes=print_changes,
+            [{"field": "pfil", "files": [src], "func": lambda *args: dest}]
         )
 
     class EntryDict(TypedDict):
@@ -258,7 +256,7 @@ class DatabaseV2(SeratoBinDb):
                         for f, l, v in value
                     ]
                 except:
-                    print(f"error on {value}")
+                    logger.error(f"error on {value}")
                     raise
                 value = new_val
             else:
@@ -270,21 +268,6 @@ class DatabaseV2(SeratoBinDb):
                 "size_bytes": length,
                 "value": value,
             }
-
-    def print_data(self):
-        for entry in self.to_dicts():
-            if isinstance(entry["value"], list):
-                print(
-                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)"
-                )
-                for e in entry["value"]:
-                    print(
-                        f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {e['value']}"
-                    )
-            else:
-                print(
-                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {entry['value']}"
-                )
 
     def find_missing(self, drive_letter: str | None = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")
@@ -303,7 +286,7 @@ class DatabaseV2(SeratoBinDb):
                 if os.path.exists(new_filepath):
                     break
                 else:
-                    print(f"entered file does not exist: {new_filepath}")
+                    logger.error(f"entered file does not exist: {new_filepath}")
 
             self.modify(
                 [
@@ -318,9 +301,7 @@ class DatabaseV2(SeratoBinDb):
                         "func": lambda *args: False,
                     },
                 ],
-                print_changes=True,
             )
-            print("\n")
 
         def field_actions(entry: DatabaseV2.EntryDict):
             nonlocal track_filepath
@@ -334,14 +315,14 @@ class DatabaseV2(SeratoBinDb):
                 missing_checked = False
 
                 if not os.path.exists(value):
-                    print(f"file does not exist: {value}")
+                    logger.error(f"file does not exist: {value}")
                     take_input_and_change_db(current_filepath=entry["value"])
                     missing_checked = True
 
             elif (not missing_checked) and (entry["field"] == "bmis"):
                 missing_checked = True
                 if entry["value"]:
-                    print(f"serato says is missing: {track_filepath}")
+                    logger.error(f"serato says is missing: {track_filepath}")
                     take_input_and_change_db(current_filepath=track_filepath)
 
         for entry in list(self.to_dicts()):
@@ -366,4 +347,4 @@ if __name__ == "__main__":
     if args.find_missing:
         db.find_missing()
     else:
-        db.print_data()
+        print(repr(db))

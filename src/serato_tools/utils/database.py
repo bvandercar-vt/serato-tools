@@ -1,7 +1,5 @@
 import os
-from typing import Any, Iterable, TypedDict
-
-from . import to_array
+from typing import Iterable, TypedDict
 
 
 class SeratoBinDb:
