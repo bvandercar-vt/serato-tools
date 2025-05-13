@@ -4,19 +4,23 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Generator, Iterable, NotRequired, TypedDict, Union
+from typing import Callable, Generator, Iterable, TypedDict, Union, Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.database import SeratoBinDb
-from serato_tools.utils import logger, DataTypeError
+from serato_tools.utils import (
+    logger,
+    DataTypeError,
+    NotRequired,  # pyright: ignore[reportAttributeAccessIssue]
+)
 
 
 class DatabaseV2(SeratoBinDb):
-    DEFAULT_DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")  # type: ignore
+    DEFAULT_DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")
 
-    ValueType = bytes | str | int | tuple  # TODO: improve the tuple
+    ValueType = Union[bytes, str, int, tuple]  # TODO: improve the tuple
     ParsedType = tuple[str, int, ValueType]
 
     ValueOrNoneType = Union[ValueType, None]
@@ -35,7 +39,7 @@ class DatabaseV2(SeratoBinDb):
         return str(list(self.to_dicts()))
 
     @staticmethod
-    def _parse_item(item_data: bytes) -> Generator[ParsedType]:
+    def _parse_item(item_data: bytes) -> Generator[ParsedType, None, None]:
         fp = io.BytesIO(item_data)
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
@@ -48,7 +52,7 @@ class DatabaseV2(SeratoBinDb):
             data = fp.read(length)
             assert len(data) == length
 
-            value: bytes | str | tuple
+            value: Union[bytes, str, tuple]
             if type_id in ("o", "r"):  #  struct
                 value = tuple(DatabaseV2._parse_item(data))
             elif type_id in ("p", "t"):  # text
@@ -67,9 +71,7 @@ class DatabaseV2(SeratoBinDb):
 
     class ModifyRule(TypedDict):
         field: str
-        func: Callable[
-            [str, "DatabaseV2.ValueOrNoneType"], "DatabaseV2.ValueOrNoneType"
-        ]
+        func: Callable[[str, "DatabaseV2.ValueOrNoneType"], "DatabaseV2.ValueOrNoneType"]
         """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
         files: NotRequired[list[str]]
 
@@ -82,11 +84,9 @@ class DatabaseV2(SeratoBinDb):
         DatabaseV2._check_rule_fields(rules)
 
         for rule in rules:
-            rule["field_found"] = False  # type: ignore
+            rule["field_found"] = False  # pyright: ignore[reportGeneralTypeIssues]
             if "files" in rule:
-                rule["files"] = [
-                    DatabaseV2.format_filepath(file).upper() for file in rule["files"]
-                ]
+                rule["files"] = [DatabaseV2.format_filepath(file).upper() for file in rule["files"]]
 
         fp = io.BytesIO()
 
@@ -132,9 +132,7 @@ class DatabaseV2(SeratoBinDb):
             prev_val: "DatabaseV2.ValueOrNoneType",
         ):
             nonlocal track_filename
-            if track_filename == "" or (
-                "files" in rule and track_filename.upper() not in rule["files"]
-            ):
+            if track_filename == "" or ("files" in rule and track_filename.upper() not in rule["files"]):
                 return None
 
             maybe_new_value = rule["func"](track_filename, prev_val)
@@ -145,19 +143,15 @@ class DatabaseV2(SeratoBinDb):
                 if not isinstance(maybe_new_value, str):
                     raise DataTypeError(maybe_new_value, str, rule["field"])
                 if not os.path.exists(maybe_new_value):
-                    raise FileNotFoundError(
-                        f"set track location to {maybe_new_value}, but doesn't exist"
-                    )
+                    raise FileNotFoundError(f"set track location to {maybe_new_value}, but doesn't exist")
                 maybe_new_value = DatabaseV2.format_filepath(maybe_new_value)
 
             field_name = DatabaseV2.get_field_name(field)
-            logger.info(
-                f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}"
-            )
+            logger.info(f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}")
             return maybe_new_value
 
         track_filename: str = ""
-        for field, length, value in item:
+        for field, length, value in item:  # pylint: disable=unused-variable
             if field == "pfil":
                 if not isinstance(value, str):
                     raise DataTypeError(value, str, "pfil")
@@ -165,7 +159,7 @@ class DatabaseV2(SeratoBinDb):
 
             rule = next((r for r in rules if field == r["field"]), None)
             if rule:
-                rule["field_found"] = True  # type: ignore
+                rule["field_found"] = True  # pyright: ignore[reportGeneralTypeIssues]
                 maybe_new_value = _maybe_perform_rule(rule, field, value)
                 if maybe_new_value is not None:
                     value = maybe_new_value
@@ -173,7 +167,7 @@ class DatabaseV2(SeratoBinDb):
             _dump(field, value)
 
         for rule in rules:
-            if not rule["field_found"]:  # type: ignore
+            if not rule["field_found"]:  # pyright: ignore[reportGeneralTypeIssues]
                 field = rule["field"]
                 maybe_new_value = _maybe_perform_rule(rule, field, None)
                 if maybe_new_value is not None:
@@ -181,11 +175,11 @@ class DatabaseV2(SeratoBinDb):
 
         return fp.getvalue()
 
-    def modify_and_save(self, rules: list[ModifyRule], file: str | None = None):
+    def modify_and_save(self, rules: list[ModifyRule], file: Optional[str] = None):
         self.modify(rules)
         self.save(file)
 
-    def save(self, file: str | None = None):
+    def save(self, file: Optional[str] = None):
         if file is None:
             file = self.filepath
         with open(file, "wb") as write_file:
@@ -201,16 +195,14 @@ class DatabaseV2(SeratoBinDb):
             logger.info(f"renamed {src} to {dest}")
         except FileExistsError:
             # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
-            logger.error("File already exists with change", src)
+            logger.error(f"File already exists with change: {src}")
             return
-        self.modify_and_save(
-            [{"field": "pfil", "files": [src], "func": lambda *args: dest}]
-        )
+        self.modify_and_save([{"field": "pfil", "files": [src], "func": lambda *args: dest}])
 
     class EntryDict(TypedDict):
         field: str
         field_name: str
-        value: str | int | bool | list["DatabaseV2.EntryDict"]
+        value: Union[str, int, bool, list["DatabaseV2.EntryDict"]]
         size_bytes: int
 
     def to_dicts(self) -> Generator[EntryDict, None, None]:
@@ -243,21 +235,15 @@ class DatabaseV2(SeratoBinDb):
     def print(self):
         for entry in self.to_dicts():
             if isinstance(entry["value"], list):
-                print(
-                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)"
-                )
+                print(f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)")
                 for e in entry["value"]:
-                    print(
-                        f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {str(e['value'])}"
-                    )
+                    print(f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {str(e['value'])}")
             else:
-                print(
-                    f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {str(entry['value'])}"
-                )
+                print(f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {str(entry['value'])}")
 
-    def find_missing(self, drive_letter: str | None = None):
+    def find_missing(self, drive_letter: Optional[str] = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")
-        if drive_letter is None:
+        if drive_letter is None:  # pylint: disable=unreachable
             drive_letter = os.path.splitdrive(self.filepath)[0]
 
         track_filepath: str = ""

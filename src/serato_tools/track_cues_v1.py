@@ -5,6 +5,7 @@ import io
 import os
 import struct
 import sys
+from typing import Union
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -26,7 +27,7 @@ class TrackCuesV1(SeratoTag):
     def __init__(self, file_or_data: SeratoTag.FileOrDataType):
         super().__init__(file_or_data)
 
-        self.entries: list[TrackCuesV1.Entry | TrackCuesV1.Color] = []
+        self.entries: list[Union[TrackCuesV1.Entry, TrackCuesV1.Color]] = []
         if self.raw_data is not None:
             self.entries = list(self._parse(self.raw_data))
 
@@ -42,7 +43,7 @@ class TrackCuesV1(SeratoTag):
             "type",
             "is_locked",
         )
-        type: bytes | str  # unsure which one
+        type: Union[bytes, str]
 
         def __init__(self, *args):
             assert len(args) == len(self.FIELDS)
@@ -52,9 +53,7 @@ class TrackCuesV1(SeratoTag):
         def __repr__(self):
             return "{name}({data})".format(
                 name=self.__class__.__name__,
-                data=", ".join(
-                    "{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS
-                ),
+                data=", ".join("{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS),
             )
 
         @classmethod
@@ -85,17 +84,13 @@ class TrackCuesV1(SeratoTag):
                 elif field == "start_position":
                     assert start_position_set is not None
                     if start_position_set:
-                        value = struct.unpack(
-                            ">I", _decode_bytes_32(value).rjust(4, b"\x00")
-                        )[0]
+                        value = struct.unpack(">I", _decode_bytes_32(value).rjust(4, b"\x00"))[0]
                     else:
                         value = None
                 elif field == "end_position":
                     assert end_position_set is not None
                     if end_position_set:
-                        value = struct.unpack(
-                            ">I", _decode_bytes_32(value).rjust(4, b"\x00")
-                        )[0]
+                        value = struct.unpack(">I", _decode_bytes_32(value).rjust(4, b"\x00"))[0]
                     else:
                         value = None
                 elif field == "color":
@@ -149,7 +144,7 @@ class TrackCuesV1(SeratoTag):
         self._check_version(fp.read(2))
 
         num_entries = struct.unpack(">I", fp.read(4))[0]
-        for i in range(num_entries):
+        for i in range(num_entries):  # pylint: disable=unused-variable
             entry_data = fp.read(0x16)
             assert len(entry_data) == 0x16
 
@@ -197,7 +192,7 @@ if __name__ == "__main__":
     entries: list[TrackCuesV1.Entry] = tags.entries
     new_entries: list[TrackCuesV1.Entry] = []
     width = math.floor(math.log10(len(entries))) + 1
-    action = None
+    action: Union[str, None] = None
     for entry_index, entry in enumerate(entries):
         if args.edit:
             if action not in ("q", "_"):
@@ -207,10 +202,7 @@ if __name__ == "__main__":
                     {
                         "y": "edit this entry",
                         "n": "do not edit this entry",
-                        "q": (
-                            "quit; do not edit this entry or any of the "
-                            "remaining ones"
-                        ),
+                        "q": "quit; do not edit this entry or any of the remaining ones",
                         "a": "edit this entry and all later entries in the file",
                         "b": "edit raw bytes",
                         "r": "remove this entry",
@@ -223,7 +215,7 @@ if __name__ == "__main__":
                     with tempfile.NamedTemporaryFile() as f:
                         if action == "b":
                             f.write(entry.dump())
-                            editor = hex_editor
+                            editor = hex_editor  # pyright: ignore[reportPossiblyUnboundVariable]
                         else:
                             if action == "a":
                                 entries_to_edit = (
@@ -231,26 +223,16 @@ if __name__ == "__main__":
                                         "{:{}d}: {}".format(
                                             i,
                                             width,
-                                            (
-                                                repr(e.type)
-                                                if e.__class__ == TrackCuesV1.Entry
-                                                else "Color"
-                                            ),
+                                            (repr(e.type) if e.__class__ == TrackCuesV1.Entry else "Color"),
                                         ),
                                         e,
                                     )
-                                    for i, e in enumerate(
-                                        entries[entry_index:], start=entry_index
-                                    )
+                                    for i, e in enumerate(entries[entry_index:], start=entry_index)
                                 )
                             else:
                                 entries_to_edit = (
                                     (
-                                        (
-                                            repr(entry.type)
-                                            if entry.__class__ == TrackCuesV1.Entry
-                                            else "Color"
-                                        ),
+                                        (repr(entry.type) if entry.__class__ == TrackCuesV1.Entry else "Color"),
                                         entry,
                                     ),
                                 )
@@ -268,7 +250,7 @@ if __name__ == "__main__":
                                         ).encode()
                                     )
                                 f.write(b"\n")
-                            editor = text_editor
+                            editor = text_editor  # pyright: ignore[reportPossiblyUnboundVariable]
                         f.flush()
                         status = subprocess.call((editor, f.name))
                         f.seek(0)
@@ -299,11 +281,7 @@ if __name__ == "__main__":
                                 for section in sections:
                                     l, s, r = section.partition(": ")
                                     name = r if s else l
-                                    cls = (
-                                        TrackCuesV1.Color
-                                        if name == "Color"
-                                        else TrackCuesV1.Entry
-                                    )
+                                    cls = TrackCuesV1.Color if name == "Color" else TrackCuesV1.Entry
                                     e = cls(
                                         *(
                                             ast.literal_eval(
@@ -315,7 +293,7 @@ if __name__ == "__main__":
                                     results.append(cls.load(e.dump()))
                             else:
                                 results = [entry.load(output)]
-                        except Exception as e:
+                        except Exception as e:  # pylint: disable=broad-exception-caught
                             print(str(e))
                             if (
                                 ui_ask(
@@ -362,7 +340,7 @@ if __name__ == "__main__":
             print("No changes made.")
         else:
             tags.entries = new_entries
-            tags._dump()
+            tags._dump()  # pylint: disable=protected-access
             if tags.tagfile:
                 tags.save()
             else:

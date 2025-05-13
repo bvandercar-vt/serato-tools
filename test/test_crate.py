@@ -1,7 +1,7 @@
+# pylint: disable=protected-access
 import unittest
 import os
 import io
-from datetime import datetime
 
 from contextlib import redirect_stdout
 
@@ -13,6 +13,24 @@ class TestCase(unittest.TestCase):
         self.file = os.path.abspath("test/data/TestCrate.crate")
         with open(self.file, mode="rb") as fp:
             self.data = fp.read()
+
+    def test_format_filepath(self):
+        self.assertEqual(
+            Crate.format_filepath("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
+        )
+        self.assertEqual(
+            Crate.format_filepath("Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
+        )
+        self.assertEqual(
+            Crate.format_filepath("C:/Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
+        )
+        self.assertEqual(
+            Crate.format_filepath("Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
+        )
 
     def test_parse_and_modify_and_dump(self):
         crate = Crate(self.file)

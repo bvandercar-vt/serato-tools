@@ -3,7 +3,7 @@
 import os
 import struct
 import sys
-from typing import Generator, TypedDict, Union, overload, cast
+from typing import Generator, TypedDict, Union, overload, cast, Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -28,7 +28,7 @@ class Crate(SeratoBinDb):
     ]
 
     StructType = list[tuple[str, "ValueType"]]
-    ValueType = StructType | str | bytes | bool
+    ValueType = Union[StructType, str, bytes, bool]
 
     ValueOrNoneType = Union[ValueType, None]
 
@@ -46,15 +46,13 @@ class Crate(SeratoBinDb):
                 self.raw_data = f.read()
                 self.data = self._parse_item(self.raw_data)
         else:
-            logger.warning(
-                f"File does not exist: {file}. Using default data for an empty crate."
-            )
+            logger.warning(f"File does not exist: {file}. Using default data for an empty crate.")
             self.data = Crate.DEFAULT_DATA
             self.raw_data = b""
 
     def __str__(self):
         tracks = self.tracks()
-        return f"Crate containing {len(tracks)} tracks: \n{'\n'.join(tracks)}"
+        return f"Crate containing {len(tracks)} tracks: \n" + "\n".join(tracks)
 
     @overload
     @staticmethod
@@ -63,7 +61,7 @@ class Crate(SeratoBinDb):
     @staticmethod
     def _parse_item(data: bytes, field: str) -> ValueType: ...
     @staticmethod
-    def _parse_item(data: bytes, field: str | None = None) -> ValueType | StructType:
+    def _parse_item(data: bytes, field: Optional[str] = None) -> Union[ValueType, StructType]:
         if not isinstance(data, bytes):
             raise DataTypeError(data, bytes, field)
 
@@ -89,7 +87,7 @@ class Crate(SeratoBinDb):
             raise ValueError(f"unexpected type for field: {field}")
 
     def _dump(self) -> bytes:
-        def _dump_item(data: Crate.ValueType, field: str | None = None) -> bytes:
+        def _dump_item(data: Crate.ValueType, field: Optional[str] = None) -> bytes:
             type_id: str = Crate._get_type(field) if field else "o"
             if type_id == "o":  # struct
                 if not isinstance(data, list):
@@ -141,7 +139,7 @@ class Crate(SeratoBinDb):
             raise TypeError(f"{Crate.TRACK_FIELD} should be list")
         track_name = value[0][1]
         if not isinstance(track_name, str):
-            raise TypeError(f"value should be str")
+            raise TypeError("value should be str")
         return track_name
 
     def tracks(self) -> list[str]:
@@ -152,21 +150,21 @@ class Crate(SeratoBinDb):
                 track_names.append(track_name)
         return track_names
 
-    def remove_track(self, track_name: str):
-        # track_name needs to include the containing folder name.
+    def remove_track(self, filepath: str):
+        # filepath name must include the containing folder
         found = False
         for i, dat in enumerate(self.data):
             if dat[0] == Crate.TRACK_FIELD:
                 crate_track_name = Crate._get_track_name(dat[1])
-                if crate_track_name == track_name:
+                if crate_track_name == filepath:
                     self.data.pop(i)
                     found = True
 
         if not found:
-            raise ValueError(f"Track not found in crate: {track_name}")
+            raise ValueError(f"Track not found in crate: {filepath}")
 
     def add_track(self, filepath: str):
-        # track name must include the containing folder name
+        # filepath name must include the containing folder
         filepath = self.format_filepath(filepath)
 
         if filepath in self.tracks():
@@ -175,10 +173,7 @@ class Crate(SeratoBinDb):
         self.data.append((Crate.TRACK_FIELD, [("ptrk", filepath)]))
 
     def include_tracks_from_folder(self, folder_path: str, replace: bool = False):
-        folder_tracks = [
-            self.format_filepath(os.path.join(folder_path, t))
-            for t in os.listdir(folder_path)
-        ]
+        folder_tracks = [self.format_filepath(os.path.join(folder_path, t)) for t in os.listdir(folder_path)]
 
         if replace:
             for track in self.tracks():
@@ -188,7 +183,7 @@ class Crate(SeratoBinDb):
         for track in folder_tracks:
             self.add_track(track)
 
-    def save(self, file: str | None = None):
+    def save(self, file: Optional[str] = None):
         if file is None:
             file = self.filepath
 
@@ -237,9 +232,7 @@ class Crate(SeratoBinDb):
                 for e in entry["value"]:
                     if isinstance(e, tuple):
                         raise TypeError("unexpected type")
-                    field_lines.append(
-                        f"[ {e['field']} ({e['field_name']}): {e['value']} ]"
-                    )
+                    field_lines.append(f"[ {e['field']} ({e['field_name']}): {e['value']} ]")
                 print_val = ", ".join(field_lines)
             else:
                 print_val = entry["value"]
@@ -253,17 +246,13 @@ if __name__ == "__main__":
     parser.add_argument("file")
     parser.add_argument("-f", "--filenames_only", action="store_true")
     parser.add_argument("-d", "--data", action="store_true")
-    parser.add_argument(
-        "-o", "--output", "--output_file", dest="output_file", default=None
-    )
+    parser.add_argument("-o", "--output", "--output_file", dest="output_file", default=None)
     args = parser.parse_args()
 
     crate = Crate(args.file)
     tracks = crate.tracks()
     if args.filenames_only:
-        track_names = [
-            os.path.splitext(os.path.basename(track))[0] for track in crate.tracks()
-        ]
+        track_names = [os.path.splitext(os.path.basename(track))[0] for track in crate.tracks()]
         print("\n".join(track_names))
     elif args.data:
         crate.print()

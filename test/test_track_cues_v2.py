@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import unittest
 import os
 
@@ -66,8 +67,6 @@ class TestCase(unittest.TestCase):
         )
         tags._dump()
 
-        with open(
-            os.path.abspath("test/data/track_cues_v2_modified.bin"), mode="rb"
-        ) as fp:
+        with open(os.path.abspath("test/data/track_cues_v2_modified.bin"), mode="rb") as fp:
             expected_modified_data = fp.read()
         self.assertEqual(tags.raw_data, expected_modified_data, "modified data dump")

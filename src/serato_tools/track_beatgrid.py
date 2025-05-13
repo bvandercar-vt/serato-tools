@@ -5,7 +5,7 @@ import io
 import struct
 import os
 import sys
-from typing import cast
+from typing import cast, Union
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -31,18 +31,18 @@ class TrackBeatgrid(SeratoTag):
 
     Footer = collections.namedtuple("Footer", ("unknown",))
 
-    EntryList = list[TerminalBeatgridMarker | NonTerminalBeatgridMarker | Footer]
+    EntryList = list[Union[TerminalBeatgridMarker, NonTerminalBeatgridMarker, Footer]]
 
     def __init__(self, file_or_data: SeratoTag.FileOrDataType):
         super().__init__(file_or_data)
 
-        self.entries: TrackBeatgrid.EntryList | None = None
+        self.entries: Union[TrackBeatgrid.EntryList, None] = None
 
         if self.raw_data is not None:
             self.entries = list(self._parse(self.raw_data))
 
     def __str__(self):
-        nonterminal_markers, terminal_markers, footer = self._check_and_split()
+        nonterminal_markers, terminal_markers, footer = self._check_and_split()  # pylint: disable=unused-variable
         markers = nonterminal_markers + terminal_markers
         return f"Beatgrid with {len(markers)} markers"
 
@@ -59,9 +59,7 @@ class TrackBeatgrid(SeratoTag):
                 yield TrackBeatgrid.TerminalBeatgridMarker(position, bpm)
             else:
                 beats_till_next_marker = struct.unpack(">I", data)[0]
-                yield TrackBeatgrid.NonTerminalBeatgridMarker(
-                    position, beats_till_next_marker
-                )
+                yield TrackBeatgrid.NonTerminalBeatgridMarker(position, beats_till_next_marker)
 
         # TODO: What's the meaning of the footer byte?
         yield TrackBeatgrid.Footer(struct.unpack("B", fp.read(1))[0])
@@ -85,13 +83,9 @@ class TrackBeatgrid(SeratoTag):
             else:
                 raise TypeError(f"unexpected value type {entry}")
 
-        assert (
-            len(terminal_markers) == 1
-        ), f"should only be 1 terminal marker, but #: {len(terminal_markers)}"
+        assert len(terminal_markers) == 1, f"should only be 1 terminal marker, but #: {len(terminal_markers)}"
         assert len(footers) == 1, f"should only be 1 footer, but #: {len(footers)}"
-        assert isinstance(
-            self.entries[-1], TrackBeatgrid.Footer
-        ), "last item should be a footer"
+        assert isinstance(self.entries[-1], TrackBeatgrid.Footer), "last item should be a footer"
         assert isinstance(
             self.entries[-2], TrackBeatgrid.TerminalBeatgridMarker
         ), "last item should be a terminal marker"
@@ -137,12 +131,9 @@ class TrackBeatgrid(SeratoTag):
 
         logger.info("Writing tags...")
         entries: TrackBeatgrid.EntryList = [
-            TrackBeatgrid.NonTerminalBeatgridMarker(position, 4)
-            for position in analyzed_breatgrid.downbeats[:-1]
+            TrackBeatgrid.NonTerminalBeatgridMarker(position, 4) for position in analyzed_breatgrid.downbeats[:-1]
         ] + [
-            TrackBeatgrid.TerminalBeatgridMarker(
-                analyzed_breatgrid.downbeats[-1], bpm=bpm or analyzed_breatgrid.bpm
-            ),
+            TrackBeatgrid.TerminalBeatgridMarker(analyzed_breatgrid.downbeats[-1], bpm=bpm or analyzed_breatgrid.bpm),
             TrackBeatgrid.Footer(0),
         ]
 

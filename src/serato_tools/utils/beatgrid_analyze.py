@@ -2,7 +2,7 @@
 
 import sys
 from dataclasses import asdict, dataclass
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import librosa
 import numpy as np
@@ -18,7 +18,7 @@ class BeatGridInfo:
     downbeats: List[float]
 
 
-def analyze_beatgrid(file: str, bpm_helper: Optional[int | float] = None):
+def analyze_beatgrid(file: str, bpm_helper: Optional[Union[int, float]] = None):
     audio_data, sample_rate = librosa.load(
         file,
         sr=None,  # sample_rate = default
@@ -60,9 +60,7 @@ def analyze_beatgrid(file: str, bpm_helper: Optional[int | float] = None):
     for beat_time in beat_times[::4]:  # Check every 4th beat
         beat_frame = int(beat_time * sample_rate / 512)  # Convert to onset frames
         if beat_frame < len(onset_env):
-            local_max = np.argmax(
-                onset_env[max(0, beat_frame - 2) : min(len(onset_env), beat_frame + 3)]
-            )
+            local_max = np.argmax(onset_env[max(0, beat_frame - 2) : min(len(onset_env), beat_frame + 3)])
             downbeats.append(float(beat_time + (local_max - 2) * 512 / sample_rate))
 
     return BeatGridInfo(

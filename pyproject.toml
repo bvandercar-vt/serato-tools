@@ -4,8 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "2.3.1"
+version = "2.4.0"
 description = "Serato crate, library database, and track metadata (cues, beatgrid, etc.) modification"
+requires-python = ">= 3.9"
 readme = "README.md"
 authors = [
     { name = "bvandercar-vt", email = "bvandercar@outlook.com" }
@@ -39,3 +40,6 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.black]
+line-length = 120

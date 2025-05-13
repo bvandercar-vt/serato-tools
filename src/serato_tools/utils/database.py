@@ -20,7 +20,6 @@ class SeratoBinDb:
         "tsiz": "Size",
         "tbpm": "BPM",
         "tkey": "Key",
-        "tart": "Artist",
         "utme": "File Time",
         "tgrp": "Grouping",
         "tlbl": "Publisher",
@@ -46,7 +45,7 @@ class SeratoBinDb:
     raw_data: bytes
 
     def __repr__(self):
-        return self.raw_data
+        return str(self.raw_data)
 
     @staticmethod
     def get_field_name(field: str):
@@ -66,7 +65,7 @@ class SeratoBinDb:
 
     @staticmethod
     def format_filepath(filepath: str) -> str:
-        drive, filepath = os.path.splitdrive(filepath)
+        drive, filepath = os.path.splitdrive(filepath)  # pylint: disable=unused-variable
         return os.path.normpath(filepath).replace(os.path.sep, "/").lstrip("/")
 
     class FieldObj(TypedDict):

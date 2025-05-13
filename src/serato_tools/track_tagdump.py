@@ -4,6 +4,7 @@
 import base64
 import os
 import sys
+from typing import Union
 
 import mutagen._file
 import mutagen.aiff
@@ -30,7 +31,7 @@ def get_serato_tagdata(tagfile: mutagen._file.FileType, decode: bool = False):
         for tagname in tagfile.tags.keys():
             tagname = str(tagname)
             if tagname.startswith("GEOB:Serato"):
-                tagvalue = tf._get_geob(tagname.lstrip("GEOB:"))
+                tagvalue = tf._get_geob(tagname.lstrip("GEOB:"))  # pylint: disable=protected-access
                 if not tagvalue:
                     raise ValueError(f"no value for {tagname}")
                 yield tagname[5:], tagvalue
@@ -38,10 +39,7 @@ def get_serato_tagdata(tagfile: mutagen._file.FileType, decode: bool = False):
     elif isinstance(tagfile, (mutagen.flac.FLAC, mutagen.mp4.MP4)):
         for tagname, tagvalue in tagfile.tags.items():  # type: ignore
             tagname = str(tagname)
-            if not (
-                tagname.startswith("serato_")
-                or tagname.startswith("----:com.serato.dj:")
-            ):
+            if not (tagname.startswith("serato_") or tagname.startswith("----:com.serato.dj:")):
                 continue
 
             tagvalue = tagvalue[0]
@@ -93,7 +91,8 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--decode", action="store_true")
     args = parser.parse_args()
 
-    tagfile: mutagen._file.FileType | None = mutagen._file.File(args.input_file)
+    # pylint: disable-next=protected-access
+    tagfile: Union[mutagen._file.FileType, None] = mutagen._file.File(args.input_file)
 
     if not tagfile:
         raise Exception("couldn't parse file")

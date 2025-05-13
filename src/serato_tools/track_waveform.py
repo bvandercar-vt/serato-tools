@@ -54,7 +54,7 @@ class TrackWaveform(SeratoTag):
                     saturation=40,
                     luminance=(value / 0xFF) * 100,
                 )
-                pixels[i, j] = ImageColor.getrgb(color)  # type: ignore
+                pixels[i, j] = ImageColor.getrgb(color)  # pyright: ignore[reportOptionalSubscript]
 
         return img
 

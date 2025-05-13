@@ -1,0 +1,5 @@
+mutagen
+numpy
+typing_extensions==4.13.2; python_version<='3.11'
+librosa
+pillow

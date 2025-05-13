@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import unittest
 import os
 
@@ -16,9 +17,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(
             tags.entries,
             [
-                TrackBeatgrid.TerminalBeatgridMarker(
-                    position=0.029895611107349396, bpm=75.0
-                ),
+                TrackBeatgrid.TerminalBeatgridMarker(position=0.029895611107349396, bpm=75.0),
                 TrackBeatgrid.Footer(unknown=0),
             ],
             "parsed entries",

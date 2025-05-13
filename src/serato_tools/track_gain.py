@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Union, Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -13,13 +14,13 @@ class TrackGain(SeratoTrack):
 
     def __init__(self, file: SeratoTrack.FileArgType):
         super().__init__(file)
-        self.gain: float | None = self.tagfile.get(TrackGain.REPLAY_GAIN_GAIN_KEY, None)
-        self.peak: float | None = self.tagfile.get(TrackGain.REPLAY_GAIN_PEAK_KEY, None)
+        self.gain: Union[float, None] = self.tagfile.get(TrackGain.REPLAY_GAIN_GAIN_KEY, None)
+        self.peak: Union[float, None] = self.tagfile.get(TrackGain.REPLAY_GAIN_PEAK_KEY, None)
 
     def __str__(self):
         return f"gain: {self.gain}\npeak: {self.peak}"
 
-    def set_and_save(self, gain: float | None = None, peak: float | None = None):
+    def set_and_save(self, gain: Optional[float] = None, peak: Optional[float] = None):
         if gain is not None:
             self.gain = gain
         if peak is not None:
@@ -27,6 +28,9 @@ class TrackGain(SeratoTrack):
 
         self.tagfile[TrackGain.REPLAY_GAIN_GAIN_KEY] = self.gain
         self.tagfile[TrackGain.REPLAY_GAIN_PEAK_KEY] = self.peak
+        self.tagfile.save()
+
+    def save(self):
         self.tagfile.save()
 
     def delete(self):

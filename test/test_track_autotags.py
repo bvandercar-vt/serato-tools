@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import unittest
 import os
 

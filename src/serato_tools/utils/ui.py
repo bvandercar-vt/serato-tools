@@ -4,9 +4,7 @@ from typing import Optional
 
 
 def ui_ask(question: str, choices: dict, default: Optional[str] = None):
-    choices_str = "/".join(
-        x.upper() if x == default else x for x in (*choices.keys(), "?")
-    )
+    choices_str = "/".join(x.upper() if x == default else x for x in (*choices.keys(), "?"))
     text = f"{question} [{choices_str}]? "
 
     while True:
@@ -17,12 +15,7 @@ def ui_ask(question: str, choices: dict, default: Optional[str] = None):
         if answer in choices.keys():
             return answer
         else:
-            print(
-                "\n".join(
-                    f"{choice} - {desc}"
-                    for choice, desc in (*choices.items(), ("?", "print help"))
-                )
-            )
+            print("\n".join(f"{choice} - {desc}" for choice, desc in (*choices.items(), ("?", "print help"))))
 
 
 def get_text_editor():

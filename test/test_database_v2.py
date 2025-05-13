@@ -1,7 +1,7 @@
+# pylint: disable=protected-access
 import unittest
 import os
 import io
-from datetime import datetime
 
 from contextlib import redirect_stdout
 
@@ -13,6 +13,24 @@ class TestCase(unittest.TestCase):
         self.file = os.path.abspath("test/data/database_v2_test.bin")
         with open(self.file, mode="rb") as fp:
             self.data = fp.read()
+
+    def test_format_filepath(self):
+        self.assertEqual(
+            DatabaseV2.format_filepath("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
+        )
+        self.assertEqual(
+            DatabaseV2.format_filepath("Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
+        )
+        self.assertEqual(
+            DatabaseV2.format_filepath("C:/Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
+        )
+        self.assertEqual(
+            DatabaseV2.format_filepath("Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
+        )
 
     def test_parse_and_modify_and_dump(self):
         db = DatabaseV2(self.file)
@@ -41,18 +59,16 @@ class TestCase(unittest.TestCase):
         self.assertEqual(db.raw_data, original_raw_data, "was not modified")
         self.assertEqual(get_print_val(), expected, "was not modified")
 
-        new_time = int(datetime(2025, 1, 1, 9, 15, 0).timestamp())
+        new_time = int(1735748100)
         db.modify(
             [
-                {"field": "uadd", "func": lambda *args: new_time},
-                {"field": "tadd", "func": lambda *args: str(new_time)},
-                {"field": "tgrp", "func": lambda *args: "NEW_GROUPING"},
+                {"field": "uadd", "func": lambda *args: new_time},  # pyright: ignore[reportArgumentType]
+                {"field": "tadd", "func": lambda *args: str(new_time)},  # pyright: ignore[reportArgumentType]
+                {"field": "tgrp", "func": lambda *args: "NEW_GROUPING"},  # pyright: ignore[reportArgumentType]
             ]
         )
         db.data = list(db.data)
-        with open(
-            "test/data/database_v2_test_modified_output.txt", "r", encoding="utf-16"
-        ) as f:
+        with open("test/data/database_v2_test_modified_output.txt", "r", encoding="utf-16") as f:
             self.assertEqual(get_print_val(), f.read(), "was modified correctly")
         with open("test/data/database_v2_test_modified_output.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly")
@@ -70,11 +86,7 @@ class TestCase(unittest.TestCase):
             ]
         )
         db.data = list(db.data)
-        with open("test/data/database_v2_test_modified_output_2.txt", "r") as f:
-            self.assertEqual(
-                get_print_val(), f.read(), "was modified correctly, given files"
-            )
+        with open("test/data/database_v2_test_modified_output_2.txt", "r", encoding="utf-8") as f:
+            self.assertEqual(get_print_val(), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
-            self.assertEqual(
-                db.raw_data, f.read(), "was modified correctly, given files"
-            )
+            self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")

@@ -1,6 +1,11 @@
 import logging
 from typing import Iterable, TypeVar, Union, cast, Any
 
+try:
+    from typing import NotRequired  # Python 3.11+ # pyright: ignore[reportAttributeAccessIssue]
+except ImportError:
+    from typing_extensions import NotRequired  # For Python 3.10
+
 T = TypeVar("T")
 
 logger = logging.getLogger("serato-tools")
@@ -16,7 +21,10 @@ def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:
 
 class DataTypeError(Exception):
     def __init__(
-        self, value: Any, expected_type: type | Iterable[type], field: str | None
+        self,
+        value: Any,
+        expected_type: Union[type, Iterable[type]],
+        field: Union[str, None],
     ):
         super().__init__(
             f"value must be {' or '.join(e.__name__ for e in to_array(expected_type))} when field is {field} (type: {type(value).__name__}) (value: {str(value)})"

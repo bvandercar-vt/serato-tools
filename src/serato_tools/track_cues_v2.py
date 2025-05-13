@@ -7,16 +7,7 @@ import io
 import os
 import struct
 import sys
-from typing import (
-    Callable,
-    NotRequired,
-    Tuple,
-    TypedDict,
-    Literal,
-    List,
-    Sequence,
-    Union,
-)
+from typing import Callable, Tuple, TypedDict, Literal, List, Sequence, Union
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -24,7 +15,11 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.track_cues_v1 import TrackCuesV1
-from serato_tools.utils import logger, DataTypeError
+from serato_tools.utils import (
+    logger,
+    DataTypeError,
+    NotRequired,  # pyright: ignore[reportAttributeAccessIssue]
+)
 from serato_tools.utils.track_tags import SeratoTag
 
 
@@ -92,14 +87,14 @@ class TrackCuesV2(SeratoTag):
         self.modified: bool = False
 
     @staticmethod
-    def _get_cue_color_key(value: bytes) -> str | None:
+    def _get_cue_color_key(value: bytes) -> Union[str, None]:
         for key, v in TrackCuesV2.CUE_COLORS.items():
             if v == value:
                 return key
         raise ValueError(f"no color key for value {value}")
 
     @staticmethod
-    def _get_track_color_key(value: bytes) -> str | None:
+    def _get_track_color_key(value: bytes) -> Union[str, None]:
         for key, v in TrackCuesV2.TRACK_COLORS.items():
             if v == value:
                 return key
@@ -123,7 +118,7 @@ class TrackCuesV2(SeratoTag):
         )
 
     class Entry(object):
-        NAME: str | None
+        NAME: Union[str, None]
         FIELDS: Tuple[str, ...]
         data: bytes
 
@@ -135,9 +130,7 @@ class TrackCuesV2(SeratoTag):
         def __repr__(self):
             return "{name}({data})".format(
                 name=self.__class__.__name__,
-                data=", ".join(
-                    "{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS
-                ),
+                data=", ".join("{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS),
             )
 
         @classmethod
@@ -212,9 +205,7 @@ class TrackCuesV2(SeratoTag):
             struct_fields = self.FIELDS[:-1]
             return b"".join(
                 (
-                    struct.pack(
-                        self.FORMAT, *(getattr(self, f) for f in struct_fields)
-                    ),
+                    struct.pack(self.FORMAT, *(getattr(self, f) for f in struct_fields)),
                     self.name.encode("utf-8"),
                     b"\x00",
                 )
@@ -249,9 +240,7 @@ class TrackCuesV2(SeratoTag):
             struct_fields = self.FIELDS[:-1]
             return b"".join(
                 (
-                    struct.pack(
-                        self.FORMAT, *(getattr(self, f) for f in struct_fields)
-                    ),
+                    struct.pack(self.FORMAT, *(getattr(self, f) for f in struct_fields)),
                     self.name.encode("utf-8"),
                     b"\x00",
                 )
@@ -283,7 +272,7 @@ class TrackCuesV2(SeratoTag):
             loop, num_actions = struct.unpack(cls.FORMAT2, other[:info2_size])
             action_data = other[info2_size:]
             actions = []
-            for i in range(num_actions):
+            for i in range(num_actions):  # pylint: disable=unused-variable
                 type_id, size = struct.unpack(cls.FORMAT2, action_data[:info2_size])
                 action_data = action_data[info2_size:]
                 if type_id == 0:
@@ -305,7 +294,7 @@ class TrackCuesV2(SeratoTag):
 
         try:
             b64data = data[self.VERSION_LEN : data.index(b"\x00", self.VERSION_LEN)]
-        except:
+        except IndexError:
             b64data = data[self.VERSION_LEN :]
         b64data = b64data.replace(b"\n", b"")
         padding = b"A==" if len(b64data) % 4 == 1 else (b"=" * (-len(b64data) % 4))
@@ -379,7 +368,7 @@ class TrackCuesV2(SeratoTag):
             results.append(entry_class.load(e.dump()))
         return results
 
-    ValueType = bytes | str | int
+    ValueType = Union[bytes, str, int]
 
     class EntryModifyRule(TypedDict):
         field: str
@@ -387,24 +376,22 @@ class TrackCuesV2(SeratoTag):
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class CueIndexModifyRule(EntryModifyRule):
-        field: Literal["index"]
-        func: Callable[[int], int | None]
+        field: Literal["index"]  # pyright: ignore[reportIncompatibleVariableOverride]
+        func: Callable[[int], Union[int, None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class ColorModifyRule(EntryModifyRule):
-        field: Literal["color"]
-        func: Callable[[bytes], bytes | None]
+        field: Literal["color"]  # pyright: ignore[reportIncompatibleVariableOverride]
+        func: Callable[[bytes], Union[bytes, None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class CueNameModifyRule(EntryModifyRule):
-        field: Literal["name"]
-        func: Callable[[str], str | None]
+        field: Literal["name"]  # pyright: ignore[reportIncompatibleVariableOverride]
+        func: Callable[[str], Union[str, None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-    CueRules = (
-        CueIndexModifyRule | ColorModifyRule | CueNameModifyRule | EntryModifyRule
-    )
-    TrackColorRules = ColorModifyRule | EntryModifyRule
+    CueRules = Union[CueIndexModifyRule, ColorModifyRule, CueNameModifyRule, EntryModifyRule]
+    TrackColorRules = Union[ColorModifyRule, EntryModifyRule]
 
     class EntryModifyRules(TypedDict):
         cues: NotRequired[List["TrackCuesV2.CueRules"]]
@@ -413,7 +400,7 @@ class TrackCuesV2(SeratoTag):
     FIELD_TO_TYPE_MAP = {"color": bytes, "index": int, "name": str}
 
     @staticmethod
-    def _modify_entry(entry: Entry, rules: Sequence[CueRules | TrackColorRules]):
+    def _modify_entry(entry: Entry, rules: Sequence[Union[CueRules, TrackColorRules]]):
         """
         Returns:
             entry: entry if was modified. If was not changed, returns None.
@@ -433,13 +420,11 @@ class TrackCuesV2(SeratoTag):
 
             rule = next((r for r in rules if field == r["field"]), None)
             if rule:
-                ExpectedType: type | None = TrackCuesV2.FIELD_TO_TYPE_MAP.get(
-                    field, None
-                )
+                ExpectedType: Union[type, None] = TrackCuesV2.FIELD_TO_TYPE_MAP.get(field, None)
                 if ExpectedType and not isinstance(value, ExpectedType):
                     raise DataTypeError(value, ExpectedType, field)
 
-                maybe_new_val: ValueType = rule["func"](value)  # type: ignore
+                maybe_new_val: TrackCuesV2.ValueType = rule["func"](value)  # type: ignore
                 if maybe_new_val is not None and maybe_new_val != value:
                     value = maybe_new_val
 
@@ -450,12 +435,10 @@ class TrackCuesV2(SeratoTag):
 
                     if field == "color":
                         is_track_color = isinstance(entry, TrackCuesV2.ColorEntry)
-                        color_name: str | None = None
+                        color_name: Union[str, None] = None
                         if isinstance(value, bytes):
                             get_color_name = (
-                                TrackCuesV2._get_track_color_key
-                                if is_track_color
-                                else TrackCuesV2._get_cue_color_key
+                                TrackCuesV2._get_track_color_key if is_track_color else TrackCuesV2._get_cue_color_key
                             )
                             try:
                                 color_name = get_color_name(value)
@@ -466,9 +449,7 @@ class TrackCuesV2(SeratoTag):
                             f"Set {color_log_str} Color to {color_name if color_name else f'Unknown Color ({str(value)})'}"
                         )
                     else:
-                        logger.info(
-                            f'Set {type(entry).__name__} field "{field}" to {str(value)}'
-                        )
+                        logger.info(f'Set {type(entry).__name__} field "{field}" to {str(value)}')
             output += f"{field}: {value!r}\n"
         output += "\n"
 
@@ -509,26 +490,22 @@ class TrackCuesV2(SeratoTag):
         if self.modified or force:
             super().save()
 
-    def get_track_color(self) -> bytes | None:
+    def get_track_color(self) -> Union[bytes, None]:
         color_entry = next(
-            (
-                entry
-                for entry in self.entries
-                if isinstance(entry, TrackCuesV2.ColorEntry)
-            ),
+            (entry for entry in self.entries if isinstance(entry, TrackCuesV2.ColorEntry)),
             None,
         )
         if color_entry is None:
             return None
         return getattr(color_entry, "color")
 
-    def get_track_color_name(self) -> str | None:
+    def get_track_color_name(self) -> Union[str, None]:
         color_bytes = self.get_track_color()
         if color_bytes is None:
             return None
         return self._get_track_color_key(color_bytes)
 
-    def set_track_color(self, color: bytes | str, delete_tags_v1: bool = True):
+    def set_track_color(self, color: Union[bytes, str], delete_tags_v1: bool = True):
         """
         Args:
             color: bytes or key of TRACK_COLORS
@@ -536,19 +513,17 @@ class TrackCuesV2(SeratoTag):
         """
         if isinstance(color, str):
             if color not in TrackCuesV2.TRACK_COLORS:
-                raise ValueError(
-                    f"Track color {color} must be one of: {str(list(TrackCuesV2.TRACK_COLORS.keys()))}"
-                )
+                raise ValueError(f"Track color {color} must be one of: {str(list(TrackCuesV2.TRACK_COLORS.keys()))}")
             color = TrackCuesV2.TRACK_COLORS[color]
 
         self.modify_entries(
-            {"color": [{"field": "color", "func": lambda v: color}]}, delete_tags_v1
+            {"color": [{"field": "color", "func": lambda v: color}]},  # pyright: ignore[reportArgumentType]
+            delete_tags_v1,
         )
 
     def is_beatgrid_locked(self) -> bool:
         return any(
-            (isinstance(entry, TrackCuesV2.BpmLockEntry) and getattr(entry, "enabled"))
-            for entry in self.entries
+            (isinstance(entry, TrackCuesV2.BpmLockEntry) and getattr(entry, "enabled")) for entry in self.entries
         )
 
 
@@ -600,10 +575,7 @@ if __name__ == "__main__":
                     {
                         "y": "edit this entry",
                         "n": "do not edit this entry",
-                        "q": (
-                            "quit; do not edit this entry or any of the "
-                            "remaining ones"
-                        ),
+                        "q": ("quit; do not edit this entry or any of the " "remaining ones"),
                         "a": "edit this entry and all later entries in the file",
                         "b": "edit raw bytes",
                         "r": "remove this entry",
@@ -616,7 +588,7 @@ if __name__ == "__main__":
                     with tempfile.NamedTemporaryFile() as f:
                         if action == "b":
                             f.write(entry.dump())
-                            editor = hex_editor
+                            editor = hex_editor  # pyright: ignore[reportPossiblyUnboundVariable]
                         else:
                             if action == "a":
                                 entries_to_edit = (
@@ -624,9 +596,7 @@ if __name__ == "__main__":
                                         "{:{}d}: {}".format(i, width, e.NAME),
                                         e,
                                     )
-                                    for i, e in enumerate(
-                                        entries[entry_index:], start=entry_index
-                                    )
+                                    for i, e in enumerate(entries[entry_index:], start=entry_index)
                                 )
                             else:
                                 entries_to_edit = ((entry.NAME, entry),)
@@ -634,14 +604,9 @@ if __name__ == "__main__":
                             for section, e in entries_to_edit:
                                 f.write("[{}]\n".format(section).encode())
                                 for field in e.FIELDS:
-                                    f.write(
-                                        "{}: {!r}\n".format(
-                                            field,
-                                            getattr(e, field),
-                                        ).encode()
-                                    )
+                                    f.write("{}: {!r}\n".format(field, getattr(e, field)).encode())
                                 f.write(b"\n")
-                            editor = text_editor
+                            editor = text_editor  # pyright: ignore[reportPossiblyUnboundVariable]
                         f.flush()
                         status = subprocess.call((editor, f.name))
                         f.seek(0)
@@ -662,12 +627,10 @@ if __name__ == "__main__":
                     else:
                         try:
                             if action != "b":
-                                results = TrackCuesV2.parse_entries_file(
-                                    output.decode(), assert_len_1=action != "a"
-                                )
+                                results = TrackCuesV2.parse_entries_file(output.decode(), assert_len_1=action != "a")
                             else:
                                 results = [entry.load(output)]
-                        except Exception as e:
+                        except Exception as e:  # pylint: disable=broad-exception-caught
                             print(str(e))
                             if (
                                 ui_ask(
@@ -714,7 +677,7 @@ if __name__ == "__main__":
             print("No changes made.")
         else:
             tags.entries = new_entries
-            tags._dump()
+            tags._dump()  # pylint: disable=protected-access
             if tags.tagfile:
                 tags.save()
             else:

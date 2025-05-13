@@ -3,6 +3,7 @@
 import io
 import os
 import sys
+from typing import Union, Optional
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -20,9 +21,9 @@ class TrackAutotags(SeratoTag):
     def __init__(self, file_or_data: SeratoTag.FileOrDataType):
         super().__init__(file_or_data)
 
-        self.bpm: float | None
-        self.autogain: float | None
-        self.gaindb: float | None
+        self.bpm: Union[float, None]
+        self.autogain: Union[float, None]
+        self.gaindb: Union[float, None]
 
         if self.raw_data is not None:
             self.bpm, self.autogain, self.gaindb = self._parse(self.raw_data)
@@ -52,9 +53,9 @@ class TrackAutotags(SeratoTag):
 
     def set(
         self,
-        bpm: float | None = None,
-        autogain: float | None = None,
-        gaindb: float | None = None,
+        bpm: Optional[float] = None,
+        autogain: Optional[float] = None,
+        gaindb: Optional[float] = None,
     ):
         if bpm is not None:
             self.bpm = bpm
@@ -96,10 +97,10 @@ if __name__ == "__main__":
             output = f.read()
 
         if status != 0:
-            error_str = f"Command executation failed with status: {status}"
-            print(error_str, file=sys.stderr)
-            logger.error(error_str)
-            raise Exception(error_str)
+            ERROR_STR = f"Command executation failed with status: {status}"
+            print(ERROR_STR, file=sys.stderr)
+            logger.error(ERROR_STR)
+            raise Exception(ERROR_STR)
 
         cp = configparser.ConfigParser()
         try:
@@ -109,9 +110,9 @@ if __name__ == "__main__":
             autogain = cp.getfloat(SECTION, "autogain")
             gaindb = cp.getfloat(SECTION, "gaindb")
         except Exception:
-            error_str = "Invalid input, no changes made"
-            print(error_str, file=sys.stderr)
-            logger.error(error_str)
+            ERROR_STR = "Invalid input, no changes made"
+            print(ERROR_STR, file=sys.stderr)
+            logger.error(ERROR_STR)
             raise
 
         tags.set(bpm=bpm, autogain=autogain, gaindb=gaindb)
