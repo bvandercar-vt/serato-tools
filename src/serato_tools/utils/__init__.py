@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Iterable, TypeVar, Type, Union, cast, Any
+from typing import Iterable, TypeVar, Type, cast, Any
 from enum import StrEnum
 
 T = TypeVar("T")
@@ -24,7 +24,7 @@ def get_enum_key_from_value(value: str, enum_class: Type[StrEnum]):
     raise ValueError(f"no key for value {value}")
 
 
-def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:
+def to_array(x: T | Iterable[T]) -> Iterable[T]:
     if isinstance(x, (str, bytes)):
         return cast(list[T], [x])
     if isinstance(x, Iterable):
@@ -33,12 +33,7 @@ def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:
 
 
 class DataTypeError(Exception):
-    def __init__(
-        self,
-        value: Any,
-        expected_type: Union[type, Iterable[type]],
-        field: Union[str, None],
-    ):
+    def __init__(self, value: Any, expected_type: type | Iterable[type], field: str | None):
         super().__init__(
             f"value must be {' or '.join(e.__name__ for e in to_array(expected_type))} when field is {field} (type: {type(value).__name__}) (value: {str(value)})"
         )

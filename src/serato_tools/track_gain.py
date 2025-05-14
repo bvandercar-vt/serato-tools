@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Union, Optional
+from typing import Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -14,8 +14,8 @@ class TrackGain(SeratoTrack):
 
     def __init__(self, file: SeratoTrack.FileArg):
         super().__init__(file)
-        self.gain: Union[float, None] = self.tagfile.get(TrackGain.REPLAY_GAIN_GAIN_KEY, None)
-        self.peak: Union[float, None] = self.tagfile.get(TrackGain.REPLAY_GAIN_PEAK_KEY, None)
+        self.gain: float | None = self.tagfile.get(TrackGain.REPLAY_GAIN_GAIN_KEY, None)
+        self.peak: float | None = self.tagfile.get(TrackGain.REPLAY_GAIN_PEAK_KEY, None)
 
     def __str__(self):
         return f"gain: {self.gain}\npeak: {self.peak}"

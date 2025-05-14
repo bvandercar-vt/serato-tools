@@ -3,7 +3,7 @@
 import io
 import os
 import sys
-from typing import Union, Optional
+from typing import Optional
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -21,9 +21,9 @@ class TrackAutotags(SeratoTag):
     def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
-        self.bpm: Union[float, None]
-        self.autogain: Union[float, None]
-        self.gaindb: Union[float, None]
+        self.bpm: float | None
+        self.autogain: float | None
+        self.gaindb: float | None
 
         if self.raw_data is not None:
             self.bpm, self.autogain, self.gaindb = self._parse(self.raw_data)

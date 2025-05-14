@@ -5,7 +5,6 @@ import io
 import os
 import struct
 import sys
-from typing import Union
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -27,7 +26,7 @@ class TrackCuesV1(SeratoTag):
     def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
-        self.entries: list[Union[TrackCuesV1.Entry, TrackCuesV1.Color]] = []
+        self.entries: list[TrackCuesV1.Entry | TrackCuesV1.Color] = []
         if self.raw_data is not None:
             self.entries = list(self._parse(self.raw_data))
 
@@ -43,7 +42,7 @@ class TrackCuesV1(SeratoTag):
             "type",
             "is_locked",
         )
-        type: Union[bytes, str]
+        type: bytes | str
 
         def __init__(self, *args):
             assert len(args) == len(self.FIELDS)
@@ -192,7 +191,7 @@ if __name__ == "__main__":
     entries: list[TrackCuesV1.Entry] = tags.entries
     new_entries: list[TrackCuesV1.Entry] = []
     width = math.floor(math.log10(len(entries))) + 1
-    action: Union[str, None] = None
+    action: str | None = None
     for entry_index, entry in enumerate(entries):
         if args.edit:
             if action not in ("q", "_"):

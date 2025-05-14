@@ -5,7 +5,7 @@ import io
 import struct
 import os
 import sys
-from typing import cast, Union
+from typing import cast
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -31,12 +31,12 @@ class TrackBeatgrid(SeratoTag):
 
     Footer = collections.namedtuple("Footer", ("unknown",))
 
-    type EntryList = list[Union[TerminalBeatgridMarker, NonTerminalBeatgridMarker, Footer]]
+    type EntryList = list[TerminalBeatgridMarker | NonTerminalBeatgridMarker | Footer]
 
     def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
-        self.entries: Union[TrackBeatgrid.EntryList, None] = None
+        self.entries: TrackBeatgrid.EntryList | None = None
 
         if self.raw_data is not None:
             self.entries = list(self._parse(self.raw_data))

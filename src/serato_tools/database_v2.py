@@ -4,7 +4,7 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Generator, Iterable, TypedDict, Union, Optional, NotRequired, cast
+from typing import Callable, Generator, Iterable, TypedDict, Optional, NotRequired, cast
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -16,10 +16,10 @@ from serato_tools.utils import logger, DataTypeError, SERATO_FOLDER
 class DatabaseV2(SeratoBinFile):
     DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER, "database V2")
 
-    type Value = Union[bytes, str, int, tuple]  # TODO: improve the tuple
+    type Value = bytes | str | int | tuple  # TODO: improve the tuple
     type Parsed = tuple[str, int, Value]
 
-    type ValueOrNone = Union[Value, None]
+    type ValueOrNone = Value | None
 
     def __init__(self, filepath: str = DEFAULT_DATABASE_FILE):
         if not os.path.exists(filepath):
@@ -48,7 +48,7 @@ class DatabaseV2(SeratoBinFile):
             data = fp.read(length)
             assert len(data) == length
 
-            value: Union[bytes, str, tuple]
+            value: bytes | str | tuple
             if type_id in ("o", "r"):  #  struct
                 value = tuple(DatabaseV2._parse_item(data))
             elif type_id in ("p", "t"):  # text
@@ -194,7 +194,7 @@ class DatabaseV2(SeratoBinFile):
             return
         self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
 
-    type EntryFull = tuple[str, str, Union[str, int, bool, list["DatabaseV2.EntryFull"]], int]
+    type EntryFull = tuple[str, str, str | int | bool | list["DatabaseV2.EntryFull"], int]
 
     def to_entries(self) -> Generator[EntryFull, None, None]:
         for field, length, value in self.data:

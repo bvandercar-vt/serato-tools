@@ -2,7 +2,7 @@
 
 import sys
 from dataclasses import asdict, dataclass
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import librosa
 import numpy as np
@@ -18,7 +18,7 @@ class BeatGridInfo:
     downbeats: List[float]
 
 
-def analyze_beatgrid(file: str, bpm_helper: Optional[Union[int, float]] = None):
+def analyze_beatgrid(file: str, bpm_helper: Optional[int | float] = None):
     audio_data, sample_rate = librosa.load(
         file,
         sr=None,  # sample_rate = default

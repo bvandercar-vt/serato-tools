@@ -108,7 +108,7 @@ class TrackCuesV2(SeratoTag):
         )
 
     class Entry(object):
-        NAME: Union[str, None]
+        NAME: str | None
         FIELDS: Tuple[str, ...]
         data: bytes
 
@@ -358,7 +358,7 @@ class TrackCuesV2(SeratoTag):
             results.append(entry_class.load(e.dump()))
         return results
 
-    type Value = Union[bytes, str, int]
+    type Value = bytes | str | int
 
     class EntryModifyRule(TypedDict):
         field: str
@@ -367,21 +367,21 @@ class TrackCuesV2(SeratoTag):
 
     class CueIndexModifyRule(EntryModifyRule):
         field: Literal["index"]  # pyright: ignore[reportIncompatibleVariableOverride]
-        func: Callable[[int], Union[int, None]]
+        func: Callable[[int], int | None]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class ColorModifyRule(EntryModifyRule):
         field: Literal["color"]  # pyright: ignore[reportIncompatibleVariableOverride]
-        func: Callable[[bytes], Union[bytes, None]]
+        func: Callable[[bytes], bytes | None]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class CueNameModifyRule(EntryModifyRule):
         field: Literal["name"]  # pyright: ignore[reportIncompatibleVariableOverride]
-        func: Callable[[str], Union[str, None]]
+        func: Callable[[str], str | None]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-    type CueRules = Union[CueIndexModifyRule, ColorModifyRule, CueNameModifyRule, EntryModifyRule]
-    type TrackColorRules = Union[ColorModifyRule, EntryModifyRule]
+    type CueRules = CueIndexModifyRule | ColorModifyRule | CueNameModifyRule | EntryModifyRule
+    type TrackColorRules = ColorModifyRule | EntryModifyRule
 
     class EntryModifyRules(TypedDict):
         cues: NotRequired[List["TrackCuesV2.CueRules"]]
@@ -390,7 +390,7 @@ class TrackCuesV2(SeratoTag):
     FIELD_TO_TYPE_MAP = {"color": bytes, "index": int, "name": str}
 
     @staticmethod
-    def _modify_entry(entry: Entry, rules: Sequence[Union[CueRules, TrackColorRules]]):
+    def _modify_entry(entry: Entry, rules: Sequence[CueRules | TrackColorRules]):
         """
         Returns:
             entry: entry if was modified. If was not changed, returns None.
@@ -410,7 +410,7 @@ class TrackCuesV2(SeratoTag):
 
             rule = next((r for r in rules if field == r["field"]), None)
             if rule:
-                ExpectedType: Union[type, None] = TrackCuesV2.FIELD_TO_TYPE_MAP.get(field, None)
+                ExpectedType: type | None = TrackCuesV2.FIELD_TO_TYPE_MAP.get(field, None)
                 if ExpectedType and not isinstance(value, ExpectedType):
                     raise DataTypeError(value, ExpectedType, field)
 
@@ -425,7 +425,7 @@ class TrackCuesV2(SeratoTag):
 
                     if field == "color":
                         is_track_color = isinstance(entry, TrackCuesV2.ColorEntry)
-                        color_name: Union[str, None] = None
+                        color_name: str | None = None
                         if isinstance(value, bytes):
                             get_color_name = (
                                 TrackCuesV2._get_track_color_key if is_track_color else TrackCuesV2._get_cue_color_key
@@ -480,7 +480,7 @@ class TrackCuesV2(SeratoTag):
         if self.modified or force:
             super().save()
 
-    def get_track_color(self) -> Union[bytes, None]:
+    def get_track_color(self) -> bytes | None:
         color_entry = next(
             (entry for entry in self.entries if isinstance(entry, TrackCuesV2.ColorEntry)),
             None,
@@ -489,13 +489,13 @@ class TrackCuesV2(SeratoTag):
             return None
         return getattr(color_entry, "color")
 
-    def get_track_color_name(self) -> Union[str, None]:
+    def get_track_color_name(self) -> str | None:
         color_bytes = self.get_track_color()
         if color_bytes is None:
             return None
         return self._get_track_color_key(color_bytes)
 
-    def set_track_color(self, color: Union[bytes, str], delete_tags_v1: bool = True):
+    def set_track_color(self, color: bytes | str, delete_tags_v1: bool = True):
         """
         Args:
             color: bytes or key of TRACK_COLORS

@@ -14,9 +14,9 @@ from serato_tools.utils import logger, DataTypeError
 
 class CrateBase(SeratoBinFile):
     type Struct = list[tuple[str, "CrateBase.Value"]]
-    type Value = Union[Struct, str, bytes, bool]
+    type Value = Struct | str | bytes | bool
 
-    type ValueOrNone = Union[Value, None]
+    type ValueOrNone = Value | None
 
     DEFAULT_DATA: Struct
 
@@ -45,7 +45,7 @@ class CrateBase(SeratoBinFile):
     @staticmethod
     def _parse_item(data: bytes, field: str) -> Value: ...
     @staticmethod
-    def _parse_item(data: bytes, field: Optional[str] = None) -> Union[Value, Struct]:
+    def _parse_item(data: bytes, field: Optional[str] = None) -> Value | Struct:
         if not isinstance(data, bytes):
             raise DataTypeError(data, bytes, field)
 

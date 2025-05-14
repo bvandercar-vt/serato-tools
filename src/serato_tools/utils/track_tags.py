@@ -1,6 +1,5 @@
 import struct
 import io
-from typing import Union
 
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3FileType, ID3
@@ -11,8 +10,8 @@ from serato_tools.utils import logger
 
 
 class SeratoTrack:
-    type Tagfile = Union[ID3FileType, ID3, AIFF]
-    type FileArg = Union[str, Tagfile]
+    type Tagfile = ID3FileType | ID3 | AIFF
+    type FileArg = str | Tagfile
 
     def __init__(self, file: FileArg):
         self.tagfile: SeratoTrack.Tagfile
@@ -28,7 +27,7 @@ class SeratoTrack:
         else:
             self.tagfile = file
 
-    def _get_geob(self, geob_key: str) -> Union[bytes, None]:
+    def _get_geob(self, geob_key: str) -> bytes | None:
         geob_key = f"GEOB:{geob_key}"
         try:
             return self.tagfile[geob_key].data
@@ -89,11 +88,11 @@ class SeratoTag(SeratoTrack):
     GEOB_KEY: str
     VERSION: tuple[int, int]
 
-    type FileOrData = Union[SeratoTrack.FileArg, bytes]
+    type FileOrData = SeratoTrack.FileArg | bytes
 
     def __init__(self, file_or_data: FileOrData):
-        self.tagfile: Union[SeratoTrack.Tagfile, None] = None  # pyright: ignore[reportIncompatibleVariableOverride]
-        self.raw_data: Union[bytes, None] = None
+        self.tagfile: SeratoTrack.Tagfile | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+        self.raw_data: bytes | None = None
 
         if isinstance(file_or_data, (bytes, bytearray, memoryview)):
             self.raw_data = file_or_data

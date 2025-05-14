@@ -4,7 +4,6 @@
 import base64
 import os
 import sys
-from typing import Union
 
 import mutagen._file
 import mutagen.aiff
@@ -92,7 +91,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # pylint: disable-next=protected-access
-    tagfile: Union[mutagen._file.FileType, None] = mutagen._file.File(args.input_file)
+    tagfile: mutagen._file.FileType | None = mutagen._file.File(args.input_file)
 
     if not tagfile:
         raise Exception("couldn't parse file")
