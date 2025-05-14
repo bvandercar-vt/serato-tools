@@ -36,7 +36,7 @@ class Crate(CrateBase):
         # filepath name must include the containing folder
         found = False
         for i, dat in enumerate(self.data):
-            if dat[0] == Crate.TRACK_FIELD:
+            if dat[0] == Crate.Fields.TRACK:
                 crate_track_name = Crate._get_track_name(dat[1])
                 if crate_track_name == filepath:
                     self.data.pop(i)
@@ -52,7 +52,7 @@ class Crate(CrateBase):
         if filepath in self.tracks():
             return
 
-        self.data.append((Crate.TRACK_FIELD, [("ptrk", filepath)]))
+        self.data.append((Crate.Fields.TRACK, [("ptrk", filepath)]))
 
     def add_tracks_from_folder(self, folder_path: str, replace: bool = False):
         folder_tracks = [self.format_filepath(os.path.join(folder_path, t)) for t in os.listdir(folder_path)]

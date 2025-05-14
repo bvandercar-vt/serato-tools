@@ -12,7 +12,6 @@ if __package__ is None:
 from serato_tools.utils.bin_file_base import SeratoBinFile
 from serato_tools.utils import logger, DataTypeError, SERATO_FOLDER
 
-
 class DatabaseV2(SeratoBinFile):
     DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER, "database V2")
 
@@ -131,7 +130,7 @@ class DatabaseV2(SeratoBinFile):
             if maybe_new_value is None or maybe_new_value == prev_val:
                 return None
 
-            if rule["field"] == "pfil":
+            if rule["field"] == DatabaseV2.Fields.FILE:
                 if not isinstance(maybe_new_value, str):
                     raise DataTypeError(maybe_new_value, str, rule["field"])
                 if not os.path.exists(maybe_new_value):
@@ -144,9 +143,9 @@ class DatabaseV2(SeratoBinFile):
 
         track_filename: str = ""
         for field, length, value in item:  # pylint: disable=unused-variable
-            if field == "pfil":
+            if field == DatabaseV2.Fields.FILE:
                 if not isinstance(value, str):
-                    raise DataTypeError(value, str, "pfil")
+                    raise DataTypeError(value, str, DatabaseV2.Fields.FILE)
                 track_filename = value
 
             rule = next((r for r in rules if field == r["field"]), None)
@@ -189,7 +188,7 @@ class DatabaseV2(SeratoBinFile):
             # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
             logger.error(f"File already exists with change: {src}")
             return
-        self.modify_and_save([{"field": "pfil", "files": [src], "func": lambda *args: dest}])
+        self.modify_and_save([{"field": DatabaseV2.Fields.FILE, "files": [src], "func": lambda *args: dest}])
 
     type EntryFull = tuple[str, str, Union[str, int, bool, list["DatabaseV2.EntryFull"]], int]
 
@@ -246,7 +245,7 @@ class DatabaseV2(SeratoBinFile):
             self.modify(
                 [
                     {
-                        "field": "pfil",
+                        "field": DatabaseV2.Fields.FILE,
                         "files": [current_filepath],
                         "func": lambda *args: new_filepath,
                     },
@@ -261,7 +260,7 @@ class DatabaseV2(SeratoBinFile):
         def field_actions(entry: DatabaseV2.EntryFull):
             nonlocal track_filepath
             nonlocal missing_checked
-            if entry["field"] == "pfil":
+            if entry["field"] == DatabaseV2.Fields.FILE:
                 if not isinstance(entry["value"], str):
                     raise DataTypeError(entry["value"], str, entry["field"])
 

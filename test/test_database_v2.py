@@ -62,8 +62,8 @@ class TestCase(unittest.TestCase):
         db.modify(
             [
                 {"field": "uadd", "func": lambda *args: new_time},
-                {"field": "tadd", "func": lambda *args: str(new_time)}, 
-                {"field": "tgrp", "func": lambda *args: "NEW_GROUPING"}, 
+                {"field": "tadd", "func": lambda *args: str(new_time)},
+                {"field": "tgrp", "func": lambda *args: "NEW_GROUPING"},
             ]
         )
         db.data = list(db.data)
@@ -92,4 +92,11 @@ class TestCase(unittest.TestCase):
 
     def test_dedupe(self):
         db = DatabaseV2("test/data/database_v2_duplicates.bin")
-        db.modify_and_save([{"field":"pfil", "func":}])
+        db.modify_and_save(
+            [
+                {
+                    "field": DatabaseV2.Fields.FILE,
+                    "func": lambda val, prev_val: os.path.join("Music", os.path.basename(str(prev_val))),
+                }
+            ]
+        )

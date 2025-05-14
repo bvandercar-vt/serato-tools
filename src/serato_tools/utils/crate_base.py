@@ -120,7 +120,7 @@ class CrateBase(SeratoBinFile):
     @staticmethod
     def _get_track_name(value: Value) -> str:
         if not isinstance(value, list):
-            raise TypeError(f"{CrateBase.TRACK_FIELD} should be list")
+            raise TypeError(f"{CrateBase.Fields.TRACK} should be list")
         track_name = value[0][1]
         if not isinstance(track_name, str):
             raise TypeError("value should be str")
@@ -129,7 +129,7 @@ class CrateBase(SeratoBinFile):
     def tracks(self) -> list[str]:
         track_names: list[str] = []
         for dat in self.data:
-            if dat[0] == CrateBase.TRACK_FIELD:
+            if dat[0] == CrateBase.Fields.TRACK:
                 track_name = CrateBase._get_track_name(dat[1])
                 track_names.append(track_name)
         return track_names

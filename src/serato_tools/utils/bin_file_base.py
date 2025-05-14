@@ -1,9 +1,10 @@
 import os
 from typing import Iterable, TypedDict
+from enum import StrEnum
 
 
 class SeratoBinFile:
-    FIELDNAMES = {
+    FIELDNAME_MAP = {
         # Database & Crate
         "vrsn": "Version",
         "otrk": "Track",
@@ -48,8 +49,11 @@ class SeratoBinFile:
         "trft": "Rule Comparison",
         "urkt": "Rule Field",
     }
-    FIELDNAME_KEYS = list(FIELDNAMES.keys())
-    TRACK_FIELD = "otrk"
+    FIELDNAMES = list(FIELDNAME_MAP.keys())
+
+    class Fields(StrEnum):
+        TRACK = "otrk"
+        FILE = "pfil"
 
     raw_data: bytes
 
@@ -58,7 +62,7 @@ class SeratoBinFile:
 
     @staticmethod
     def get_field_name(field: str):
-        return SeratoBinFile.FIELDNAMES.get(field, "Unknown Field")
+        return SeratoBinFile.FIELDNAME_MAP.get(field, "Unknown Field")
 
     @staticmethod
     def _get_type(field: str) -> str:
@@ -67,9 +71,9 @@ class SeratoBinFile:
 
     @staticmethod
     def _check_valid_field(field: str):
-        if field not in SeratoBinFile.FIELDNAME_KEYS:
+        if field not in SeratoBinFile.FIELDNAMES:
             raise ValueError(
-                f"invalid field: {field} must be one of: {str(SeratoBinFile.FIELDNAME_KEYS)}\n(see {__file__} for what these keys map to)"
+                f"invalid field: {field} must be one of: {str(SeratoBinFile.FIELDNAMES)}\n(see {__file__} for what these keys map to)"
             )
 
     @staticmethod
