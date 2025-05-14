@@ -10,11 +10,11 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
-from serato_tools.utils import logger, DataTypeError
+from serato_tools.utils import logger, DataTypeError, SERATO_FOLDER
 
 
 class DatabaseV2(SeratoBinFile):
-    DEFAULT_DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")
+    DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER, "database V2")
 
     type Value = Union[bytes, str, int, tuple]  # TODO: improve the tuple
     type Parsed = tuple[str, int, Value]

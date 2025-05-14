@@ -25,10 +25,12 @@
 - Read a crate's tracks
 - Remove a track from a crate
 - Add a track to a crate
+- List available crates
 
 **smart Crate:**
 - Read a smart crate's tracks
 - Read a smart crate's rules (TODO: ability to modify the rules!)
+- List available smart crates
 
 _**Code examples are below.**_
 
@@ -157,6 +159,16 @@ tags.modify_entries(
 )
 tags.save()
 ```
+
+### Listing available crates or smart crates
+
+```python
+from serato_tools.crate import Crate
+Crate.list_folder()
+
+from serato_tools.smart_crate import smartCrate
+smartCrate.list_folder()
+``` 
 
 ### Crate details and adding a track
 

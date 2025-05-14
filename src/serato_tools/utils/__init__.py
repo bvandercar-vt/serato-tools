@@ -1,10 +1,13 @@
 import logging
+import os
 from typing import Iterable, TypeVar, Union, cast, Any
 
 
 T = TypeVar("T")
 
 logger = logging.getLogger("serato-tools")
+
+SERATO_FOLDER = os.path.join(os.path.expanduser("~"), "Music\\_Serato_")
 
 
 def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:

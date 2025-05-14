@@ -8,9 +8,12 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
+from serato_tools.utils import SERATO_FOLDER
 
 
 class Crate(CrateBase):
+    FOLDER = os.path.join(SERATO_FOLDER, "Subcrates")
+
     DEFAULT_DATA = [
         ("vrsn", "1.0/Serato ScratchLive Crate"),
         ("osrt", [("tvcn", "key"), ("brev", "\x00")]),
@@ -83,16 +86,26 @@ class Crate(CrateBase):
                 print_val = str(value)
             print(f"{field} ({fieldname}): {print_val}")
 
+    @staticmethod
+    def list_folder():
+        for file in os.listdir(Crate.FOLDER):
+            print(os.path.join(Crate.FOLDER, file))
+
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file")
+    parser.add_argument("file", nargs="?")
     parser.add_argument("-f", "--filenames_only", action="store_true")
     parser.add_argument("-d", "--data", action="store_true")
     parser.add_argument("-o", "--output", "--output_file", dest="output_file", default=None)
     args = parser.parse_args()
+
+    if not args.file:
+        print(f"must pass a file! files in {Crate.FOLDER}:")
+        Crate.list_folder()
+        sys.exit()
 
     crate = Crate(args.file)
     tracks = crate.tracks()
