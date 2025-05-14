@@ -32,17 +32,11 @@ class TestCase(unittest.TestCase):
         tags.modify_entries(
             {
                 "cues": [
-                    {
-                        "field": "color",
-                        "func": lambda val: TrackCuesV2.CUE_COLORS["red"],
-                    },
+                    {"field": "color", "func": lambda val: TrackCuesV2.CueColors.RED},
                     {"field": "name", "func": lambda val: "NEW" if val == "" else None},
                 ],
                 "color": [
-                    {
-                        "field": "color",
-                        "func": lambda val: TrackCuesV2.TRACK_COLORS["orange"],
-                    },
+                    {"field": "color", "func": lambda val: TrackCuesV2.TrackColors.ORANGE},
                 ],
             },
         )

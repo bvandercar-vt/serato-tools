@@ -8,6 +8,7 @@ import os
 import struct
 import sys
 from typing import Callable, Tuple, TypedDict, Literal, List, Sequence, Union, NotRequired
+from enum import Enum
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -15,7 +16,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.track_cues_v1 import TrackCuesV1
-from serato_tools.utils import get_key_from_value, logger, DataTypeError
+from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError
 from serato_tools.utils.track_tags import SeratoTag
 
 
@@ -23,56 +24,48 @@ class TrackCuesV2(SeratoTag):
     GEOB_KEY = "Serato Markers2"
     VERSION = (0x01, 0x01)
 
-    CUE_COLORS = {
-        k: bytes.fromhex(v)
-        for k, v in {
-            "red": "CC0000",  # Hot Cue 1
-            "orange": "CC4400",
-            "yelloworange": "CC8800",  # Hot Cue 2
-            "yellow": "CCCC00",  # Hot Cue 4
-            "limegreen1": "88CC00",
-            "darkgreen": "44CC00",
-            "limegreen2": "00CC00",  # Hot Cue 5
-            "limegreen3": "00CC44",
-            "seafoam": "00CC88",
-            "cyan": "00CCCC",  # Hot Cue 7
-            "lightblue": "0088CC",
-            "blue1": "0044CC",
-            "blue2": "0000CC",  # Hot Cue 3
-            "purple1": "4400CC",
-            "purple2": "8800CC",  # Hot Cue 8
-            "pink": "CC00CC",  # Hot Cue 6
-            "magenta": "CC0088",
-            "pinkred": "CC0044",
-        }.items()
-    }
+    class CueColors(Enum):
+        RED = b"\xcc\x00\x00"
+        ORANGE = b"\xcc\x44\x00"
+        YELLOWORANGE = b"\xcc\x88\x00"
+        YELLOW = b"\xcc\xcc\x00"
+        LIMEGREEN1 = b"\x88\xcc\x00"
+        DARKGREEN = b"\x44\xcc\x00"
+        LIMEGREEN2 = b"\x00\xcc\x00"
+        LIMEGREEN3 = b"\x00\xcc\x88"
+        SEAFOAM = b"\x00\xcc\x88"
+        CYAN = b"\x00\xcc\xcc"
+        LIGHTBLUE = b"\x00\x88\xcc"
+        BLUE1 = b"\x00\x44\xcc"
+        BLUE2 = b"\x00\x00\xcc"
+        PURPLE1 = b"\x44\x00\xcc"
+        PURPLE2 = b"\x88\x00\xcc"
+        PINK = b"\xcc\x00\xcc"
+        MAGENTA = b"\xcc\x00\x88"
+        PINKRED = b"\xcc\x00\x44"
 
-    TRACK_COLORS = {
-        k: bytes.fromhex(v)
-        for k, v in {
-            "pink": "FF99FF",
-            "darkpink": "FF99DD",
-            "pinkred": "FF99BB",
-            "red": "FF9999",
-            "orange": "FFBB99",
-            "yelloworange": "FFDD99",
-            "yellow": "FFFF99",
-            "limegreen1": "DDFF99",
-            "limegreen2": "BBFF99",
-            "limegreen3": "99FF99",
-            "limegreen4": "99FFBB",
-            "seafoam": "99FFDD",
-            "cyan": "99FFFF",
-            "lightblue": "99DDFF",
-            "blue1": "99BBFF",
-            "blue2": "9999FF",
-            "purple": "BB99FF",
-            "magenta": "DD99FF",
-            "white": "FFFFFF",
-            "grey": "BBBBBB",
-            "black": "999999",
-        }.items()
-    }
+    class TrackColors(Enum):
+        PINK = b"\xff\x99\xff"
+        DARKPINK = b"\xff\x99\xdd"
+        PINKRED = b"\xff\x99\xbb"
+        RED = b"\xff\x99\x99"
+        ORANGE = b"\xff\xbb\x99"
+        YELLOWORANGE = b"\xff\xdd\x99"
+        YELLOW = b"\xff\xff\x99"
+        LIMEGREEN1 = b"\xdd\xff\x99"
+        LIMEGREEN2 = b"\xbb\xff\x99"
+        LIMEGREEN3 = b"\x99\xff\x99"
+        LIMEGREEN4 = b"\x99\xff\xbb"
+        SEAFOAM = b"\x99\xff\xdd"
+        CYAN = b"\x99\xff\xff"
+        LIGHTBLUE = b"\x99\xdd\xff"
+        BLUE1 = b"\x99\xbb\xff"
+        BLUE2 = b"\x99\x99\xff"
+        PURPLE = b"\xbb\x99\xff"
+        MAGENTA = b"\xdd\x99\xff"
+        WHITE = b"\xff\xff\xff"
+        GREY = b"\xbb\xbb\xbb"
+        BLACK = b"\x99\x99\x99"
 
     def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
@@ -84,11 +77,11 @@ class TrackCuesV2(SeratoTag):
 
     @staticmethod
     def _get_cue_color_key(value: bytes) -> str:
-        return get_key_from_value(value, TrackCuesV2.CUE_COLORS)
+        return get_enum_key_from_value(value, TrackCuesV2.CueColors)
 
     @staticmethod
     def _get_track_color_key(value: bytes) -> str:
-        return get_key_from_value(value, TrackCuesV2.TRACK_COLORS)
+        return get_enum_key_from_value(value, TrackCuesV2.TrackColors)
 
     @staticmethod
     def _get_entry_class(entry_name: str):
@@ -370,9 +363,9 @@ class TrackCuesV2(SeratoTag):
         func: Callable[[int], int | None]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-    class ColorModifyRule(EntryModifyRule):
+    class CueColorModifyRule(EntryModifyRule):
         field: Literal["color"]  # pyright: ignore[reportIncompatibleVariableOverride]
-        func: Callable[[bytes], bytes | None]
+        func: Callable[["TrackCuesV2.CueColors"], Union["TrackCuesV2.CueColors", None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class CueNameModifyRule(EntryModifyRule):
@@ -380,8 +373,13 @@ class TrackCuesV2(SeratoTag):
         func: Callable[[str], str | None]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-    type CueRules = CueIndexModifyRule | ColorModifyRule | CueNameModifyRule | EntryModifyRule
-    type TrackColorRules = ColorModifyRule | EntryModifyRule
+    class TrackColorModifyRule(EntryModifyRule):
+        field: Literal["color"]  # pyright: ignore[reportIncompatibleVariableOverride]
+        func: Callable[["TrackCuesV2.TrackColors"], Union["TrackCuesV2.TrackColors", None]]
+        """ (prev_value: ValueType) -> new_value: ValueType | None """
+
+    type CueRules = CueIndexModifyRule | CueColorModifyRule | CueNameModifyRule | EntryModifyRule
+    type TrackColorRules = TrackColorModifyRule | EntryModifyRule
 
     class EntryModifyRules(TypedDict):
         cues: NotRequired[List["TrackCuesV2.CueRules"]]
@@ -414,7 +412,9 @@ class TrackCuesV2(SeratoTag):
                 if ExpectedType and not isinstance(value, ExpectedType):
                     raise DataTypeError(value, ExpectedType, field)
 
-                maybe_new_val: TrackCuesV2.Value = rule["func"](value)  # type: ignore
+                maybe_new_val = rule["func"](value)  # type: ignore
+                if isinstance(maybe_new_val, Enum):
+                    maybe_new_val = maybe_new_val.value
                 if maybe_new_val is not None and maybe_new_val != value:
                     value = maybe_new_val
 
@@ -495,17 +495,12 @@ class TrackCuesV2(SeratoTag):
             return None
         return self._get_track_color_key(color_bytes)
 
-    def set_track_color(self, color: bytes | str, delete_tags_v1: bool = True):
+    def set_track_color(self, color: TrackColors, delete_tags_v1: bool = True):
         """
         Args:
-            color: bytes or key of TRACK_COLORS
+            color: TrackColors (bytes)
             delete_tags_v1: Must delete delete_tags_v1 in order for track color change to appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
         """
-        if isinstance(color, str):
-            if color not in TrackCuesV2.TRACK_COLORS:
-                raise ValueError(f"Track color {color} must be one of: {str(list(TrackCuesV2.TRACK_COLORS.keys()))}")
-            color = TrackCuesV2.TRACK_COLORS[color]
-
         self.modify_entries({"color": [{"field": "color", "func": lambda v: color}]}, delete_tags_v1)
 
     def is_beatgrid_locked(self) -> bool:

@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Iterable, TypeVar, Type, cast, Any
-from enum import StrEnum
+from enum import Enum
 
 T = TypeVar("T")
 
@@ -17,7 +17,7 @@ def get_key_from_value(value: T, dict: dict[str, T]) -> str:
     raise ValueError(f"no key for value {value}")
 
 
-def get_enum_key_from_value(value: str, enum_class: Type[StrEnum]):
+def get_enum_key_from_value(value: str | bytes, enum_class: Type[Enum]):
     for member in enum_class:
         if member.value == value:
             return member.name
