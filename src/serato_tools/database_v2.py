@@ -72,7 +72,7 @@ class DatabaseV2(SeratoBinFile):
         files: NotRequired[list[str]]
 
     class __GeneralModifyRule(ModifyRule):
-        field: str
+        field: str  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def modify(self, rules: list[ModifyRule]):
         self.raw_data = DatabaseV2._modify_data_item(list(self.data), rules)
