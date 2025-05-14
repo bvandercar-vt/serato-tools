@@ -45,9 +45,9 @@ class SmartCrate(CrateBase):
 
     DEFAULT_DATA = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Smart Crate"),
-        (CrateBase.Fields.SMARTCRATE_MATCH_ALL, [("brut", "0")]),
-        (CrateBase.Fields.SMARTCRATE_LIVE_UPDATE, [("brut", "0")]),
-        (CrateBase.Fields.SORTING, [(CrateBase.Fields.COLUMN_NAME, "key"), (CrateBase.Fields.REVERSE_ORDER, "\x00")]),
+        (CrateBase.Fields.SMARTCRATE_MATCH_ALL, [("brut", False)]),
+        (CrateBase.Fields.SMARTCRATE_LIVE_UPDATE, [("brut", False)]),
+        (CrateBase.Fields.SORTING, [(CrateBase.Fields.COLUMN_NAME, "key"), (CrateBase.Fields.REVERSE_ORDER, False)]),
         (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "song"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
         (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "playCount"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
         (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "artist"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),

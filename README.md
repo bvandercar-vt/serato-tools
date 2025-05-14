@@ -27,7 +27,7 @@
 - Add a track to a crate
 - List available crates
 
-**smart Crate:**
+**Smart Crate:**
 - Read a smart crate's tracks
 - Read a smart crate's rules (TODO: ability to modify the rules!)
 - List available smart crates
@@ -55,7 +55,7 @@ The following deps are optional, but **must be installed based on what features 
 _NOTE: This feature has only been tested on a couple of tracks. Recommend reviewing the resulting beatgrid in Serato— some grid markers may require adjustment. It seems to be working pretty great though!_
 
 ```cmd
->>> analyze_beatgrid "Music/Dubstep/Mind Splitter - YAPPIN'.mp3"
+>>> serato_analyze_beatgrid "Music/Dubstep/Mind Splitter - YAPPIN'.mp3"
 ```
 
 ### Renaming a file and changing its location in the database

@@ -33,7 +33,7 @@ beatgrid_analysis = [
 ]
 
 [project.scripts]
-analyze_beatgrid = "track_beatgrid:main"
+serato_analyze_beatgrid = "serato-tools.track_beatgrid:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
