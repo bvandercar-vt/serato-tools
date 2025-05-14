@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import io
 import os
-import struct
 import sys
 from typing import Callable, TypedDict, Optional, NotRequired, cast
 
@@ -25,6 +23,18 @@ class DatabaseV2(SeratoBinFile):
             raise FileNotFoundError(f"file does not exist: {file}")
         super().__init__(file=file)
 
+    @staticmethod
+    def _get_filename(item: SeratoBinFile.Struct):
+        for field, value in item:
+            if isinstance(value, list):
+                raise TypeError("Have not accounted for deeply nested list")
+            if field != DatabaseV2.Fields.FILE_PATH:
+                continue
+            if not isinstance(value, str):
+                raise DataTypeError(value, str, DatabaseV2.Fields.FILE_PATH)
+            return value
+        raise ValueError(f"no filename found ({ DatabaseV2.Fields.FILE_PATH})!")
+
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
         func: Callable[[str, "DatabaseV2.ValueOrNone"], "DatabaseV2.ValueOrNone"]
@@ -35,68 +45,26 @@ class DatabaseV2(SeratoBinFile):
         field: str  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def modify(self, rules: list[ModifyRule]):
-        self.raw_data = DatabaseV2._modify_data_item(self.data, rules)
-        self.data = list(self._parse_item(self.raw_data))
-
-    @staticmethod
-    def _modify_data_item(item: SeratoBinFile.Struct, rules: list[ModifyRule]):
         DatabaseV2._check_rule_fields(cast(list[DatabaseV2.__GeneralModifyRule], rules))
 
         for rule in rules:
-            rule["field_found"] = False  # pyright: ignore[reportGeneralTypeIssues]
             if "files" in rule:
                 rule["files"] = [DatabaseV2.format_filepath(file).upper() for file in rule["files"]]
 
-        fp = io.BytesIO()
-
-        def _dump(field: str, value: "DatabaseV2.Value"):
-            nonlocal rules
-            field_bytes = field.encode("ascii")
-            assert len(field_bytes) == 4
-
-            type_id: str = DatabaseV2._get_type(field)
-
-            if type_id in ("o", "r"):  #  struct
-                if not isinstance(value, list):
-                    raise DataTypeError(value, list, field)
-                data = DatabaseV2._modify_data_item(value, rules)
-            elif type_id in ("p", "t"):  # text
-                if not isinstance(value, str):
-                    raise DataTypeError(value, str, field)
-                # if this ever fails, we did used to do this a different way, see old commits.
-                data = value.encode("utf-16-be")
-            elif type_id == "b":  # single byte, is a boolean
-                if not isinstance(value, bool):
-                    raise DataTypeError(value, bool, field)
-                data = struct.pack("?", value)
-            elif type_id == "s":  # signed int
-                if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
-                data = struct.pack(">H", value)
-            elif type_id == "u":  # unsigned int
-                if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
-                data = struct.pack(">I", value)
-            else:
-                raise ValueError(f"unexpected type for field: {field}")
-
-            length = len(data)
-            header = struct.pack(">4sI", field_bytes, length)
-            fp.write(header)
-            fp.write(data)
-
-        def _maybe_perform_rule(rule: DatabaseV2.ModifyRule, field: str, prev_val: "DatabaseV2.ValueOrNone"):
-            nonlocal track_filename
-            if track_filename == "" or ("files" in rule and track_filename.upper() not in rule["files"]):
+        def _maybe_perform_rule(field: str, prev_val: "DatabaseV2.ValueOrNone", track_filename: str):
+            rule = next((r for r in rules if field == r["field"]), None)
+            if rule is None:
+                return None
+            if "files" in rule and track_filename.upper() not in rule["files"]:
                 return None
 
             maybe_new_value = rule["func"](track_filename, prev_val)
             if maybe_new_value is None or maybe_new_value == prev_val:
                 return None
 
-            if rule["field"] == DatabaseV2.Fields.FILE_PATH:
+            if field == DatabaseV2.Fields.FILE_PATH:
                 if not isinstance(maybe_new_value, str):
-                    raise DataTypeError(maybe_new_value, str, rule["field"])
+                    raise DataTypeError(maybe_new_value, str, field)
                 if not os.path.exists(maybe_new_value):
                     raise FileNotFoundError(f"set track location to {maybe_new_value}, but doesn't exist")
                 maybe_new_value = DatabaseV2.format_filepath(maybe_new_value)
@@ -105,30 +73,33 @@ class DatabaseV2(SeratoBinFile):
             logger.info(f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}")
             return maybe_new_value
 
-        track_filename: str = ""
-        for field, value in item:
-            if field == DatabaseV2.Fields.FILE_PATH:
-                if not isinstance(value, str):
-                    raise DataTypeError(value, str, DatabaseV2.Fields.FILE_PATH)
-                track_filename = value
+        new_data: DatabaseV2.Struct = []
+        for field, value in self.data:
+            if field == DatabaseV2.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track_filename = DatabaseV2._get_filename(value)
+                new_struct: DatabaseV2.Struct = []
+                fields: list[str] = []
+                for f, v in value:
+                    maybe_new_value = _maybe_perform_rule(f, v, track_filename)
+                    if maybe_new_value is not None:
+                        v = maybe_new_value
+                    new_struct.append((f, v))
+                    fields.append(f)
+                for rule in rules:
+                    if rule["field"] not in fields:
+                        maybe_new_value = _maybe_perform_rule(rule["field"], None, track_filename)
+                        if maybe_new_value is not None:
+                            new_struct.append((rule["field"], maybe_new_value))
+                value = new_struct
+            else:
+                # isn't a track
+                pass
+            new_data.append((field, value))
 
-            rule = next((r for r in rules if field == r["field"]), None)
-            if rule:
-                rule["field_found"] = True  # pyright: ignore[reportGeneralTypeIssues]
-                maybe_new_value = _maybe_perform_rule(rule, field, value)
-                if maybe_new_value is not None:
-                    value = maybe_new_value
-
-            _dump(field, value)
-
-        for rule in rules:
-            if not rule["field_found"]:  # pyright: ignore[reportGeneralTypeIssues]
-                field = rule["field"]
-                maybe_new_value = _maybe_perform_rule(rule, field, None)
-                if maybe_new_value is not None:
-                    _dump(field, maybe_new_value)
-
-        return fp.getvalue()
+        self.data = new_data
+        self._dump()
 
     def modify_and_save(self, rules: list[ModifyRule], file: Optional[str] = None):
         self.modify(rules)

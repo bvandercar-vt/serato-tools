@@ -122,47 +122,45 @@ class SeratoBinFile:
             yield field, value
 
     @staticmethod
-    def _dump_item(item: Struct):
-        fp = io.BytesIO()
+    def _dump_item(field: str, value: Value) -> bytes:
+        field_bytes = field.encode("ascii")
+        assert len(field_bytes) == 4
 
-        for field, value in item:
-            field_bytes = field.encode("ascii")
-            assert len(field_bytes) == 4
+        type_id: str = SeratoBinFile._get_type(field)
 
-            type_id: str = SeratoBinFile._get_type(field)
+        if type_id in ("o", "r"):  #  struct
+            if not isinstance(value, list):
+                raise DataTypeError(value, list, field)
+            data = SeratoBinFile._dump_struct(value)
+        elif type_id in ("p", "t"):  # text
+            if not isinstance(value, str):
+                raise DataTypeError(value, str, field)
+            data = value.encode("utf-16-be")
+        elif type_id == "b":  # single byte, is a boolean
+            if not isinstance(value, bool):
+                raise DataTypeError(value, bool, field)
+            data = struct.pack("?", value)
+        elif type_id == "s":  # signed int
+            if not isinstance(value, int):
+                raise DataTypeError(value, int, field)
+            data = struct.pack(">H", value)
+        elif type_id == "u":  # unsigned int
+            if not isinstance(value, int):
+                raise DataTypeError(value, int, field)
+            data = struct.pack(">I", value)
+        else:
+            raise ValueError(f"unexpected type for field: {field}")
 
-            if type_id in ("o", "r"):  #  struct
-                if not isinstance(value, list):
-                    raise DataTypeError(value, list, field)
-                data = SeratoBinFile._dump_item(value)
-            elif type_id in ("p", "t"):  # text
-                if not isinstance(value, str):
-                    raise DataTypeError(value, str, field)
-                data = value.encode("utf-16-be")
-            elif type_id == "b":  # single byte, is a boolean
-                if not isinstance(value, bool):
-                    raise DataTypeError(value, bool, field)
-                data = struct.pack("?", value)
-            elif type_id == "s":  # signed int
-                if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
-                data = struct.pack(">H", value)
-            elif type_id == "u":  # unsigned int
-                if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
-                data = struct.pack(">I", value)
-            else:
-                raise ValueError(f"unexpected type for field: {field}")
+        length = len(data)
+        header = struct.pack(">4sI", field_bytes, length)
+        return header + data
 
-            length = len(data)
-            header = struct.pack(">4sI", field_bytes, length)
-            fp.write(header)
-            fp.write(data)
-
-        return fp.getvalue()
+    @staticmethod
+    def _dump_struct(item: Struct):
+        return b"".join(SeratoBinFile._dump_item(field, value) for field, value in item)
 
     def _dump(self):
-        self.raw_data = SeratoBinFile._dump_item(self.data)
+        self.raw_data = SeratoBinFile._dump_struct(self.data)
 
     def save(self, file: Optional[str] = None):
         if file is None:
