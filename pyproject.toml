@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "3.0.0"
+version = "3.0.1"
 description = "Serato crate, smartcrate, library database, and track metadata (cues, beatgrid, etc.) modification, including dyanmic beatgrid analysis."
 requires-python = ">= 3.12"
 readme = "README.md"

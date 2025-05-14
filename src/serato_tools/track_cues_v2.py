@@ -412,7 +412,16 @@ class TrackCuesV2(SeratoTag):
                 if ExpectedType and not isinstance(value, ExpectedType):
                     raise DataTypeError(value, ExpectedType, field)
 
-                maybe_new_val = rule["func"](value)  # type: ignore
+                prev_value = value
+                if field == "color":
+                    is_track_color = isinstance(entry, TrackCuesV2.ColorEntry)
+                    Colors = TrackCuesV2.TrackColors if is_track_color else TrackCuesV2.CueColors
+                    try:
+                        prev_value = Colors(prev_value)
+                    except ValueError:
+                        pass
+
+                maybe_new_val = rule["func"](prev_value)  # type: ignore
                 if isinstance(maybe_new_val, Enum):
                     maybe_new_val = maybe_new_val.value
                 if maybe_new_val is not None and maybe_new_val != value:
