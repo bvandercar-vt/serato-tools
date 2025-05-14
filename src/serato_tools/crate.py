@@ -71,7 +71,7 @@ class Crate(CrateBase):
 
         if not file.endswith(".crate"):
             raise ValueError("file should end with .crate: " + file)
-        
+
         super().save(file)
 
     def print(self):
