@@ -55,12 +55,14 @@ class SeratoBinFile:
 
     FIELDS = list(f.value for f in Fields)
 
-    type KeyAndValue = tuple[Fields | str, "SeratoBinFile.Value"]
-    type Struct = list[KeyAndValue]
-    type Value = Struct | str | bytes | int | bool
+    type ParsedField = Fields | str
+    type BasicValue = str | bytes | int | bool
+    type FieldAndValue = tuple[ParsedField, "SeratoBinFile.Value"]
+    type Struct = list[FieldAndValue]
+    type Value = BasicValue | Struct
     type ValueOrNone = Value | None
 
-    type EntryFull = tuple[Fields | str, str, str | bytes | int | bool | list[EntryFull]]
+    type EntryFull = tuple[ParsedField, str, BasicValue | list[EntryFull]]
 
     DEFAULT_DATA: Struct
 
@@ -91,7 +93,7 @@ class SeratoBinFile:
         return "t" if field == SeratoBinFile.Fields.VERSION else field[0]
 
     @staticmethod
-    def _parse_item(item_data: bytes) -> Generator["SeratoBinFile.KeyAndValue", None, None]:
+    def _parse_item(item_data: bytes) -> Generator["SeratoBinFile.FieldAndValue", None, None]:
         fp = io.BytesIO(item_data)
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
