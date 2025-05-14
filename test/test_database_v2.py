@@ -8,6 +8,14 @@ from contextlib import redirect_stdout
 from serato_tools.database_v2 import DatabaseV2
 
 
+def get_print_val(db: DatabaseV2):
+    captured_output = io.StringIO()
+    with redirect_stdout(captured_output):
+        db.print()
+    output = captured_output.getvalue()
+    return output
+
+
 class TestCase(unittest.TestCase):
     def test_format_filepath(self):
         self.assertEqual(
@@ -27,7 +35,7 @@ class TestCase(unittest.TestCase):
             "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
         )
 
-    def test_parse_and_modify_and_dump(self):
+    def test_parse_and_dump(self):
         file = os.path.abspath("test/data/database_v2_test.bin")
         with open(file, mode="rb") as fp:
             file_data = fp.read()
@@ -36,19 +44,29 @@ class TestCase(unittest.TestCase):
         db.data = list(db.data)
 
         self.maxDiff = None
-
-        def get_print_val():
-            captured_output = io.StringIO()
-            with redirect_stdout(captured_output):
-                db.print()
-            output = captured_output.getvalue()
-            return output
-
         self.assertEqual(db.raw_data, file_data, "raw_data read")
 
         with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
             expected = f.read()
-            self.assertEqual(get_print_val(), expected, "parse")
+            self.assertEqual(get_print_val(db), expected, "parse")
+
+        db._dump()
+        self.assertEqual(db.raw_data, file_data, "raw_data read")
+
+    def test_parse_and_modify(self):
+        file = os.path.abspath("test/data/database_v2_test.bin")
+        with open(file, mode="rb") as fp:
+            file_data = fp.read()
+
+        db = DatabaseV2(file)
+        db.data = list(db.data)
+
+        self.maxDiff = None
+        self.assertEqual(db.raw_data, file_data, "raw_data read")
+
+        with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
+            expected = f.read()
+            self.assertEqual(get_print_val(db), expected, "parse")
 
         original_data = db.data
         original_raw_data = db.raw_data
@@ -56,7 +74,7 @@ class TestCase(unittest.TestCase):
         db.data = list(db.data)
         self.assertEqual(db.data, original_data, "was not modified")
         self.assertEqual(db.raw_data, original_raw_data, "was not modified")
-        self.assertEqual(get_print_val(), expected, "was not modified")
+        self.assertEqual(get_print_val(db), expected, "was not modified")
 
         new_time = int(1735748100)
         db.modify(
@@ -68,7 +86,7 @@ class TestCase(unittest.TestCase):
         )
         db.data = list(db.data)
         with open("test/data/database_v2_test_modified_output.txt", "r", encoding="utf-16") as f:
-            self.assertEqual(get_print_val(), f.read(), "was modified correctly")
+            self.assertEqual(get_print_val(db), f.read(), "was modified correctly")
         with open("test/data/database_v2_test_modified_output.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly")
 
@@ -86,6 +104,6 @@ class TestCase(unittest.TestCase):
         )
         db.data = list(db.data)
         with open("test/data/database_v2_test_modified_output_2.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(), f.read(), "was modified correctly, given files")
+            self.assertEqual(get_print_val(db), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")

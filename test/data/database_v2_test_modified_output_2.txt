@@ -1,128 +1,128 @@
-vrsn (Version, 64 B): '2.0/Serato Scratch LIVE Database'
-otrk (Track, 572 B)
-    ttyp (File Type, 6 B): mp3
-    pfil (File Path, 120 B): Users/bvand/Music/DJ Tracks/Zeds Dead - In The Beginning.mp3
-    tsng (Title, 32 B): In The Beginning
-    tart (Artist, 18 B): Zeds Dead
-    talb (Album, 20 B): Adrenaline
-    tgen (Genre, 18 B): NEW_GENRE
-    tbpm (Bpm, 10 B): 70.00
-    tgrp (Grouping, 24 B): NEW_GROUPING
-    tlbl (Publisher, 12 B): SOUL_C
-    ttyr (Year, 8 B): 2012
-    tadd (Date Added, 20 B): 1735748100
-    tkey (Key, 4 B): 4A
-    uadd (Date Added, 4 B): 1735748100
-    ulbl (Unknown Field, 4 B): 10092441
-    utme (Time, 4 B): 1747137257
-    utpc (Unknown Field, 4 B): 5
-    sbav (Unknown Field, 2 B): 0
-    bhrt (Unknown Field, 1 B): True
-    bmis (Missing, 1 B): False
-    bply (Unknown Field, 1 B): False
-    blop (Unknown Field, 1 B): False
-    bitu (Unknown Field, 1 B): False
-    bovc (Unknown Field, 1 B): True
-    bcrt (Corrupt, 1 B): False
-    biro (Unknown Field, 1 B): False
-    bwlb (Unknown Field, 1 B): False
-    bwll (Unknown Field, 1 B): False
-    buns (Unknown Field, 1 B): False
-    bbgl (Beatgrid Locked, 1 B): False
-    bkrk (Unknown Field, 1 B): False
-    bstm (Unknown Field, 1 B): False
-otrk (Track, 542 B)
-    ttyp (File Type, 6 B): mp3
-    pfil (File Path, 106 B): Users/bvand/Music/DJ Tracks/Tripp St. - Enlighten.mp3
-    tsng (Title, 18 B): Enlighten
-    tart (Artist, 18 B): Tripp St.
-    talb (Album, 22 B): The Rose EP
-    tgen (Genre, 18 B): NEW_GENRE
-    tbpm (Bpm, 10 B): 86.00
-    tgrp (Grouping, 24 B): NEW_GROUPING
-    tlbl (Publisher, 8 B): SOUL
-    ttyr (Year, 8 B): 2023
-    tadd (Date Added, 20 B): 1735748100
-    tkey (Key, 4 B): 2A
-    uadd (Date Added, 4 B): 1735748100
-    ulbl (Unknown Field, 4 B): 10092441
-    utme (Time, 4 B): 1747137256
-    utpc (Unknown Field, 4 B): 3
-    sbav (Unknown Field, 2 B): 0
-    bhrt (Unknown Field, 1 B): True
-    bmis (Missing, 1 B): False
-    bply (Unknown Field, 1 B): False
-    blop (Unknown Field, 1 B): False
-    bitu (Unknown Field, 1 B): False
-    bovc (Unknown Field, 1 B): True
-    bcrt (Corrupt, 1 B): False
-    biro (Unknown Field, 1 B): False
-    bwlb (Unknown Field, 1 B): False
-    bwll (Unknown Field, 1 B): False
-    buns (Unknown Field, 1 B): False
-    bbgl (Beatgrid Locked, 1 B): False
-    bkrk (Unknown Field, 1 B): False
-    bstm (Unknown Field, 1 B): False
-otrk (Track, 520 B)
-    ttyp (File Type, 6 B): mp3
-    pfil (File Path, 90 B): Users/bvand/Music/DJ Tracks/SiR - D'Evils.mp3
-    tsng (Title, 14 B): D'Evils
-    tart (Artist, 6 B): SiR
-    talb (Album, 16 B): November
-    tgen (Genre, 32 B): Upbeat Newer Rap
-    tbpm (Bpm, 12 B): 131.98
-    tgrp (Grouping, 24 B): NEW_GROUPING
-    tlbl (Publisher, 8 B): SOUL
-    ttyr (Year, 8 B): 2018
-    tadd (Date Added, 20 B): 1735748100
-    tkey (Key, 4 B): 2A
-    uadd (Date Added, 4 B): 1735748100
-    utkn (Unknown Field, 4 B): 4
-    ulbl (Unknown Field, 4 B): 16777215
-    utme (Time, 4 B): 1747137255
-    sbav (Unknown Field, 2 B): 0
-    bhrt (Unknown Field, 1 B): True
-    bmis (Missing, 1 B): False
-    bply (Unknown Field, 1 B): False
-    blop (Unknown Field, 1 B): False
-    bitu (Unknown Field, 1 B): False
-    bovc (Unknown Field, 1 B): True
-    bcrt (Corrupt, 1 B): False
-    biro (Unknown Field, 1 B): False
-    bwlb (Unknown Field, 1 B): False
-    bwll (Unknown Field, 1 B): False
-    buns (Unknown Field, 1 B): False
-    bbgl (Beatgrid Locked, 1 B): False
-    bkrk (Unknown Field, 1 B): False
-    bstm (Unknown Field, 1 B): False
-otrk (Track, 570 B)
-    ttyp (File Type, 6 B): mp3
-    pfil (File Path, 114 B): Users/bvand/Music/DJ Tracks/Slaycub - Visceral Planet.mp3
-    tsng (Title, 30 B): Visceral Planet
-    tart (Artist, 14 B): Slaycub
-    talb (Album, 30 B): Visceral Planet
-    tgen (Genre, 36 B): Psydub & Squelches
-    tbpm (Bpm, 8 B): 0.00
-    tgrp (Grouping, 24 B): NEW_GROUPING
-    tlbl (Publisher, 8 B): SOUL
-    ttyr (Year, 8 B): 2021
-    tadd (Date Added, 20 B): 1735748100
-    tkey (Key, 4 B): 5A
-    uadd (Date Added, 4 B): 1735748100
-    ulbl (Unknown Field, 4 B): 16777215
-    utme (Time, 4 B): 1747137253
-    sbav (Unknown Field, 2 B): 0
-    bhrt (Unknown Field, 1 B): True
-    bmis (Missing, 1 B): False
-    bply (Unknown Field, 1 B): False
-    blop (Unknown Field, 1 B): False
-    bitu (Unknown Field, 1 B): False
-    bovc (Unknown Field, 1 B): False
-    bcrt (Corrupt, 1 B): False
-    biro (Unknown Field, 1 B): False
-    bwlb (Unknown Field, 1 B): False
-    bwll (Unknown Field, 1 B): False
-    buns (Unknown Field, 1 B): False
-    bbgl (Beatgrid Locked, 1 B): False
-    bkrk (Unknown Field, 1 B): False
-    bstm (Unknown Field, 1 B): False
+vrsn (Version): '2.0/Serato Scratch LIVE Database'
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Users/bvand/Music/DJ Tracks/Zeds Dead - In The Beginning.mp3
+    tsng (Title): In The Beginning
+    tart (Artist): Zeds Dead
+    talb (Album): Adrenaline
+    tgen (Genre): NEW_GENRE
+    tbpm (Bpm): 70.00
+    tgrp (Grouping): NEW_GROUPING
+    tlbl (Publisher): SOUL_C
+    ttyr (Year): 2012
+    tadd (Date Added): 1735748100
+    tkey (Key): 4A
+    uadd (Date Added): 1735748100
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1747137257
+    utpc (Unknown Field): 5
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Users/bvand/Music/DJ Tracks/Tripp St. - Enlighten.mp3
+    tsng (Title): Enlighten
+    tart (Artist): Tripp St.
+    talb (Album): The Rose EP
+    tgen (Genre): NEW_GENRE
+    tbpm (Bpm): 86.00
+    tgrp (Grouping): NEW_GROUPING
+    tlbl (Publisher): SOUL
+    ttyr (Year): 2023
+    tadd (Date Added): 1735748100
+    tkey (Key): 2A
+    uadd (Date Added): 1735748100
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1747137256
+    utpc (Unknown Field): 3
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Users/bvand/Music/DJ Tracks/SiR - D'Evils.mp3
+    tsng (Title): D'Evils
+    tart (Artist): SiR
+    talb (Album): November
+    tgen (Genre): Upbeat Newer Rap
+    tbpm (Bpm): 131.98
+    tgrp (Grouping): NEW_GROUPING
+    tlbl (Publisher): SOUL
+    ttyr (Year): 2018
+    tadd (Date Added): 1735748100
+    tkey (Key): 2A
+    uadd (Date Added): 1735748100
+    utkn (Unknown Field): 4
+    ulbl (Unknown Field): 16777215
+    utme (Time): 1747137255
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Users/bvand/Music/DJ Tracks/Slaycub - Visceral Planet.mp3
+    tsng (Title): Visceral Planet
+    tart (Artist): Slaycub
+    talb (Album): Visceral Planet
+    tgen (Genre): Psydub & Squelches
+    tbpm (Bpm): 0.00
+    tgrp (Grouping): NEW_GROUPING
+    tlbl (Publisher): SOUL
+    ttyr (Year): 2021
+    tadd (Date Added): 1735748100
+    tkey (Key): 5A
+    uadd (Date Added): 1735748100
+    ulbl (Unknown Field): 16777215
+    utme (Time): 1747137253
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): False
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False

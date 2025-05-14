@@ -17,7 +17,7 @@ class DatabaseV2(SeratoBinFile):
     DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER, "database V2")
 
     type Value = bytes | str | int | tuple  # TODO: improve the tuple
-    type Parsed = tuple[str, int, Value]
+    type Parsed = tuple[str, Value]
 
     type ValueOrNone = Value | None
 
@@ -63,7 +63,51 @@ class DatabaseV2(SeratoBinFile):
             else:
                 raise ValueError(f"unexpected type for field: {field}")
 
-            yield field, length, value
+            yield field, value
+
+    @staticmethod
+    def _dump_item(item: Iterable["DatabaseV2.Parsed"]):
+        fp = io.BytesIO()
+
+        for field, value in item:
+            field_bytes = field.encode("ascii")
+            assert len(field_bytes) == 4
+
+            type_id: str = DatabaseV2._get_type(field)
+
+            if type_id in ("o", "r"):  #  struct
+                if not isinstance(value, tuple):
+                    raise DataTypeError(value, tuple, field)
+                data = DatabaseV2._dump_item(value)
+            elif type_id in ("p", "t"):  # text
+                if not isinstance(value, str):
+                    raise DataTypeError(value, str, field)
+                # if this ever fails, we did used to do this a different way, see old commits.
+                data = value.encode("utf-16-be")
+            elif type_id == "b":  # single byte, is a boolean
+                if not isinstance(value, bool):
+                    raise DataTypeError(value, bool, field)
+                data = struct.pack("?", value)
+            elif type_id == "s":  # signed int
+                if not isinstance(value, int):
+                    raise DataTypeError(value, int, field)
+                data = struct.pack(">H", value)
+            elif type_id == "u":  # unsigned int
+                if not isinstance(value, int):
+                    raise DataTypeError(value, int, field)
+                data = struct.pack(">I", value)
+            else:
+                raise ValueError(f"unexpected type for field: {field}")
+
+            length = len(data)
+            header = struct.pack(">4sI", field_bytes, length)
+            fp.write(header)
+            fp.write(data)
+
+        return fp.getvalue()
+
+    def _dump(self):
+        self.raw_data = DatabaseV2._dump_item(list(self.data))
 
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
@@ -146,7 +190,7 @@ class DatabaseV2(SeratoBinFile):
             return maybe_new_value
 
         track_filename: str = ""
-        for field, length, value in item:  # pylint: disable=unused-variable
+        for field, value in item:
             if field == DatabaseV2.Fields.FILE_PATH:
                 if not isinstance(value, str):
                     raise DataTypeError(value, str, DatabaseV2.Fields.FILE_PATH)
@@ -194,13 +238,13 @@ class DatabaseV2(SeratoBinFile):
             return
         self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
 
-    type EntryFull = tuple[str, str, str | int | bool | list["DatabaseV2.EntryFull"], int]
+    type EntryFull = tuple[str, str, str | int | bool | list["DatabaseV2.EntryFull"]]
 
     def to_entries(self) -> Generator[EntryFull, None, None]:
-        for field, length, value in self.data:
+        for field, value in self.data:
             if isinstance(value, tuple):
                 try:
-                    new_val: list[DatabaseV2.EntryFull] = [(f, DatabaseV2.get_field_name(f), v, l) for f, l, v in value]
+                    new_val: list[DatabaseV2.EntryFull] = [(f, DatabaseV2.get_field_name(f), v) for f, v in value]
                 except:
                     logger.error(f"error on {value}")
                     raise
@@ -208,16 +252,16 @@ class DatabaseV2(SeratoBinFile):
             else:
                 value = repr(value)
 
-            yield (field, DatabaseV2.get_field_name(field), value, length)
+            yield (field, DatabaseV2.get_field_name(field), value)
 
     def print(self):
-        for field, fieldname, value, size_bytes in self.to_entries():
+        for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
-                print(f"{field} ({fieldname}, {size_bytes} B)")
-                for f, f_name, v, s_b in value:
-                    print(f"    {f} ({f_name}, {s_b} B): {str(v)}")
+                print(f"{field} ({fieldname})")
+                for f, f_name, v in value:
+                    print(f"    {f} ({f_name}): {str(v)}")
             else:
-                print(f"{field} ({fieldname}, {size_bytes} B): {str(value)}")
+                print(f"{field} ({fieldname}): {str(value)}")
 
     def find_missing(self, drive_letter: Optional[str] = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")
