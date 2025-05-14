@@ -4,7 +4,7 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Generator, Iterable, TypedDict, Optional, NotRequired, cast
+from typing import Callable, Generator, TypedDict, Optional, NotRequired, cast
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -16,11 +16,6 @@ from serato_tools.utils import logger, DataTypeError, SERATO_FOLDER
 class DatabaseV2(SeratoBinFile):
     DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER, "database V2")
 
-    type Value = bytes | str | int | tuple  # TODO: improve the tuple
-    type Parsed = tuple[str, Value]
-
-    type ValueOrNone = Value | None
-
     def __init__(self, filepath: str = DEFAULT_DATABASE_FILE):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"file does not exist: {filepath}")
@@ -29,13 +24,13 @@ class DatabaseV2(SeratoBinFile):
 
         with open(self.filepath, "rb") as fp:
             self.raw_data: bytes = fp.read()
-            self.data: Iterable[DatabaseV2.Parsed] = self._parse_item(self.raw_data)
+            self.data: DatabaseV2.Struct = list(self._parse_item(self.raw_data))
 
     def __str__(self):
         return str(list(self.to_entries()))
 
     @staticmethod
-    def _parse_item(item_data: bytes) -> Generator[Parsed, None, None]:
+    def _parse_item(item_data: bytes) -> Generator["DatabaseV2.KeyAndValue", None, None]:
         fp = io.BytesIO(item_data)
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
@@ -48,9 +43,9 @@ class DatabaseV2(SeratoBinFile):
             data = fp.read(length)
             assert len(data) == length
 
-            value: bytes | str | tuple
+            value: DatabaseV2.Value
             if type_id in ("o", "r"):  #  struct
-                value = tuple(DatabaseV2._parse_item(data))
+                value = list(DatabaseV2._parse_item(data))
             elif type_id in ("p", "t"):  # text
                 # value = (data[1:] + b"\00").decode("utf-16") # from imported code
                 value = data.decode("utf-16-be")
@@ -66,7 +61,7 @@ class DatabaseV2(SeratoBinFile):
             yield field, value
 
     @staticmethod
-    def _dump_item(item: Iterable["DatabaseV2.Parsed"]):
+    def _dump_item(item: SeratoBinFile.Struct):
         fp = io.BytesIO()
 
         for field, value in item:
@@ -76,8 +71,8 @@ class DatabaseV2(SeratoBinFile):
             type_id: str = DatabaseV2._get_type(field)
 
             if type_id in ("o", "r"):  #  struct
-                if not isinstance(value, tuple):
-                    raise DataTypeError(value, tuple, field)
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
                 data = DatabaseV2._dump_item(value)
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
@@ -107,7 +102,7 @@ class DatabaseV2(SeratoBinFile):
         return fp.getvalue()
 
     def _dump(self):
-        self.raw_data = DatabaseV2._dump_item(list(self.data))
+        self.raw_data = DatabaseV2._dump_item(self.data)
 
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
@@ -119,11 +114,11 @@ class DatabaseV2(SeratoBinFile):
         field: str  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def modify(self, rules: list[ModifyRule]):
-        self.raw_data = DatabaseV2._modify_data_item(list(self.data), rules)
-        self.data = self._parse_item(self.raw_data)
+        self.raw_data = DatabaseV2._modify_data_item(self.data, rules)
+        self.data = list(self._parse_item(self.raw_data))
 
     @staticmethod
-    def _modify_data_item(item: Iterable[Parsed], rules: list[ModifyRule]):
+    def _modify_data_item(item: SeratoBinFile.Struct, rules: list[ModifyRule]):
         DatabaseV2._check_rule_fields(cast(list[DatabaseV2.__GeneralModifyRule], rules))
 
         for rule in rules:
@@ -141,8 +136,8 @@ class DatabaseV2(SeratoBinFile):
             type_id: str = DatabaseV2._get_type(field)
 
             if type_id in ("o", "r"):  #  struct
-                if not isinstance(value, tuple):
-                    raise DataTypeError(value, tuple, field)
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
                 data = DatabaseV2._modify_data_item(value, rules)
             elif type_id in ("p", "t"):  # text
                 if not isinstance(value, str):
@@ -239,10 +234,10 @@ class DatabaseV2(SeratoBinFile):
         self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
 
     def remove_duplicates(self):
-        new_data: list[DatabaseV2.Parsed] = []
+        new_data: DatabaseV2.Struct = []
         tracks_paths: list[str] = []
-        for field, value in list(self.data):
-            if isinstance(value, tuple):
+        for field, value in self.data:
+            if isinstance(value, list):
                 if field == DatabaseV2.Fields.TRACK:
                     for f, v in value:
                         if f == DatabaseV2.Fields.FILE_PATH:
@@ -261,31 +256,6 @@ class DatabaseV2(SeratoBinFile):
                 new_data.append((field, value))
         self.data = new_data
         self._dump()
-
-    type EntryFull = tuple[str, str, str | int | bool | list["DatabaseV2.EntryFull"]]
-
-    def to_entries(self) -> Generator[EntryFull, None, None]:
-        for field, value in self.data:
-            if isinstance(value, tuple):
-                try:
-                    new_val: list[DatabaseV2.EntryFull] = [(f, DatabaseV2.get_field_name(f), v) for f, v in value]
-                except:
-                    logger.error(f"error on {value}")
-                    raise
-                value = new_val
-            else:
-                value = repr(value)
-
-            yield (field, DatabaseV2.get_field_name(field), value)
-
-    def print(self):
-        for field, fieldname, value in self.to_entries():
-            if isinstance(value, list):
-                print(f"{field} ({fieldname})")
-                for f, f_name, v in value:
-                    print(f"    {f} ({f_name}): {str(v)}")
-            else:
-                print(f"{field} ({fieldname}): {str(value)}")
 
     def find_missing(self, drive_letter: Optional[str] = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")

@@ -1,8 +1,8 @@
 import os
-from typing import Iterable, TypedDict
+from typing import Iterable, TypedDict, Generator
 from enum import StrEnum
 
-from serato_tools.utils import get_enum_key_from_value
+from serato_tools.utils import get_enum_key_from_value, logger
 
 
 class SeratoBinFile:
@@ -53,7 +53,15 @@ class SeratoBinFile:
 
     FIELDS = list(f.value for f in Fields)
 
+    type KeyAndValue = tuple[Fields | str, "SeratoBinFile.Value"]
+    type Struct = list[KeyAndValue]
+    type Value = Struct | str | bytes | int | bool
+    type ValueOrNone = Value | None
+
+    type EntryFull = tuple[Fields | str, str, str | bytes | int | bool | list[EntryFull]]
+
     raw_data: bytes
+    data: Struct
 
     def __repr__(self):
         return str(self.raw_data)
@@ -101,3 +109,32 @@ class SeratoBinFile:
         ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
         for field in uniq_field_names:
             SeratoBinFile._check_valid_field(field)
+
+    def to_entries(self) -> Generator[EntryFull, None, None]:
+        for field, value in self.data:
+            if isinstance(value, list):
+                try:
+                    new_val: list[SeratoBinFile.EntryFull] = []
+                    for f, v in value:
+                        if isinstance(v, list):
+                            raise TypeError("not implemented for deeply nested")
+                        new_val.append((f, SeratoBinFile.get_field_name(f), v))
+                except:
+                    logger.error(f"error on field: {field} value: {value}")
+                    raise
+                value = new_val
+            else:
+                value = repr(value)
+
+            yield field, SeratoBinFile.get_field_name(field), value
+
+    def print(self):
+        for field, fieldname, value in self.to_entries():
+            if isinstance(value, list):
+                print(f"{field} ({fieldname})")
+                for f, f_name, v in value:
+                    if isinstance(v, list):
+                        raise TypeError("unexpected type, deeply nested list")
+                    print(f"    {f} ({f_name}): {str(v)}")
+            else:
+                print(f"{field} ({fieldname}): {str(value)}")

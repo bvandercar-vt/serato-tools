@@ -3,7 +3,7 @@
 import os
 import struct
 import sys
-from typing import Generator, Union, overload, cast, Optional
+from typing import overload, Union, Optional, cast
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -13,12 +13,7 @@ from serato_tools.utils import logger, DataTypeError
 
 
 class CrateBase(SeratoBinFile):
-    type Struct = list[tuple[str, "CrateBase.Value"]]
-    type Value = Struct | str | bytes | bool
-
-    type ValueOrNone = Value | None
-
-    DEFAULT_DATA: Struct
+    DEFAULT_DATA: SeratoBinFile.Struct
 
     def __init__(self, file: str):
         self.filepath = os.path.abspath(file)
@@ -40,12 +35,12 @@ class CrateBase(SeratoBinFile):
 
     @overload
     @staticmethod
-    def _parse_item(data: bytes, field: None = None) -> Struct: ...
+    def _parse_item(data: bytes, field: None = None) -> "CrateBase.Struct": ...
     @overload
     @staticmethod
-    def _parse_item(data: bytes, field: str) -> Value: ...
+    def _parse_item(data: bytes, field: str) -> "CrateBase.Value": ...
     @staticmethod
-    def _parse_item(data: bytes, field: Optional[str] = None) -> Value | Struct:
+    def _parse_item(data: bytes, field: Optional[str] = None) -> Union["CrateBase.Value", "CrateBase.Struct"]:
         if not isinstance(data, bytes):
             raise DataTypeError(data, bytes, field)
 
@@ -118,7 +113,7 @@ class CrateBase(SeratoBinFile):
         return allparts
 
     @staticmethod
-    def _get_track_name(value: Value) -> str:
+    def _get_track_name(value: "CrateBase.Value") -> str:
         if not isinstance(value, list):
             raise TypeError(f"{CrateBase.Fields.TRACK} should be list")
         track_name = value[0][1]
@@ -145,19 +140,3 @@ class CrateBase(SeratoBinFile):
         with open(file, "wb") as f:
             f.write(raw_data)
         self.raw_data = raw_data
-
-    type EntryFull = tuple[str, str, Union["CrateBase.Value", list["CrateBase.EntryFull"]]]
-
-    def to_entries(self) -> Generator[EntryFull, None, None]:
-        for field, value in self.data:
-            if isinstance(value, list):
-                try:
-                    new_val: list[CrateBase.EntryFull] = [(f, CrateBase.get_field_name(f), v) for f, v in value]
-                except:
-                    logger.error(f"error on {value}")
-                    raise
-                value = new_val
-            else:
-                value = repr(value)
-
-            yield field, CrateBase.get_field_name(field), value

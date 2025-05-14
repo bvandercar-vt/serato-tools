@@ -41,7 +41,6 @@ class TestCase(unittest.TestCase):
             file_data = fp.read()
 
         db = DatabaseV2(file)
-        db.data = list(db.data)
 
         self.maxDiff = None
         self.assertEqual(db.raw_data, file_data, "raw_data read")
@@ -59,7 +58,6 @@ class TestCase(unittest.TestCase):
             file_data = fp.read()
 
         db = DatabaseV2(file)
-        db.data = list(db.data)
 
         self.maxDiff = None
         self.assertEqual(db.raw_data, file_data, "raw_data read")
@@ -71,7 +69,6 @@ class TestCase(unittest.TestCase):
         original_data = db.data
         original_raw_data = db.raw_data
         db.modify([])
-        db.data = list(db.data)
         self.assertEqual(db.data, original_data, "was not modified")
         self.assertEqual(db.raw_data, original_raw_data, "was not modified")
         self.assertEqual(get_print_val(db), expected, "was not modified")
@@ -84,7 +81,6 @@ class TestCase(unittest.TestCase):
                 {"field": DatabaseV2.Fields.GROUPING, "func": lambda *args: "NEW_GROUPING"},
             ]
         )
-        db.data = list(db.data)
         with open("test/data/database_v2_test_modified_output.txt", "r", encoding="utf-16") as f:
             self.assertEqual(get_print_val(db), f.read(), "was modified correctly")
         with open("test/data/database_v2_test_modified_output.bin", "rb") as f:
@@ -102,7 +98,6 @@ class TestCase(unittest.TestCase):
                 },
             ]
         )
-        db.data = list(db.data)
         with open("test/data/database_v2_test_modified_output_2.txt", "r", encoding="utf-8") as f:
             self.assertEqual(get_print_val(db), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
@@ -111,13 +106,11 @@ class TestCase(unittest.TestCase):
     def test_dedupe(self):
         file = os.path.abspath("test/data/database_v2_duplicates.bin")
         db = DatabaseV2(file)
-        db.data = list(db.data)
 
         with open("test/data/database_v2_duplicates_output.txt", "r", encoding="utf-8") as f:
             self.assertEqual(get_print_val(db), f.read(), "original")
 
         db.remove_duplicates()
-        db.data = list(db.data)
 
         with open("test/data/database_v2_duplicates_output_deduped.txt", "r", encoding="utf-8") as f:
             self.assertEqual(get_print_val(db), f.read(), "deduped")

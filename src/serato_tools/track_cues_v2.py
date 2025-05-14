@@ -7,7 +7,7 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Tuple, TypedDict, Literal, List, Sequence, Union, NotRequired
+from typing import Callable, TypedDict, Literal, List, Sequence, Union, NotRequired
 from enum import Enum
 
 from mutagen.mp3 import HeaderNotFoundError
@@ -102,7 +102,7 @@ class TrackCuesV2(SeratoTag):
 
     class Entry(object):
         NAME: str | None
-        FIELDS: Tuple[str, ...]
+        FIELDS: tuple[str, ...]
         data: bytes
 
         def __init__(self, *args):
@@ -553,11 +553,10 @@ if __name__ == "__main__":
         text_editor = get_text_editor()
         hex_editor = get_hex_editor()
 
-    entries: list[TrackCuesV2.Entry] = list(tags.entries)
     new_entries: list[TrackCuesV2.Entry] = []
-    width = math.floor(math.log10(len(entries))) + 1
+    width = math.floor(math.log10(len(tags.entries))) + 1
     action = None
-    for entry_index, entry in enumerate(entries):
+    for entry_index, entry in enumerate(tags.entries):
         if args.edit:
             if action not in ("q", "_"):
                 print("{:{}d}: {!r}".format(entry_index, width, entry))
@@ -587,7 +586,7 @@ if __name__ == "__main__":
                                         "{:{}d}: {}".format(i, width, e.NAME),
                                         e,
                                     )
-                                    for i, e in enumerate(entries[entry_index:], start=entry_index)
+                                    for i, e in enumerate(tags.entries[entry_index:], start=entry_index)
                                 )
                             else:
                                 entries_to_edit = ((entry.NAME, entry),)
@@ -664,7 +663,7 @@ if __name__ == "__main__":
             print("{:{}d}: {!r}".format(entry_index, width, entry))
 
     if args.edit:
-        if new_entries == entries:
+        if new_entries == tags.entries:
             print("No changes made.")
         else:
             tags.entries = new_entries

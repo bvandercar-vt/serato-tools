@@ -77,9 +77,9 @@ class Crate(CrateBase):
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
                 field_lines = []
-                for f, f_name, v in value:  # type: ignore
-                    if isinstance(v, tuple):
-                        raise TypeError("unexpected type")
+                for f, f_name, v in value:
+                    if isinstance(v, list):
+                        raise TypeError("unexpected type, deeply nested list")
                     field_lines.append(f"[ {f} ({f_name}): {v} ]")
                 print_val = ", ".join(field_lines)
             else:

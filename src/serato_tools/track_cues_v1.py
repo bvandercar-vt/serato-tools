@@ -153,7 +153,7 @@ class TrackCuesV1(SeratoTag):
         yield TrackCuesV1.Color.load(fp.read())
 
     def _dump(self):
-        entries = list(self.entries)
+        entries = self.entries
         data = self._pack_version()
         num_entries = len(entries) - 1
         data += struct.pack(">I", num_entries)

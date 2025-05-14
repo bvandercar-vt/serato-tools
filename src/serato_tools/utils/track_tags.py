@@ -60,16 +60,16 @@ class SeratoTrack:
 
     VERSION_FORMAT = "BB"
     VERSION_LEN = struct.calcsize(VERSION_FORMAT)
-    VersionType = tuple[int, int]
+    type Version = tuple[int, int]
 
     @staticmethod
-    def _check_version(given: bytes, expected: VersionType):
+    def _check_version(given: bytes, expected: Version):
         given_version = struct.unpack(SeratoTrack.VERSION_FORMAT, given)
         if given_version != expected:
             raise ValueError(f"Wrong version. Expected: {str(expected)} Given: {str(given_version)}")
 
     @staticmethod
-    def _pack_version(version: VersionType):
+    def _pack_version(version: Version):
         return struct.pack(SeratoTrack.VERSION_FORMAT, *version)
 
     @staticmethod
@@ -86,7 +86,7 @@ class SeratoTrack:
 
 class SeratoTag(SeratoTrack):
     GEOB_KEY: str
-    VERSION: tuple[int, int]
+    VERSION: SeratoTrack.Version
 
     type FileOrData = SeratoTrack.FileArg | bytes
 

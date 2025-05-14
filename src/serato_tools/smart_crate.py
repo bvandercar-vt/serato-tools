@@ -78,15 +78,15 @@ class SmartCrate(CrateBase):
 
     def __str__(self):
         tracks = self.tracks()
-        return f"Crate containing {len(tracks)} tracks (TODO: print rules!): \n" + "\n".join(tracks)
+        return f"Smart Crate containing {len(tracks)} tracks (TODO: print rules!): \n" + "\n".join(tracks)
 
     def print(self):
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
                 field_lines = []
                 for f, f_name, v in value:  # type: ignore
-                    if isinstance(v, tuple):
-                        raise TypeError("unexpected type")
+                    if isinstance(v, list):
+                        raise TypeError("unexpected type, deeply nested list")
                     p_val = str(v)
                     if f == CrateBase.Fields.RULE_FIELD:
                         if not isinstance(v, int):
