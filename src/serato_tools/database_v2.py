@@ -238,6 +238,30 @@ class DatabaseV2(SeratoBinFile):
             return
         self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
 
+    def remove_duplicates(self):
+        new_data: list[DatabaseV2.Parsed] = []
+        tracks_paths: list[str] = []
+        for field, value in list(self.data):
+            if isinstance(value, tuple):
+                if field == DatabaseV2.Fields.TRACK:
+                    for f, v in value:
+                        if f == DatabaseV2.Fields.FILE_PATH:
+                            if not isinstance(v, str):
+                                raise DataTypeError(v, str, f)
+                            track_path = v
+                            if track_path in tracks_paths:
+                                # TODO: check if any different aside from date added
+                                logger.info(f"removed duplicate: {track_path}")
+                            else:
+                                new_data.append((field, value))
+                                tracks_paths.append(track_path)
+                else:
+                    new_data.append((field, value))
+            else:
+                new_data.append((field, value))
+        self.data = new_data
+        self._dump()
+
     type EntryFull = tuple[str, str, str | int | bool | list["DatabaseV2.EntryFull"]]
 
     def to_entries(self) -> Generator[EntryFull, None, None]:

@@ -107,3 +107,17 @@ class TestCase(unittest.TestCase):
             self.assertEqual(get_print_val(db), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")
+
+    def test_dedupe(self):
+        file = os.path.abspath("test/data/database_v2_duplicates.bin")
+        db = DatabaseV2(file)
+        db.data = list(db.data)
+
+        with open("test/data/database_v2_duplicates_output.txt", "r", encoding="utf-8") as f:
+            self.assertEqual(get_print_val(db), f.read(), "original")
+
+        db.remove_duplicates()
+        db.data = list(db.data)
+
+        with open("test/data/database_v2_duplicates_output_deduped.txt", "r", encoding="utf-8") as f:
+            self.assertEqual(get_print_val(db), f.read(), "deduped")

@@ -1,0 +1,172 @@
+vrsn (Version): '2.0/Serato Scratch LIVE Database'
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Music/Zeds Dead - Rude Boy.mp3
+    tsng (Title): Rude Boy
+    tart (Artist): Zeds Dead
+    talb (Album): Rude Boy
+    tgen (Genre): Old Sounding Dubstep
+    tlen (Length): 02:44.65
+    tsiz (Size): 5.9MB
+    tbit (Bitrate): 298.6kbps
+    tbpm (Bpm): 70.00
+    tgrp (Grouping):  
+    tlbl (Publisher): SOUL_C
+    ttyr (Year): 2010
+    tadd (Date Added): 1747196346
+    tkey (Key): 9A
+    uadd (Date Added): 1747196346
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1747137260
+    utpc (Unknown Field): 2
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Music/Zeds Dead - Ecstasy Of Soul (feat. GRiZ).mp3
+    tsng (Title): Ecstasy Of Soul (feat. GRiZ)
+    tart (Artist): Zeds Dead
+    talb (Album): Ecstasy Of Soul
+    tgen (Genre): Proper Brostep; Hardest Crunchy Briddim; Groovy MonkeyStep
+    tlen (Length): 03:58.47
+    tsiz (Size): 8.9MB
+    tbit (Bitrate): 305.3kbps
+    tbpm (Bpm): 75.00
+    tlbl (Publisher): SOUL_C
+    ttyr (Year): 2022
+    tadd (Date Added): 1747196346
+    tkey (Key): 9A
+    uadd (Date Added): 1747196346
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1746051304
+    utpc (Unknown Field): 2
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Music/Zeds Dead - In The Beginning.mp3
+    tsng (Title): In The Beginning
+    tart (Artist): Zeds Dead
+    talb (Album): Adrenaline
+    tgen (Genre): Groovy MonkeyStep; Old Sounding Dubstep; Trippy Nasty Wavey
+    tlen (Length): 03:49.36
+    tsiz (Size): 8.6MB
+    tbit (Bitrate): 308.4kbps
+    tbpm (Bpm): 70.00
+    tgrp (Grouping):  
+    tlbl (Publisher): SOUL_C
+    ttyr (Year): 2012
+    tadd (Date Added): 1747196346
+    tkey (Key): 4A
+    uadd (Date Added): 1747196346
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1747137258
+    utpc (Unknown Field): 5
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Music/Excision - Sleepless (feat. Savvy) - Loadstar Remix.mp3
+    tsng (Title): Sleepless (feat. Savvy) - Loadstar Remix
+    tart (Artist): Excision
+    talb (Album): X Rated (The Remixes)
+    tgen (Genre): Proper Brostep; Old Sounding Dubstep
+    tlen (Length): 04:14.56
+    tsiz (Size): 7.4MB
+    tbit (Bitrate): 234.8kbps
+    tbpm (Bpm): 87.00
+    tlbl (Publisher): YT
+    ttyr (Year): 2012
+    tadd (Date Added): 1747196350
+    tkey (Key): 3A
+    uadd (Date Added): 1747196350
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1746051286
+    utpc (Unknown Field): 1
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
+otrk (Track)
+    ttyp (File Type): mp3
+    pfil (File Path): Music/Excision - Swerve (feat. Downlink).mp3
+    tsng (Title): Swerve (feat. Downlink)
+    tart (Artist): Excision
+    talb (Album): X Rated
+    tgen (Genre): Hardest Bass House
+    tlen (Length): 05:21.12
+    tsiz (Size): 7.5MB
+    tbit (Bitrate): 192.0kbps
+    tbpm (Bpm): 128.00
+    tlbl (Publisher): YT
+    ttyr (Year): 2011
+    tadd (Date Added): 1747196350
+    tkey (Key): 11A
+    uadd (Date Added): 1747196350
+    ulbl (Unknown Field): 10092441
+    utme (Time): 1746051286
+    sbav (Unknown Field): 0
+    bhrt (Unknown Field): True
+    bmis (Missing): False
+    bply (Unknown Field): False
+    blop (Unknown Field): False
+    bitu (Unknown Field): False
+    bovc (Unknown Field): True
+    bcrt (Corrupt): False
+    biro (Unknown Field): False
+    bwlb (Unknown Field): False
+    bwll (Unknown Field): False
+    buns (Unknown Field): False
+    bbgl (Beatgrid Locked): False
+    bkrk (Unknown Field): False
+    bstm (Unknown Field): False
