@@ -328,7 +328,7 @@ class DatabaseV2(SeratoBinFile):
                 if not isinstance(entry["value"], str):
                     raise DataTypeError(entry["value"], str, entry["field"])
 
-                value = os.path.join(drive_letter + "//", entry["value"])
+                value = os.path.join(drive_letter, entry["value"])
                 track_filepath = value
                 missing_checked = False
 

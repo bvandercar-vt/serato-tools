@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 logger = logging.getLogger("serato-tools")
 
-SERATO_FOLDER = os.path.join(os.path.expanduser("~"), "Music\\_Serato_")
+SERATO_FOLDER = os.path.join(os.path.expanduser("~"), "Music", "_Serato_")
 
 
 def get_key_from_value(value: T, dict: dict[str, T]) -> str:
