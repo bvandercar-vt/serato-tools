@@ -1,16 +1,16 @@
 import os
 import sys
-from typing import Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import get_key_from_value, DataTypeError, SERATO_FOLDER, DeeplyNestedStructError
+from serato_tools.utils import get_key_from_value, DataTypeError, DeeplyNestedStructError
 
 
 class SmartCrate(CrateBase):
-    FOLDER = os.path.join(SERATO_FOLDER, "SmartCrates")
+    EXTENSION = ".scrate"
+    FOLDER = "SmartCrates"
 
     RULE_FIELD = {
         "added": 25,
@@ -67,15 +67,6 @@ class SmartCrate(CrateBase):
     def _get_rule_comparison(value: str) -> str:
         return get_key_from_value(value, SmartCrate.RULE_COMPARISON)
 
-    def save(self, file: Optional[str] = None):
-        if file is None:
-            file = self.filepath
-
-        if not file.endswith(".scrate"):
-            raise ValueError("file should end with .scrate: " + file)
-
-        super().save(file)
-
     def __str__(self):
         tracks = self.tracks()
         return f"Smart Crate containing {len(tracks)} tracks (TODO: print rules!): \n" + "\n".join(tracks)
@@ -101,11 +92,6 @@ class SmartCrate(CrateBase):
             else:
                 print_val = str(value)
             print(f"{field} ({fieldname}): {print_val}")
-
-    @staticmethod
-    def list_folder():
-        for file in os.listdir(SmartCrate.FOLDER):
-            print(os.path.join(SmartCrate.FOLDER, file))
 
 
 if __name__ == "__main__":

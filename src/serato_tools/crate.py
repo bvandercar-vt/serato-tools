@@ -2,17 +2,17 @@
 # This is from this repo: https://github.com/sharst/seratopy
 import os
 import sys
-from typing import Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import SERATO_FOLDER, DeeplyNestedStructError
+from serato_tools.utils import DeeplyNestedStructError
 
 
 class Crate(CrateBase):
-    FOLDER = os.path.join(SERATO_FOLDER, "Subcrates")
+    EXTENSION = ".crate"
+    FOLDER = "Subcrates"
 
     DEFAULT_DATA = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Crate"),
@@ -65,15 +65,6 @@ class Crate(CrateBase):
         for track in folder_tracks:
             self.add_track(track)
 
-    def save(self, file: Optional[str] = None):
-        if file is None:
-            file = self.filepath
-
-        if not file.endswith(".crate"):
-            raise ValueError("file should end with .crate: " + file)
-
-        super().save(file)
-
     def print(self):
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
@@ -86,11 +77,6 @@ class Crate(CrateBase):
             else:
                 print_val = str(value)
             print(f"{field} ({fieldname}): {print_val}")
-
-    @staticmethod
-    def list_folder():
-        for file in os.listdir(Crate.FOLDER):
-            print(os.path.join(Crate.FOLDER, file))
 
 
 if __name__ == "__main__":

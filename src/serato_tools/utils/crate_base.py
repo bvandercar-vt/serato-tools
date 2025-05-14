@@ -8,9 +8,13 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
+from serato_tools.utils import SERATO_FOLDER_PATH
 
 
 class CrateBase(SeratoBinFile):
+    EXTENSION: str
+    FOLDER: str
+
     def __init__(self, file: str):
         super().__init__(file=file)
 
@@ -54,8 +58,13 @@ class CrateBase(SeratoBinFile):
         if file is None:
             file = self.filepath
 
-        if not file.endswith("crate"):
-            raise ValueError("file should end with crate: " + file)
+        if not file.endswith(self.EXTENSION):
+            raise ValueError(f"file should end with {self.EXTENSION}: " + file)
 
-        self._dump()
         super().save(file)
+
+    @classmethod
+    def list_folder(cls):
+        FOLDER = os.path.join(SERATO_FOLDER_PATH, cls.FOLDER)
+        for file in os.listdir(FOLDER):
+            print(os.path.join(FOLDER, file))
