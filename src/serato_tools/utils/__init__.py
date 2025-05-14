@@ -37,3 +37,8 @@ class DataTypeError(Exception):
         super().__init__(
             f"value must be {' or '.join(e.__name__ for e in to_array(expected_type))} when field is {field} (type: {type(value).__name__}) (value: {str(value)})"
         )
+
+
+class DeeplyNestedStructError(Exception):
+    def __init__(self):
+        super().__init__("unexpected type, deeply nested list. if this occurs, need to implement code for it.")

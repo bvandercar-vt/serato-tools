@@ -8,7 +8,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import SERATO_FOLDER
+from serato_tools.utils import SERATO_FOLDER, DeeplyNestedStructError
 
 
 class Crate(CrateBase):
@@ -80,7 +80,7 @@ class Crate(CrateBase):
                 field_lines = []
                 for f, f_name, v in value:
                     if isinstance(v, list):
-                        raise TypeError("unexpected type, deeply nested list")
+                        raise DeeplyNestedStructError
                     field_lines.append(f"[ {f} ({f_name}): {v} ]")
                 print_val = ", ".join(field_lines)
             else:

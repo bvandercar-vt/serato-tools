@@ -24,7 +24,7 @@ class DatabaseV2(SeratoBinFile):
         super().__init__(file=file)
 
     @staticmethod
-    def _get_filename(item: SeratoBinFile.Struct):
+    def _get_track_path(item: SeratoBinFile.Struct):
         for field, value in item:
             if isinstance(value, list):
                 raise TypeError("Have not accounted for deeply nested list")
@@ -78,7 +78,7 @@ class DatabaseV2(SeratoBinFile):
             if field == DatabaseV2.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
-                track_filename = DatabaseV2._get_filename(value)
+                track_filename = DatabaseV2._get_track_path(value)
                 new_struct: DatabaseV2.Struct = []
                 fields: list[str] = []
                 for f, v in value:

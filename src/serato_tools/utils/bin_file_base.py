@@ -4,7 +4,7 @@ import struct
 from typing import Iterable, TypedDict, Generator, Optional, cast
 from enum import StrEnum
 
-from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError
+from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError, DeeplyNestedStructError
 
 
 class SeratoBinFile:
@@ -213,15 +213,15 @@ class SeratoBinFile:
         for field, value in self.data:
             if isinstance(value, list):
                 try:
-                    new_val: list[SeratoBinFile.EntryFull] = []
+                    new_struct: list[SeratoBinFile.EntryFull] = []
                     for f, v in value:
                         if isinstance(v, list):
-                            raise TypeError("not implemented for deeply nested")
-                        new_val.append((f, SeratoBinFile.get_field_name(f), v))
+                            raise DeeplyNestedStructError
+                        new_struct.append((f, SeratoBinFile.get_field_name(f), v))
                 except:
                     logger.error(f"error on field: {field} value: {value}")
                     raise
-                value = new_val
+                value = new_struct
             else:
                 value = repr(value)
 
@@ -233,7 +233,7 @@ class SeratoBinFile:
                 print(f"{field} ({fieldname})")
                 for f, f_name, v in value:
                     if isinstance(v, list):
-                        raise TypeError("unexpected type, deeply nested list")
+                        raise DeeplyNestedStructError
                     print(f"    {f} ({f_name}): {str(v)}")
             else:
                 print(f"{field} ({fieldname}): {str(value)}")

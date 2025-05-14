@@ -6,7 +6,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import get_key_from_value, DataTypeError, SERATO_FOLDER
+from serato_tools.utils import get_key_from_value, DataTypeError, SERATO_FOLDER, DeeplyNestedStructError
 
 
 class SmartCrate(CrateBase):
@@ -84,9 +84,9 @@ class SmartCrate(CrateBase):
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
                 field_lines = []
-                for f, f_name, v in value:  # type: ignore
+                for f, f_name, v in value:
                     if isinstance(v, list):
-                        raise TypeError("unexpected type, deeply nested list")
+                        raise DeeplyNestedStructError
                     p_val = str(v)
                     if f == CrateBase.Fields.RULE_FIELD:
                         if not isinstance(v, int):
