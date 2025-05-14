@@ -7,7 +7,7 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Tuple, TypedDict, Literal, List, Sequence, Union
+from typing import Callable, Tuple, TypedDict, Literal, List, Sequence, Union, NotRequired
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -15,11 +15,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.track_cues_v1 import TrackCuesV1
-from serato_tools.utils import (
-    logger,
-    DataTypeError,
-    NotRequired,  # pyright: ignore[reportAttributeAccessIssue]
-)
+from serato_tools.utils import logger, DataTypeError
 from serato_tools.utils.track_tags import SeratoTag
 
 
@@ -78,7 +74,7 @@ class TrackCuesV2(SeratoTag):
         }.items()
     }
 
-    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+    def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
         self.entries: list[TrackCuesV2.Entry] = []
@@ -87,14 +83,14 @@ class TrackCuesV2(SeratoTag):
         self.modified: bool = False
 
     @staticmethod
-    def _get_cue_color_key(value: bytes) -> Union[str, None]:
+    def _get_cue_color_key(value: bytes) -> str:
         for key, v in TrackCuesV2.CUE_COLORS.items():
             if v == value:
                 return key
         raise ValueError(f"no color key for value {value}")
 
     @staticmethod
-    def _get_track_color_key(value: bytes) -> Union[str, None]:
+    def _get_track_color_key(value: bytes) -> str:
         for key, v in TrackCuesV2.TRACK_COLORS.items():
             if v == value:
                 return key
@@ -368,11 +364,11 @@ class TrackCuesV2(SeratoTag):
             results.append(entry_class.load(e.dump()))
         return results
 
-    ValueType = Union[bytes, str, int]
+    type Value = Union[bytes, str, int]
 
     class EntryModifyRule(TypedDict):
         field: str
-        func: Callable[["TrackCuesV2.ValueType"], Union["TrackCuesV2.ValueType", None]]
+        func: Callable[["TrackCuesV2.Value"], Union["TrackCuesV2.Value", None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
     class CueIndexModifyRule(EntryModifyRule):
@@ -390,8 +386,8 @@ class TrackCuesV2(SeratoTag):
         func: Callable[[str], Union[str, None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-    CueRules = Union[CueIndexModifyRule, ColorModifyRule, CueNameModifyRule, EntryModifyRule]
-    TrackColorRules = Union[ColorModifyRule, EntryModifyRule]
+    type CueRules = Union[CueIndexModifyRule, ColorModifyRule, CueNameModifyRule, EntryModifyRule]
+    type TrackColorRules = Union[ColorModifyRule, EntryModifyRule]
 
     class EntryModifyRules(TypedDict):
         cues: NotRequired[List["TrackCuesV2.CueRules"]]
@@ -416,7 +412,7 @@ class TrackCuesV2(SeratoTag):
 
         output = f"[{entry.NAME}]\n"
         for field in entry.FIELDS:
-            value: TrackCuesV2.ValueType = getattr(entry, field)
+            value: TrackCuesV2.Value = getattr(entry, field)
 
             rule = next((r for r in rules if field == r["field"]), None)
             if rule:
@@ -424,7 +420,7 @@ class TrackCuesV2(SeratoTag):
                 if ExpectedType and not isinstance(value, ExpectedType):
                     raise DataTypeError(value, ExpectedType, field)
 
-                maybe_new_val: TrackCuesV2.ValueType = rule["func"](value)  # type: ignore
+                maybe_new_val: TrackCuesV2.Value = rule["func"](value)  # type: ignore
                 if maybe_new_val is not None and maybe_new_val != value:
                     value = maybe_new_val
 

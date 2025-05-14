@@ -5,7 +5,8 @@ disable=
     redefined-outer-name,
     fixme,
     broad-exception-raised,
-    logging-fstring-interpolation
+    logging-fstring-interpolation,
+    import-error
 
 
 [FORMAT]

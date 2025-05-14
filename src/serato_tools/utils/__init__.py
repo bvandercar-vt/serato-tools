@@ -1,10 +1,6 @@
 import logging
 from typing import Iterable, TypeVar, Union, cast, Any
 
-try:
-    from typing import NotRequired  # Python 3.11+ # pyright: ignore[reportAttributeAccessIssue]
-except ImportError:
-    from typing_extensions import NotRequired  # For Python 3.10
 
 T = TypeVar("T")
 

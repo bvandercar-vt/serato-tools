@@ -17,7 +17,7 @@ class TrackWaveform(SeratoTag):
     GEOB_KEY = "Serato Overview"
     VERSION = (0x01, 0x05)
 
-    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+    def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
         if self.raw_data is None:

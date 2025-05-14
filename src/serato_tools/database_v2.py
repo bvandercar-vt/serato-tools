@@ -4,26 +4,22 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Generator, Iterable, TypedDict, Union, Optional
+from typing import Callable, Generator, Iterable, TypedDict, Union, Optional, NotRequired
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.database import SeratoBinDb
-from serato_tools.utils import (
-    logger,
-    DataTypeError,
-    NotRequired,  # pyright: ignore[reportAttributeAccessIssue]
-)
+from serato_tools.utils.bin_file_base import SeratoBinFile
+from serato_tools.utils import logger, DataTypeError
 
 
-class DatabaseV2(SeratoBinDb):
+class DatabaseV2(SeratoBinFile):
     DEFAULT_DATABASE_FILE = os.path.join(os.path.expanduser("~"), "Music\\_Serato_\\database V2")
 
-    ValueType = Union[bytes, str, int, tuple]  # TODO: improve the tuple
-    ParsedType = tuple[str, int, ValueType]
+    type Value = Union[bytes, str, int, tuple]  # TODO: improve the tuple
+    type Parsed = tuple[str, int, Value]
 
-    ValueOrNoneType = Union[ValueType, None]
+    type ValueOrNone = Union[Value, None]
 
     def __init__(self, filepath: str = DEFAULT_DATABASE_FILE):
         if not os.path.exists(filepath):
@@ -33,13 +29,13 @@ class DatabaseV2(SeratoBinDb):
 
         with open(self.filepath, "rb") as fp:
             self.raw_data: bytes = fp.read()
-            self.data: Iterable[DatabaseV2.ParsedType] = self._parse_item(self.raw_data)
+            self.data: Iterable[DatabaseV2.Parsed] = self._parse_item(self.raw_data)
 
     def __str__(self):
-        return str(list(self.to_dicts()))
+        return str(list(self.to_entries()))
 
     @staticmethod
-    def _parse_item(item_data: bytes) -> Generator[ParsedType, None, None]:
+    def _parse_item(item_data: bytes) -> Generator[Parsed, None, None]:
         fp = io.BytesIO(item_data)
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
@@ -71,7 +67,7 @@ class DatabaseV2(SeratoBinDb):
 
     class ModifyRule(TypedDict):
         field: str
-        func: Callable[[str, "DatabaseV2.ValueOrNoneType"], "DatabaseV2.ValueOrNoneType"]
+        func: Callable[[str, "DatabaseV2.ValueOrNone"], "DatabaseV2.ValueOrNone"]
         """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
         files: NotRequired[list[str]]
 
@@ -80,7 +76,7 @@ class DatabaseV2(SeratoBinDb):
         self.data = self._parse_item(self.raw_data)
 
     @staticmethod
-    def _modify_data_item(item: Iterable[ParsedType], rules: list[ModifyRule]):
+    def _modify_data_item(item: Iterable[Parsed], rules: list[ModifyRule]):
         DatabaseV2._check_rule_fields(rules)
 
         for rule in rules:
@@ -90,7 +86,7 @@ class DatabaseV2(SeratoBinDb):
 
         fp = io.BytesIO()
 
-        def _dump(field: str, value: "DatabaseV2.ValueType"):
+        def _dump(field: str, value: "DatabaseV2.Value"):
             nonlocal rules
             field_bytes = field.encode("ascii")
             assert len(field_bytes) == 4
@@ -126,11 +122,7 @@ class DatabaseV2(SeratoBinDb):
             fp.write(header)
             fp.write(data)
 
-        def _maybe_perform_rule(
-            rule: DatabaseV2.ModifyRule,
-            field: str,
-            prev_val: "DatabaseV2.ValueOrNoneType",
-        ):
+        def _maybe_perform_rule(rule: DatabaseV2.ModifyRule, field: str, prev_val: "DatabaseV2.ValueOrNone"):
             nonlocal track_filename
             if track_filename == "" or ("files" in rule and track_filename.upper() not in rule["files"]):
                 return None
@@ -199,23 +191,19 @@ class DatabaseV2(SeratoBinDb):
             return
         self.modify_and_save([{"field": "pfil", "files": [src], "func": lambda *args: dest}])
 
-    class EntryDict(TypedDict):
-        field: str
-        field_name: str
-        value: Union[str, int, bool, list["DatabaseV2.EntryDict"]]
-        size_bytes: int
+    type EntryFull = tuple[str, str, Union[str, int, bool, list["DatabaseV2.EntryFull"]], int]
 
-    def to_dicts(self) -> Generator[EntryDict, None, None]:
+    def to_entries(self) -> Generator[EntryFull, None, None]:
         for field, length, value in self.data:
             if isinstance(value, tuple):
                 try:
-                    new_val: list[DatabaseV2.EntryDict] = [
-                        {
-                            "field": f,
-                            "field_name": DatabaseV2.get_field_name(f),
-                            "size_bytes": l,
-                            "value": v,
-                        }
+                    new_val: list[DatabaseV2.EntryFull] = [
+                        (
+                            f,
+                            DatabaseV2.get_field_name(f),
+                            v,
+                            l,
+                        )
                         for f, l, v in value
                     ]
                 except:
@@ -225,21 +213,16 @@ class DatabaseV2(SeratoBinDb):
             else:
                 value = repr(value)
 
-            yield {
-                "field": field,
-                "field_name": DatabaseV2.get_field_name(field),
-                "size_bytes": length,
-                "value": value,
-            }
+            yield (field, DatabaseV2.get_field_name(field), value, length)
 
     def print(self):
-        for entry in self.to_dicts():
-            if isinstance(entry["value"], list):
-                print(f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B)")
-                for e in entry["value"]:
-                    print(f"    {e['field']} ({e['field_name']}, {e['size_bytes']} B): {str(e['value'])}")
+        for field, fieldname, value, size_bytes in self.to_entries():
+            if isinstance(value, list):
+                print(f"{field} ({fieldname}, {size_bytes} B)")
+                for f, f_name, v, s_b in value:
+                    print(f"    {f} ({f_name}, {s_b} B): {str(v)}")
             else:
-                print(f"{entry['field']} ({entry['field_name']}, {entry['size_bytes']} B): {str(entry['value'])}")
+                print(f"{field} ({fieldname}, {size_bytes} B): {str(value)}")
 
     def find_missing(self, drive_letter: Optional[str] = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")
@@ -275,7 +258,7 @@ class DatabaseV2(SeratoBinDb):
                 ],
             )
 
-        def field_actions(entry: DatabaseV2.EntryDict):
+        def field_actions(entry: DatabaseV2.EntryFull):
             nonlocal track_filepath
             nonlocal missing_checked
             if entry["field"] == "pfil":
@@ -297,7 +280,7 @@ class DatabaseV2(SeratoBinDb):
                     logger.error(f"serato says is missing: {track_filepath}")
                     take_input_and_change_db(current_filepath=track_filepath)
 
-        for entry in list(self.to_dicts()):
+        for entry in list(self.to_entries()):
             if isinstance(entry["value"], list):
                 for e in entry["value"]:
                     field_actions(e)

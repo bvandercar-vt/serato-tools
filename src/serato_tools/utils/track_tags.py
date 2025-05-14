@@ -11,11 +11,11 @@ from serato_tools.utils import logger
 
 
 class SeratoTrack:
-    TagfileType = Union[ID3FileType, ID3, AIFF]
-    FileArgType = Union[str, TagfileType]
+    type Tagfile = Union[ID3FileType, ID3, AIFF]
+    type FileArg = Union[str, Tagfile]
 
-    def __init__(self, file: FileArgType):
-        self.tagfile: SeratoTrack.TagfileType
+    def __init__(self, file: FileArg):
+        self.tagfile: SeratoTrack.Tagfile
         if isinstance(file, str):
             try:
                 if file.lower().endswith(".mp3"):
@@ -89,10 +89,10 @@ class SeratoTag(SeratoTrack):
     GEOB_KEY: str
     VERSION: tuple[int, int]
 
-    FileOrDataType = Union[SeratoTrack.FileArgType, bytes]
+    type FileOrData = Union[SeratoTrack.FileArg, bytes]
 
-    def __init__(self, file_or_data: FileOrDataType):
-        self.tagfile: Union[SeratoTrack.TagfileType, None] = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    def __init__(self, file_or_data: FileOrData):
+        self.tagfile: Union[SeratoTrack.Tagfile, None] = None  # pyright: ignore[reportIncompatibleVariableOverride]
         self.raw_data: Union[bytes, None] = None
 
         if isinstance(file_or_data, (bytes, bytearray, memoryview)):

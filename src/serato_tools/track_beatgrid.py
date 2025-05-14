@@ -31,9 +31,9 @@ class TrackBeatgrid(SeratoTag):
 
     Footer = collections.namedtuple("Footer", ("unknown",))
 
-    EntryList = list[Union[TerminalBeatgridMarker, NonTerminalBeatgridMarker, Footer]]
+    type EntryList = list[Union[TerminalBeatgridMarker, NonTerminalBeatgridMarker, Footer]]
 
-    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+    def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
         self.entries: Union[TrackBeatgrid.EntryList, None] = None

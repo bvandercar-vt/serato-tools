@@ -3,7 +3,10 @@
 - Serato track tag parsing and modification, including cue points, track color, beatgrid, waveform, autogain, etc.
 - Serato library database parsing and modification
 - Serato crate parsing and modification
+- Serato smart crate parsing (viewing only-- modifying a TODO!)
 - Dynamic beatgrid analysis that can be saved to a track's beatgrid.
+
+**Currently designed for Python 3.12+. If you would like backwards compatibility with an older version, please reach out!**
 
 ## Example uses:
 
@@ -22,6 +25,10 @@
 - Read a crate's tracks
 - Remove a track from a crate
 - Add a track to a crate
+
+**smart Crate:**
+- Read a smart crate's tracks
+- Read a smart crate's rules (TODO: ability to modify the rules!)
 
 _**Code examples are below.**_
 
@@ -168,7 +175,7 @@ print(crate)
 # Music/Dubstep/Evalution - Throw It Back.mp3
 # ...
 
-crate.print_data()
+crate.print()
 # OUTPUT:
 #
 # [   ('vrsn', '1.0/Serato ScratchLive Crate'),
@@ -195,12 +202,13 @@ crate.add_track('/Users/Username/Music/Dubstep/Chozen - I Wanna Dance.mp3')
 crate.save_to_file('/Users/Username/Music/Dubstep/New Crate.crate')
 ```
 
-### Hiding console output
+### Smart Crate details (TODO: modification)
 
 ```python
-import logging
+from serato_tools.smart_crate import SmartCrate
 
-logging.getLogger("serato-tools").setLevel(logging.ERROR)  # or logging.WARN
+s_crate = Crate('/Users/Username/Music/_Serato_/SmartCrates/Dubstep.scrate')
+print(s_crate)
 ```
 
 # Serato Tags

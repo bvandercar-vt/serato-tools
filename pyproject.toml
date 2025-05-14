@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "2.4.0"
-description = "Serato crate, library database, and track metadata (cues, beatgrid, etc.) modification"
-requires-python = ">= 3.9"
+version = "2.5.0"
+description = "Serato crate, smartcrate, library database, and track metadata (cues, beatgrid, etc.) modification, including dyanmic beatgrid analysis."
+requires-python = ">= 3.12"
 readme = "README.md"
 authors = [
     { name = "bvandercar-vt", email = "bvandercar@outlook.com" }

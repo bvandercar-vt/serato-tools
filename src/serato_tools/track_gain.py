@@ -12,7 +12,7 @@ class TrackGain(SeratoTrack):
     REPLAY_GAIN_GAIN_KEY = "replaygain_SeratoGain_gain"
     REPLAY_GAIN_PEAK_KEY = "replaygain_SeratoGain_peak"
 
-    def __init__(self, file: SeratoTrack.FileArgType):
+    def __init__(self, file: SeratoTrack.FileArg):
         super().__init__(file)
         self.gain: Union[float, None] = self.tagfile.get(TrackGain.REPLAY_GAIN_GAIN_KEY, None)
         self.peak: Union[float, None] = self.tagfile.get(TrackGain.REPLAY_GAIN_PEAK_KEY, None)

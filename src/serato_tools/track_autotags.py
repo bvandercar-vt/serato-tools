@@ -18,7 +18,7 @@ class TrackAutotags(SeratoTag):
     GEOB_KEY = "Serato Autotags"
     VERSION = (0x01, 0x01)
 
-    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+    def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
         self.bpm: Union[float, None]

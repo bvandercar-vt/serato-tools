@@ -2,7 +2,7 @@ import os
 from typing import Iterable, TypedDict
 
 
-class SeratoBinDb:
+class SeratoBinFile:
     FIELDNAMES = {
         # Database & Crate
         "vrsn": "Version",
@@ -38,6 +38,15 @@ class SeratoBinDb:
         "tvcn": "Column Name",
         "tvcw": "Column Width",
         "ptrk": "Track Path",
+        # Smart Crates
+        "rurt": "SmartCrate Rule",
+        "rlut": "SmartCrate Live Update",
+        "rart": "SmartCrate Match All",
+        "trpt": "Rule Value Text",
+        "trtt": "Rule Value Date",
+        "urpt": "Rule Value Integer",
+        "trft": "Rule Comparison",
+        "urkt": "Rule Field",
     }
     FIELDNAME_KEYS = list(FIELDNAMES.keys())
     TRACK_FIELD = "otrk"
@@ -49,7 +58,7 @@ class SeratoBinDb:
 
     @staticmethod
     def get_field_name(field: str):
-        return SeratoBinDb.FIELDNAMES.get(field, "Unknown Field")
+        return SeratoBinFile.FIELDNAMES.get(field, "Unknown Field")
 
     @staticmethod
     def _get_type(field: str) -> str:
@@ -58,9 +67,9 @@ class SeratoBinDb:
 
     @staticmethod
     def _check_valid_field(field: str):
-        if field not in SeratoBinDb.FIELDNAME_KEYS:
+        if field not in SeratoBinFile.FIELDNAME_KEYS:
             raise ValueError(
-                f"invalid field: {field} must be one of: {str(SeratoBinDb.FIELDNAME_KEYS)}\n(see {__file__} for what these keys map to)"
+                f"invalid field: {field} must be one of: {str(SeratoBinFile.FIELDNAME_KEYS)}\n(see {__file__} for what these keys map to)"
             )
 
     @staticmethod
@@ -79,4 +88,4 @@ class SeratoBinDb:
             uniq_field_names
         ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
         for field in uniq_field_names:
-            SeratoBinDb._check_valid_field(field)
+            SeratoBinFile._check_valid_field(field)

@@ -24,7 +24,7 @@ class TrackCuesV1(SeratoTag):
         CUE = 1
         LOOP = 3
 
-    def __init__(self, file_or_data: SeratoTag.FileOrDataType):
+    def __init__(self, file_or_data: SeratoTag.FileOrData):
         super().__init__(file_or_data)
 
         self.entries: list[Union[TrackCuesV1.Entry, TrackCuesV1.Color]] = []
