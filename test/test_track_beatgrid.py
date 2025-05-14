@@ -6,13 +6,11 @@ from serato_tools.track_beatgrid import TrackBeatgrid
 
 
 class TestCase(unittest.TestCase):
-    def setUp(self):
-        with open(os.path.abspath("test/data/track_beatgrid.bin"), mode="rb") as fp:
-            self.data = fp.read()
-
     def test_parse_and_dump(self):
-        tags = TrackBeatgrid(self.data)
-        self.assertEqual(tags.raw_data, self.data, "raw_data read")
+        with open(os.path.abspath("test/data/track_beatgrid.bin"), mode="rb") as fp:
+            file_data = fp.read()
+        tags = TrackBeatgrid(file_data)
+        self.assertEqual(tags.raw_data, file_data, "raw_data read")
         assert tags.entries is not None
         self.assertEqual(
             tags.entries,
@@ -23,4 +21,4 @@ class TestCase(unittest.TestCase):
             "parsed entries",
         )
         tags._dump()
-        self.assertEqual(tags.raw_data, self.data, "dump")
+        self.assertEqual(tags.raw_data, file_data, "dump")

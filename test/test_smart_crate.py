@@ -9,13 +9,12 @@ from serato_tools.smart_crate import SmartCrate
 
 
 class TestCase(unittest.TestCase):
-    def setUp(self):
-        self.file = os.path.abspath("test/data/TestSmartCrate.scrate")
-        with open(self.file, mode="rb") as fp:
-            self.data = fp.read()
-
     def test_parse(self):
-        crate = SmartCrate(self.file)
+        file = os.path.abspath("test/data/TestSmartCrate.scrate")
+        with open(file, mode="rb") as fp:
+            file_data = fp.read()
+
+        crate = SmartCrate(file)
 
         self.maxDiff = None
 
@@ -26,7 +25,7 @@ class TestCase(unittest.TestCase):
             output = captured_output.getvalue()
             return output
 
-        self.assertEqual(crate.raw_data, self.data, "raw_data read")
+        self.assertEqual(crate.raw_data, file_data, "raw_data read")
 
         expected = """vrsn (Version): '1.0/Serato ScratchLive Smart Crate'
 rart (SmartCrate Match All): [ brut (Unknown Field): True ]

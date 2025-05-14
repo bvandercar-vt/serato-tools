@@ -9,11 +9,6 @@ from serato_tools.crate import Crate
 
 
 class TestCase(unittest.TestCase):
-    def setUp(self):
-        self.file = os.path.abspath("test/data/TestCrate.crate")
-        with open(self.file, mode="rb") as fp:
-            self.data = fp.read()
-
     def test_format_filepath(self):
         self.assertEqual(
             Crate.format_filepath("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
@@ -33,7 +28,11 @@ class TestCase(unittest.TestCase):
         )
 
     def test_parse_and_modify_and_dump(self):
-        crate = Crate(self.file)
+        file = os.path.abspath("test/data/TestCrate.crate")
+        with open(file, mode="rb") as fp:
+            file_data = fp.read()
+
+        crate = Crate(file)
 
         self.maxDiff = None
 
@@ -44,7 +43,7 @@ class TestCase(unittest.TestCase):
             output = captured_output.getvalue()
             return output
 
-        self.assertEqual(crate.raw_data, self.data, "raw_data read")
+        self.assertEqual(crate.raw_data, file_data, "raw_data read")
 
         expected = """vrsn (Version): '1.0/Serato ScratchLive Crate'
 osrt (Sorting): [ tvcn (Column Name): # ], [ brev (Reverse Order): False ]

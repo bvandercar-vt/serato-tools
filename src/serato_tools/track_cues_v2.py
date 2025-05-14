@@ -512,10 +512,7 @@ class TrackCuesV2(SeratoTag):
                 raise ValueError(f"Track color {color} must be one of: {str(list(TrackCuesV2.TRACK_COLORS.keys()))}")
             color = TrackCuesV2.TRACK_COLORS[color]
 
-        self.modify_entries(
-            {"color": [{"field": "color", "func": lambda v: color}]},  # pyright: ignore[reportArgumentType]
-            delete_tags_v1,
-        )
+        self.modify_entries({"color": [{"field": "color", "func": lambda v: color}]}, delete_tags_v1)
 
     def is_beatgrid_locked(self) -> bool:
         return any(

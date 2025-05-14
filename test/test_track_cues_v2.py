@@ -6,12 +6,10 @@ from serato_tools.track_cues_v2 import TrackCuesV2
 
 
 class TestCase(unittest.TestCase):
-    def setUp(self):
-        with open(os.path.abspath("test/data/track_cues_v2.bin"), mode="rb") as fp:
-            self.data = fp.read()
-
     def test_parse_and_dump(self):
-        tags = TrackCuesV2(self.data)
+        with open(os.path.abspath("test/data/track_cues_v2.bin"), mode="rb") as fp:
+            file_data = fp.read()
+        tags = TrackCuesV2(file_data)
         self.assertEqual(
             [str(e) for e in tags.entries],
             [
@@ -29,7 +27,7 @@ class TestCase(unittest.TestCase):
             "parsed entries",
         )
         tags._dump()
-        self.assertEqual(tags.raw_data, self.data, "dump")
+        self.assertEqual(tags.raw_data, file_data, "dump")
 
         tags.modify_entries(
             {
