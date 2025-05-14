@@ -16,18 +16,14 @@ from serato_tools.utils import logger, DataTypeError, SERATO_FOLDER
 class DatabaseV2(SeratoBinFile):
     DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER, "database V2")
 
-    def __init__(self, filepath: str = DEFAULT_DATABASE_FILE):
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"file does not exist: {filepath}")
+    DEFAULT_DATA = [
+        (SeratoBinFile.Fields.VERSION, "2.0/Serato Scratch LIVE Database"),
+    ]
 
-        self.filepath: str = os.path.abspath(filepath)
-
-        with open(self.filepath, "rb") as fp:
-            self.raw_data: bytes = fp.read()
-            self.data: DatabaseV2.Struct = list(self._parse_item(self.raw_data))
-
-    def __str__(self):
-        return str(list(self.to_entries()))
+    def __init__(self, file: str = DEFAULT_DATABASE_FILE):
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"file does not exist: {file}")
+        super().__init__(file=file)
 
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
@@ -137,12 +133,6 @@ class DatabaseV2(SeratoBinFile):
     def modify_and_save(self, rules: list[ModifyRule], file: Optional[str] = None):
         self.modify(rules)
         self.save(file)
-
-    def save(self, file: Optional[str] = None):
-        if file is None:
-            file = self.filepath
-        with open(file, "wb") as write_file:
-            write_file.write(self.raw_data)
 
     def rename_track_file(self, src: str, dest: str):
         """

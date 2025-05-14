@@ -1,7 +1,7 @@
 import os
 import io
 import struct
-from typing import Iterable, TypedDict, Generator, cast
+from typing import Iterable, TypedDict, Generator, Optional, cast
 from enum import StrEnum
 
 from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError
@@ -62,8 +62,25 @@ class SeratoBinFile:
 
     type EntryFull = tuple[Fields | str, str, str | bytes | int | bool | list[EntryFull]]
 
-    raw_data: bytes
-    data: Struct
+    DEFAULT_DATA: Struct
+
+    def __init__(self, file: str):
+        self.filepath = os.path.abspath(file)
+        self.dir = os.path.dirname(self.filepath)
+
+        self.raw_data: bytes
+        self.data: SeratoBinFile.Struct
+        if os.path.exists(file):
+            with open(file, "rb") as f:
+                self.raw_data = f.read()
+                self.data = list(SeratoBinFile._parse_item(self.raw_data))
+        else:
+            logger.warning(f"File does not exist: {file}. Using default data to create an empty item.")
+            self.data = self.DEFAULT_DATA
+            self._dump()
+
+    def __str__(self):
+        return str(list(self.to_entries()))
 
     def __repr__(self):
         return str(self.raw_data)
@@ -146,6 +163,12 @@ class SeratoBinFile:
 
     def _dump(self):
         self.raw_data = SeratoBinFile._dump_item(self.data)
+
+    def save(self, file: Optional[str] = None):
+        if file is None:
+            file = self.filepath
+        with open(file, "wb") as f:
+            f.write(self.raw_data)
 
     @staticmethod
     def get_field_name(field: str) -> str:

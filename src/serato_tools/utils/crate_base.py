@@ -8,29 +8,14 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
-from serato_tools.utils import logger
 
 
 class CrateBase(SeratoBinFile):
-    DEFAULT_DATA: SeratoBinFile.Struct
-
     def __init__(self, file: str):
-        self.filepath = os.path.abspath(file)
-        self.dir = os.path.dirname(self.filepath)
+        super().__init__(file=file)
 
         # Omit the _Serato_ and Subcrates folders at the end
         self.track_dir: str = os.path.join(*CrateBase._split_path(self.dir)[:-2])
-
-        self.raw_data: bytes
-        self.data: CrateBase.Struct
-        if os.path.exists(file):
-            with open(file, "rb") as f:
-                self.raw_data = f.read()
-                self.data = list(CrateBase._parse_item(self.raw_data))
-        else:
-            logger.warning(f"File does not exist: {file}. Using default data for an empty crate.")
-            self.data = self.DEFAULT_DATA
-            self.raw_data = b""
 
     @staticmethod
     def _split_path(path: str):
@@ -73,5 +58,4 @@ class CrateBase(SeratoBinFile):
             raise ValueError("file should end with crate: " + file)
 
         self._dump()
-        with open(file, "wb") as f:
-            f.write(self.raw_data)
+        super().save(file)
