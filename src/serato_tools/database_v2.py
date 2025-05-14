@@ -29,50 +29,6 @@ class DatabaseV2(SeratoBinFile):
     def __str__(self):
         return str(list(self.to_entries()))
 
-    @staticmethod
-    def _dump_item(item: SeratoBinFile.Struct):
-        fp = io.BytesIO()
-
-        for field, value in item:
-            field_bytes = field.encode("ascii")
-            assert len(field_bytes) == 4
-
-            type_id: str = DatabaseV2._get_type(field)
-
-            if type_id in ("o", "r"):  #  struct
-                if not isinstance(value, list):
-                    raise DataTypeError(value, list, field)
-                data = DatabaseV2._dump_item(value)
-            elif type_id in ("p", "t"):  # text
-                if not isinstance(value, str):
-                    raise DataTypeError(value, str, field)
-                # if this ever fails, we did used to do this a different way, see old commits.
-                data = value.encode("utf-16-be")
-            elif type_id == "b":  # single byte, is a boolean
-                if not isinstance(value, bool):
-                    raise DataTypeError(value, bool, field)
-                data = struct.pack("?", value)
-            elif type_id == "s":  # signed int
-                if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
-                data = struct.pack(">H", value)
-            elif type_id == "u":  # unsigned int
-                if not isinstance(value, int):
-                    raise DataTypeError(value, int, field)
-                data = struct.pack(">I", value)
-            else:
-                raise ValueError(f"unexpected type for field: {field}")
-
-            length = len(data)
-            header = struct.pack(">4sI", field_bytes, length)
-            fp.write(header)
-            fp.write(data)
-
-        return fp.getvalue()
-
-    def _dump(self):
-        self.raw_data = DatabaseV2._dump_item(self.data)
-
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
         func: Callable[[str, "DatabaseV2.ValueOrNone"], "DatabaseV2.ValueOrNone"]
