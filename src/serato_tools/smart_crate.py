@@ -6,7 +6,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import DataTypeError, SERATO_FOLDER
+from serato_tools.utils import get_key_from_value, DataTypeError, SERATO_FOLDER
 
 
 class SmartCrate(CrateBase):
@@ -44,34 +44,28 @@ class SmartCrate(CrateBase):
     }
 
     DEFAULT_DATA = [
-        ("vrsn", "1.0/Serato ScratchLive Smart Crate"),
-        ("rart", [("brut", "0")]),
-        ("rlut", [("brut", "0")]),
-        ("osrt", [("tvcn", "key"), ("brev", "\x00")]),
-        ("ovct", [("tvcn", "song"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "playCount"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "artist"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "bpm"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "key"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "album"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "length"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "comment"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "added"), ("tvcw", "0")]),
+        (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Smart Crate"),
+        (CrateBase.Fields.SMARTCRATE_MATCH_ALL, [("brut", "0")]),
+        (CrateBase.Fields.SMARTCRATE_LIVE_UPDATE, [("brut", "0")]),
+        (CrateBase.Fields.SORTING, [(CrateBase.Fields.COLUMN_NAME, "key"), (CrateBase.Fields.REVERSE_ORDER, "\x00")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "song"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "playCount"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "artist"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "bpm"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "key"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "album"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "length"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "comment"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "added"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
     ]
 
     @staticmethod
     def _get_rule_field_name(value: int) -> str:
-        for key, v in SmartCrate.RULE_FIELD.items():
-            if v == value:
-                return key
-        raise ValueError(f"no key for value {value}")
+        return get_key_from_value(value, SmartCrate.RULE_FIELD)
 
     @staticmethod
     def _get_rule_comparison(value: str) -> str:
-        for key, v in SmartCrate.RULE_COMPARISON.items():
-            if v == value:
-                return key
-        raise ValueError(f"no key for value {value}")
+        return get_key_from_value(value, SmartCrate.RULE_COMPARISON)
 
     def save(self, file: Optional[str] = None):
         if file is None:
@@ -94,11 +88,11 @@ class SmartCrate(CrateBase):
                     if isinstance(v, tuple):
                         raise TypeError("unexpected type")
                     p_val = str(v)
-                    if f == "urkt":
+                    if f == CrateBase.Fields.RULE_FIELD:
                         if not isinstance(v, int):
                             raise DataTypeError(v, int, f)
                         p_val += f" ({self._get_rule_field_name(v)})"
-                    elif f == "trft":
+                    elif f == CrateBase.Fields.RULE_COMPARISON:
                         if not isinstance(v, str):
                             raise DataTypeError(v, str, f)
                         p_val += f" ({self._get_rule_comparison(v)})"

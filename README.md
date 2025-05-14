@@ -95,9 +95,9 @@ db = DatabaseV2()
 # a list of field keys can be found in serato_tools.database_v2
 db.modify_file(
     rules=[
-        {"field": "uadd", "files": files_set_date, "func": modify_uadd},
-        {"field": "tadd", "files": files_set_date, "func": modify_tadd},
-        {"field": "tgrp", "func": remove_group}, # all files
+        {"field": DatabaseV2.Fields.DATE_ADDED_U, "files": files_set_date, "func": modify_uadd},
+        {"field": DatabaseV2.Fields.DATE_ADDED_T, "files": files_set_date, "func": modify_tadd},
+        {"field": DatabaseV2.Fields.GROUPING, "func": remove_group}, # all files
     ]
 )
 ```

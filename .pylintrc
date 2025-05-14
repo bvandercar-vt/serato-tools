@@ -6,7 +6,8 @@ disable=
     fixme,
     broad-exception-raised,
     logging-fstring-interpolation,
-    import-error
+    import-error,
+    redefined-builtin
 
 
 [FORMAT]

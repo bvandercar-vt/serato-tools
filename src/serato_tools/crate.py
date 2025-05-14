@@ -15,17 +15,17 @@ class Crate(CrateBase):
     FOLDER = os.path.join(SERATO_FOLDER, "Subcrates")
 
     DEFAULT_DATA = [
-        ("vrsn", "1.0/Serato ScratchLive Crate"),
-        ("osrt", [("tvcn", "key"), ("brev", "\x00")]),
-        ("ovct", [("tvcn", "song"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "playCount"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "artist"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "bpm"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "key"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "album"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "length"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "comment"), ("tvcw", "0")]),
-        ("ovct", [("tvcn", "added"), ("tvcw", "0")]),
+        (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Crate"),
+        (CrateBase.Fields.SORTING, [(CrateBase.Fields.COLUMN_NAME, "key"), (CrateBase.Fields.REVERSE_ORDER, "\x00")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "song"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "playCount"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "artist"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "bpm"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "key"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "album"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "length"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "comment"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
+        (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "added"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
     ]
 
     def __str__(self):
@@ -52,7 +52,7 @@ class Crate(CrateBase):
         if filepath in self.tracks():
             return
 
-        self.data.append((Crate.Fields.TRACK, [("ptrk", filepath)]))
+        self.data.append((Crate.Fields.TRACK, [(Crate.Fields.TRACK_PATH, filepath)]))
 
     def add_tracks_from_folder(self, folder_path: str, replace: bool = False):
         folder_tracks = [self.format_filepath(os.path.join(folder_path, t)) for t in os.listdir(folder_path)]

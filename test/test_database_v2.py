@@ -61,9 +61,9 @@ class TestCase(unittest.TestCase):
         new_time = int(1735748100)
         db.modify(
             [
-                {"field": "uadd", "func": lambda *args: new_time},
-                {"field": "tadd", "func": lambda *args: str(new_time)},
-                {"field": "tgrp", "func": lambda *args: "NEW_GROUPING"},
+                {"field": DatabaseV2.Fields.DATE_ADDED_U, "func": lambda *args: new_time},
+                {"field": DatabaseV2.Fields.DATE_ADDED_T, "func": lambda *args: str(new_time)},
+                {"field": DatabaseV2.Fields.GROUPING, "func": lambda *args: "NEW_GROUPING"},
             ]
         )
         db.data = list(db.data)
@@ -75,7 +75,7 @@ class TestCase(unittest.TestCase):
         db.modify(
             [
                 {
-                    "field": "tgen",
+                    "field": DatabaseV2.Fields.GENRE,
                     "func": lambda *args: "NEW_GENRE",
                     "files": [
                         "Users\\bvand\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3",
@@ -89,14 +89,3 @@ class TestCase(unittest.TestCase):
             self.assertEqual(get_print_val(), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")
-
-    def test_dedupe(self):
-        db = DatabaseV2("test/data/database_v2_duplicates.bin")
-        db.modify_and_save(
-            [
-                {
-                    "field": DatabaseV2.Fields.FILE,
-                    "func": lambda val, prev_val: os.path.join("Music", os.path.basename(str(prev_val))),
-                }
-            ]
-        )

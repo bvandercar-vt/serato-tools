@@ -2,19 +2,19 @@ vrsn (Version, 64 B): '2.0/Serato Scratch LIVE Database'
 otrk (Track, 572 B)
     ttyp (File Type, 6 B): mp3
     pfil (File Path, 120 B): Users/bvand/Music/DJ Tracks/Zeds Dead - In The Beginning.mp3
-    tsng (Song Title, 32 B): In The Beginning
+    tsng (Title, 32 B): In The Beginning
     tart (Artist, 18 B): Zeds Dead
     talb (Album, 20 B): Adrenaline
     tgen (Genre, 18 B): NEW_GENRE
-    tbpm (BPM, 10 B): 70.00
+    tbpm (Bpm, 10 B): 70.00
     tgrp (Grouping, 24 B): NEW_GROUPING
     tlbl (Publisher, 12 B): SOUL_C
     ttyr (Year, 8 B): 2012
-    tadd (Date added, 20 B): 1735748100
+    tadd (Date Added, 20 B): 1735748100
     tkey (Key, 4 B): 4A
-    uadd (Date added, 4 B): 1735748100
+    uadd (Date Added, 4 B): 1735748100
     ulbl (Unknown Field, 4 B): 10092441
-    utme (File Time, 4 B): 1747137257
+    utme (Time, 4 B): 1747137257
     utpc (Unknown Field, 4 B): 5
     sbav (Unknown Field, 2 B): 0
     bhrt (Unknown Field, 1 B): True
@@ -34,19 +34,19 @@ otrk (Track, 572 B)
 otrk (Track, 542 B)
     ttyp (File Type, 6 B): mp3
     pfil (File Path, 106 B): Users/bvand/Music/DJ Tracks/Tripp St. - Enlighten.mp3
-    tsng (Song Title, 18 B): Enlighten
+    tsng (Title, 18 B): Enlighten
     tart (Artist, 18 B): Tripp St.
     talb (Album, 22 B): The Rose EP
     tgen (Genre, 18 B): NEW_GENRE
-    tbpm (BPM, 10 B): 86.00
+    tbpm (Bpm, 10 B): 86.00
     tgrp (Grouping, 24 B): NEW_GROUPING
     tlbl (Publisher, 8 B): SOUL
     ttyr (Year, 8 B): 2023
-    tadd (Date added, 20 B): 1735748100
+    tadd (Date Added, 20 B): 1735748100
     tkey (Key, 4 B): 2A
-    uadd (Date added, 4 B): 1735748100
+    uadd (Date Added, 4 B): 1735748100
     ulbl (Unknown Field, 4 B): 10092441
-    utme (File Time, 4 B): 1747137256
+    utme (Time, 4 B): 1747137256
     utpc (Unknown Field, 4 B): 3
     sbav (Unknown Field, 2 B): 0
     bhrt (Unknown Field, 1 B): True
@@ -66,20 +66,20 @@ otrk (Track, 542 B)
 otrk (Track, 520 B)
     ttyp (File Type, 6 B): mp3
     pfil (File Path, 90 B): Users/bvand/Music/DJ Tracks/SiR - D'Evils.mp3
-    tsng (Song Title, 14 B): D'Evils
+    tsng (Title, 14 B): D'Evils
     tart (Artist, 6 B): SiR
     talb (Album, 16 B): November
     tgen (Genre, 32 B): Upbeat Newer Rap
-    tbpm (BPM, 12 B): 131.98
+    tbpm (Bpm, 12 B): 131.98
     tgrp (Grouping, 24 B): NEW_GROUPING
     tlbl (Publisher, 8 B): SOUL
     ttyr (Year, 8 B): 2018
-    tadd (Date added, 20 B): 1735748100
+    tadd (Date Added, 20 B): 1735748100
     tkey (Key, 4 B): 2A
-    uadd (Date added, 4 B): 1735748100
+    uadd (Date Added, 4 B): 1735748100
     utkn (Unknown Field, 4 B): 4
     ulbl (Unknown Field, 4 B): 16777215
-    utme (File Time, 4 B): 1747137255
+    utme (Time, 4 B): 1747137255
     sbav (Unknown Field, 2 B): 0
     bhrt (Unknown Field, 1 B): True
     bmis (Missing, 1 B): False
@@ -98,19 +98,19 @@ otrk (Track, 520 B)
 otrk (Track, 570 B)
     ttyp (File Type, 6 B): mp3
     pfil (File Path, 114 B): Users/bvand/Music/DJ Tracks/Slaycub - Visceral Planet.mp3
-    tsng (Song Title, 30 B): Visceral Planet
+    tsng (Title, 30 B): Visceral Planet
     tart (Artist, 14 B): Slaycub
     talb (Album, 30 B): Visceral Planet
     tgen (Genre, 36 B): Psydub & Squelches
-    tbpm (BPM, 8 B): 0.00
+    tbpm (Bpm, 8 B): 0.00
     tgrp (Grouping, 24 B): NEW_GROUPING
     tlbl (Publisher, 8 B): SOUL
     ttyr (Year, 8 B): 2021
-    tadd (Date added, 20 B): 1735748100
+    tadd (Date Added, 20 B): 1735748100
     tkey (Key, 4 B): 5A
-    uadd (Date added, 4 B): 1735748100
+    uadd (Date Added, 4 B): 1735748100
     ulbl (Unknown Field, 4 B): 16777215
-    utme (File Time, 4 B): 1747137253
+    utme (Time, 4 B): 1747137253
     sbav (Unknown Field, 2 B): 0
     bhrt (Unknown Field, 1 B): True
     bmis (Missing, 1 B): False

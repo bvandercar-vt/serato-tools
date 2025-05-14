@@ -1,13 +1,27 @@
 import logging
 import os
-from typing import Iterable, TypeVar, Union, cast, Any
-
+from typing import Iterable, TypeVar, Type, Union, cast, Any
+from enum import StrEnum
 
 T = TypeVar("T")
 
 logger = logging.getLogger("serato-tools")
 
 SERATO_FOLDER = os.path.join(os.path.expanduser("~"), "Music\\_Serato_")
+
+
+def get_key_from_value(value: T, dict: dict[str, T]) -> str:
+    for key, v in dict.items():
+        if v == value:
+            return key
+    raise ValueError(f"no key for value {value}")
+
+
+def get_enum_key_from_value(value: str, enum_class: Type[StrEnum]):
+    for member in enum_class:
+        if member.value == value:
+            return member.name
+    raise ValueError(f"no key for value {value}")
 
 
 def to_array(x: Union[T, Iterable[T]]) -> Iterable[T]:

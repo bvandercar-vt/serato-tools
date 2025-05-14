@@ -15,7 +15,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.track_cues_v1 import TrackCuesV1
-from serato_tools.utils import logger, DataTypeError
+from serato_tools.utils import get_key_from_value, logger, DataTypeError
 from serato_tools.utils.track_tags import SeratoTag
 
 
@@ -84,17 +84,11 @@ class TrackCuesV2(SeratoTag):
 
     @staticmethod
     def _get_cue_color_key(value: bytes) -> str:
-        for key, v in TrackCuesV2.CUE_COLORS.items():
-            if v == value:
-                return key
-        raise ValueError(f"no color key for value {value}")
+        return get_key_from_value(value, TrackCuesV2.CUE_COLORS)
 
     @staticmethod
     def _get_track_color_key(value: bytes) -> str:
-        for key, v in TrackCuesV2.TRACK_COLORS.items():
-            if v == value:
-                return key
-        raise ValueError(f"no color key for value {value}")
+        return get_key_from_value(value, TrackCuesV2.TRACK_COLORS)
 
     @staticmethod
     def _get_entry_class(entry_name: str):
