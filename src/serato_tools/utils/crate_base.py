@@ -3,7 +3,7 @@
 import os
 import struct
 import sys
-from typing import overload, Union, Optional, cast
+from typing import Optional
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -27,43 +27,11 @@ class CrateBase(SeratoBinFile):
         if os.path.exists(file):
             with open(file, "rb") as f:
                 self.raw_data = f.read()
-                self.data = self._parse_item(self.raw_data)
+                self.data = list(CrateBase._parse_item(self.raw_data))
         else:
             logger.warning(f"File does not exist: {file}. Using default data for an empty crate.")
             self.data = self.DEFAULT_DATA
             self.raw_data = b""
-
-    @overload
-    @staticmethod
-    def _parse_item(data: bytes, field: None = None) -> "CrateBase.Struct": ...
-    @overload
-    @staticmethod
-    def _parse_item(data: bytes, field: str) -> "CrateBase.Value": ...
-    @staticmethod
-    def _parse_item(data: bytes, field: Optional[str] = None) -> Union["CrateBase.Value", "CrateBase.Struct"]:
-        if not isinstance(data, bytes):
-            raise DataTypeError(data, bytes, field)
-
-        type_id: str = CrateBase._get_type(field) if field else "o"
-        if type_id in ("o", "r"):  # struct
-            ret_data: CrateBase.Struct = []
-            i = 0
-            while i < len(data):
-                field = data[i : i + 4].decode("ascii")
-                length = struct.unpack(">I", data[i + 4 : i + 8])[0]
-                value = data[i + 8 : i + 8 + length]
-                value = CrateBase._parse_item(value, field=field)
-                ret_data.append((field, value))
-                i += 8 + length
-            return ret_data
-        elif type_id in ("p", "t"):  # text
-            return data.decode("utf-16-be")
-        elif type_id == "b":  # single byte
-            return cast(bool, struct.unpack("?", data)[0])
-        elif type_id == "u":  # unsigned int
-            return cast(bytes, struct.unpack(">I", data)[0])
-        else:
-            raise ValueError(f"unexpected type for field: {field}")
 
     def _dump(self) -> bytes:
         def _dump_item(data: CrateBase.Value, field: Optional[str] = None) -> bytes:

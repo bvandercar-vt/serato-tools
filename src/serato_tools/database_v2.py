@@ -4,7 +4,7 @@ import io
 import os
 import struct
 import sys
-from typing import Callable, Generator, TypedDict, Optional, NotRequired, cast
+from typing import Callable, TypedDict, Optional, NotRequired, cast
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -28,37 +28,6 @@ class DatabaseV2(SeratoBinFile):
 
     def __str__(self):
         return str(list(self.to_entries()))
-
-    @staticmethod
-    def _parse_item(item_data: bytes) -> Generator["DatabaseV2.KeyAndValue", None, None]:
-        fp = io.BytesIO(item_data)
-        for header in iter(lambda: fp.read(8), b""):
-            assert len(header) == 8
-            field_ascii: bytes
-            length: int
-            field_ascii, length = struct.unpack(">4sI", header)
-            field: str = field_ascii.decode("ascii")
-            type_id: str = DatabaseV2._get_type(field)
-
-            data = fp.read(length)
-            assert len(data) == length
-
-            value: DatabaseV2.Value
-            if type_id in ("o", "r"):  #  struct
-                value = list(DatabaseV2._parse_item(data))
-            elif type_id in ("p", "t"):  # text
-                # value = (data[1:] + b"\00").decode("utf-16") # from imported code
-                value = data.decode("utf-16-be")
-            elif type_id == "b":  # single byte, is a boolean
-                value = struct.unpack("?", data)[0]
-            elif type_id == "s":  # signed int
-                value = struct.unpack(">H", data)[0]
-            elif type_id == "u":  # unsigned int
-                value = struct.unpack(">I", data)[0]
-            else:
-                raise ValueError(f"unexpected type for field: {field}")
-
-            yield field, value
 
     @staticmethod
     def _dump_item(item: SeratoBinFile.Struct):
