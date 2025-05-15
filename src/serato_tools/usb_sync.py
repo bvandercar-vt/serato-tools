@@ -90,6 +90,7 @@ def copy_crates_to_usb(
 
     def modify_db_track(track: DatabaseV2.Track) -> DatabaseV2.Track:
         track.set_path(os.path.join(dest_tracks_dir, os.path.basename(track.path)))
+        track.set_value(DatabaseV2.Fields.PLAYED, False)
         return track
 
     db.filter_tracks(lambda track: os.path.basename(track.path) in tracks_to_copy_basenames)
