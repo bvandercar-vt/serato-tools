@@ -16,6 +16,8 @@ from serato_tools.crate import Crate
 from serato_tools.smart_crate import SmartCrate
 from serato_tools.utils import SERATO_DIR_NAME, SERATO_DIR as LOCAL_SERATO_DIR
 
+# TODO: put in folders if there are different locations locally for the same basename
+
 
 def _uniq_by_basename(paths: list[str]):
     basenames: list[str] = []
