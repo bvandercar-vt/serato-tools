@@ -148,7 +148,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
-    parser.add_argument("-e", "--analyze", action="store_true")
+    parser.add_argument("-a", "--analyze", action="store_true", help="Analyze dynamic beatgrid and write to file")
     args = parser.parse_args()
 
     try:
@@ -165,6 +165,16 @@ def main():
             raise ValueError("no entries")
         for entry in tags.entries:
             print(entry)
+
+
+def main_analyze():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file")
+    args = parser.parse_args()
+    tags = TrackBeatgrid(args.file)
+    tags.analyze_and_write()
 
 
 if __name__ == "__main__":

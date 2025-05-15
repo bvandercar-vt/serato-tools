@@ -131,10 +131,15 @@ class SeratoBinFile:
         def __init__(self, data: "SeratoBinFile.Struct", track_path_key: str):
             super().__init__(data)
 
+            self.track_path_key = track_path_key
             track_path = self.get_value(track_path_key)
             if not isinstance(track_path, str):
                 raise DataTypeError(track_path, str, track_path_key)
             self.path: str = track_path
+
+        def set_path(self, path: str):
+            self.set_value(self.track_path_key, path)
+            self.path = path
 
     def _get_track(self, data: "SeratoBinFile.Struct"):
         return SeratoBinFile.Track(data, track_path_key=self.TRACK_PATH_KEY)
@@ -226,7 +231,7 @@ class SeratoBinFile:
                 track_paths.append(track.path)
         return track_paths
 
-    def process_tracks(self, func: Callable[[Track], Track]):
+    def modify_tracks(self, func: Callable[[Track], Track]):
         for i, (field, value) in enumerate(self.data):
             if field == SeratoBinFile.Fields.TRACK:
                 if not isinstance(value, list):

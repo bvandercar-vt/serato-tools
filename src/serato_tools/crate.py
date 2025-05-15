@@ -49,9 +49,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs="?")
-    parser.add_argument("-l", "--list_tracks", action="store_true")
-    parser.add_argument("-f", "--filenames_only", action="store_true")
-    parser.add_argument("-o", "--output", "--output_file", dest="output_file", default=None)
+    parser.add_argument("-l", "--list_tracks", action="store_true", help="Only list tracks")
+    parser.add_argument("-f", "--filenames_only", action="store_true", help="Only list track filenames")
+    parser.add_argument(
+        "-o", "--output", "--output_file", dest="output_file", default=None, help="Output file to save the crate to"
+    )
     args = parser.parse_args()
 
     if not args.file:
@@ -60,7 +62,7 @@ if __name__ == "__main__":
         sys.exit()
 
     crate = Crate(args.file)
-    if args.list_tracks:
+    if args.list_tracks or args.filenames_only:
         tracks = crate.get_track_paths()
         if args.filenames_only:
             tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]

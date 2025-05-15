@@ -62,26 +62,19 @@ class DatabaseV2(SeratoBinFile):
             logger.info(f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}")
             return maybe_new_value
 
-        new_data: DatabaseV2.Struct = []
-        for field, value in self.data:
-            if field == DatabaseV2.Fields.TRACK:
-                if not isinstance(value, list):
-                    raise DataTypeError(value, list, field)
-                track = self._get_track(value)
-                for f, v in track.to_struct():
-                    maybe_new_value = _maybe_perform_rule(f, v, track.path)
+        def modify_track(track: DatabaseV2.Track) -> DatabaseV2.Track:
+            for f, v in track.to_struct():
+                maybe_new_value = _maybe_perform_rule(f, v, track.path)
+                if maybe_new_value is not None:
+                    track.set_value(f, maybe_new_value)
+            for rule in rules:
+                if rule["field"] not in track.fields:
+                    maybe_new_value = _maybe_perform_rule(rule["field"], None, track.path)
                     if maybe_new_value is not None:
-                        track.set_value(f, maybe_new_value)
-                for rule in rules:
-                    if rule["field"] not in track.fields:
-                        maybe_new_value = _maybe_perform_rule(rule["field"], None, track.path)
-                        if maybe_new_value is not None:
-                            track.set_value(rule["field"], maybe_new_value)
-                value = track.to_struct()
-            new_data.append((field, value))
+                        track.set_value(rule["field"], maybe_new_value)
+            return track
 
-        self.data = new_data
-        self._dump()
+        self.modify_tracks(modify_track)
 
     def modify_and_save(self, rules: list[ModifyRule], file: Optional[str] = None):
         self.modify(rules)
@@ -101,70 +94,7 @@ class DatabaseV2(SeratoBinFile):
             return
         self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
 
-    def find_missing(self, drive_letter: Optional[str] = None):
-        raise NotImplementedError("TODO: debug. This currently ruins the database.")
-        if drive_letter is None:  # pylint: disable=unreachable
-            drive_letter = os.path.splitdrive(self.filepath)[0]
-
-        track_filepath: str = ""
-        missing_checked = False
-
-        def take_input_and_change_db(current_filepath: str):
-            while True:
-                new_filepath = input("Enter new filepath, or s to skip:")
-                new_filepath = new_filepath.strip().strip('"').strip()
-                if new_filepath.lower() == "s":
-                    return
-                if os.path.exists(new_filepath):
-                    break
-                else:
-                    logger.error(f"entered file does not exist: {new_filepath}")
-
-            self.modify(
-                [
-                    {
-                        "field": DatabaseV2.Fields.FILE_PATH,
-                        "files": [current_filepath],
-                        "func": lambda *args: new_filepath,
-                    },
-                    {
-                        "field": DatabaseV2.Fields.MISSING,
-                        "files": [current_filepath],
-                        "func": lambda *args: False,
-                    },
-                ],
-            )
-
-        def field_actions(entry: DatabaseV2.EntryFull):
-            nonlocal track_filepath
-            nonlocal missing_checked
-            if entry["field"] == DatabaseV2.Fields.FILE_PATH:
-                if not isinstance(entry["value"], str):
-                    raise DataTypeError(entry["value"], str, entry["field"])
-
-                value = os.path.join(drive_letter, entry["value"])
-                track_filepath = value
-                missing_checked = False
-
-                if not os.path.exists(value):
-                    logger.error(f"file does not exist: {value}")
-                    take_input_and_change_db(current_filepath=entry["value"])
-                    missing_checked = True
-
-            elif (not missing_checked) and (entry["field"] == DatabaseV2.Fields.MISSING):
-                missing_checked = True
-                if entry["value"]:
-                    logger.error(f"serato says is missing: {track_filepath}")
-                    take_input_and_change_db(current_filepath=track_filepath)
-
-        for entry in list(self.to_entries()):
-            if isinstance(entry["value"], list):
-                for e in entry["value"]:
-                    field_actions(e)
-            else:
-                field_actions(entry)
-
-        self.save()
+    # TODO: find_missing function!
 
 
 if __name__ == "__main__":
@@ -172,12 +102,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs="?", default=DatabaseV2.DEFAULT_DATABASE_FILE)
-    parser.add_argument("--find_missing", action="store_true")
-    parser.add_argument("--track_matcher", type=str, default=None)
     args = parser.parse_args()
 
     db = DatabaseV2(args.file)
-    if args.find_missing:
-        db.find_missing()
-    else:
-        print(db)
+    print(db)
