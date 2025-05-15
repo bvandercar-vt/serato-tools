@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import struct
 from typing import Iterable, TypedDict, Generator, Optional, cast
 from enum import StrEnum
@@ -242,9 +243,17 @@ class SeratoBinFile:
         for field in uniq_field_names:
             SeratoBinFile._check_valid_field(field)
 
-    def to_entries(self) -> Generator[EntryFull, None, None]:
+    def to_entries(self, track_matcher: Optional[str] = None) -> Generator[EntryFull, None, None]:
         for field, value in self.data:
             if isinstance(value, list):
+                if track_matcher and field == SeratoBinFile.Fields.TRACK:
+                    if not isinstance(value, list):
+                        raise DataTypeError(value, list, field)
+                    track = self.__class__.Track(  # pyright: ignore[reportCallIssue] # pylint: disable=no-value-for-parameter
+                        value
+                    )
+                    if not bool(re.search(track_matcher, track.filepath)):
+                        continue
                 try:
                     new_struct: list[SeratoBinFile.EntryFull] = []
                     for f, v in value:
@@ -260,8 +269,8 @@ class SeratoBinFile:
 
             yield field, SeratoBinFile.get_field_name(field), value
 
-    def print(self):
-        for field, fieldname, value in self.to_entries():
+    def print(self, track_matcher: Optional[str] = None):
+        for field, fieldname, value in self.to_entries(track_matcher=track_matcher):
             if isinstance(value, list):
                 print(f"{field} ({fieldname})")
                 for f, f_name, v in value:
