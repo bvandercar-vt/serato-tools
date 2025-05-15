@@ -111,6 +111,15 @@ class SeratoBinFile:
         def to_struct(self) -> "SeratoBinFile.Struct":
             return [(f, self.get_value(f)) for f in self.fields]
 
+    class Track(StructCls):
+        def __init__(self, data: "SeratoBinFile.Struct", filepath_key: str):
+            super().__init__(data)
+
+            filepath = self.get_value(filepath_key)
+            if not isinstance(filepath, str):
+                raise DataTypeError(filepath, str, filepath_key)
+            self.filepath: str = filepath
+
     @staticmethod
     def _get_type(field: str) -> str:
         # vrsn field has no type_id, but contains text ("t")

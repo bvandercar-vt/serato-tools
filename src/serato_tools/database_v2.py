@@ -23,14 +23,9 @@ class DatabaseV2(SeratoBinFile):
             raise FileNotFoundError(f"file does not exist: {file}")
         super().__init__(file=file)
 
-    class Track(SeratoBinFile.StructCls):
+    class Track(SeratoBinFile.Track):
         def __init__(self, data: "DatabaseV2.Struct"):
-            super().__init__(data)
-
-            filepath = self.get_value(DatabaseV2.Fields.FILE_PATH)
-            if not isinstance(filepath, str):
-                raise DataTypeError(filepath, str, DatabaseV2.Fields.FILE_PATH)
-            self.filepath: str = filepath
+            super().__init__(data, filepath_key=DatabaseV2.Fields.FILE_PATH)
 
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
