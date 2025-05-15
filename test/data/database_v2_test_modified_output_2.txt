@@ -19,7 +19,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -30,7 +30,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Users/bvand/Music/DJ Tracks/Tripp St. - Enlighten.mp3
@@ -51,7 +51,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -62,7 +62,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Users/bvand/Music/DJ Tracks/SiR - D'Evils.mp3
@@ -83,7 +83,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -94,7 +94,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Users/bvand/Music/DJ Tracks/Slaycub - Visceral Planet.mp3
@@ -114,7 +114,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): False
@@ -125,4 +125,4 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False

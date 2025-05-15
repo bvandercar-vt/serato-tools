@@ -13,7 +13,7 @@ class SeratoBinFile:
         # Database & Crate
         VERSION = "vrsn"
         TRACK = "otrk"
-        # Database
+        # Database - Track
         FILE_TYPE = "ttyp"
         FILE_PATH = "pfil"
         TITLE = "tsng"
@@ -31,12 +31,13 @@ class SeratoBinFile:
         PUBLISHER = "tlbl"
         COMPOSER = "tcmp"
         YEAR = "ttyr"
-        # Serato stuff
         DATE_ADDED_T = "tadd"
         DATE_ADDED_U = "uadd"
         BEATGRID_LOCKED = "bbgl"
         CORRUPT = "bcrt"
         MISSING = "bmis"
+        HAS_STEMS = "bstm"
+        PLAYED = "bply"
         # Crates
         SORTING = "osrt"
         REVERSE_ORDER = "brev"
@@ -252,7 +253,7 @@ class SeratoBinFile:
                     track = self.__class__.Track(  # pyright: ignore[reportCallIssue] # pylint: disable=no-value-for-parameter
                         value
                     )
-                    if not bool(re.search(track_matcher, track.filepath)):
+                    if not bool(re.search(track_matcher, track.filepath, re.IGNORECASE)):
                         continue
                 try:
                     new_struct: list[SeratoBinFile.EntryFull] = []

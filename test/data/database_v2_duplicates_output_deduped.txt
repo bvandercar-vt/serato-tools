@@ -22,7 +22,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -33,7 +33,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Music/Zeds Dead - Ecstasy Of Soul (feat. GRiZ).mp3
@@ -56,7 +56,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -67,7 +67,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Music/Zeds Dead - In The Beginning.mp3
@@ -91,7 +91,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -102,7 +102,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Music/Excision - Sleepless (feat. Savvy) - Loadstar Remix.mp3
@@ -125,7 +125,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -136,7 +136,7 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Music/Excision - Swerve (feat. Downlink).mp3
@@ -158,7 +158,7 @@ otrk (Track)
     sbav (Unknown Field): 0
     bhrt (Unknown Field): True
     bmis (Missing): False
-    bply (Unknown Field): False
+    bply (Played): False
     blop (Unknown Field): False
     bitu (Unknown Field): False
     bovc (Unknown Field): True
@@ -169,4 +169,4 @@ otrk (Track)
     buns (Unknown Field): False
     bbgl (Beatgrid Locked): False
     bkrk (Unknown Field): False
-    bstm (Unknown Field): False
+    bstm (Has Stems): False
