@@ -29,10 +29,7 @@ class Crate(CrateBase):
     ]
 
     def __str__(self):
-        tracks = self.track_paths()
-        return f"Crate containing {len(tracks)} tracks: \n" + "\n".join(tracks)
-
-    def print(self):  # pylint: disable=arguments-differ
+        lines: list[str] = []
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
                 field_lines = []
@@ -43,7 +40,8 @@ class Crate(CrateBase):
                 print_val = ", ".join(field_lines)
             else:
                 print_val = str(value)
-            print(f"{field} ({fieldname}): {print_val}")
+            lines.append(f"{field} ({fieldname}): {print_val}")
+        return "\n".join(lines)
 
 
 if __name__ == "__main__":
@@ -51,8 +49,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs="?")
+    parser.add_argument("-l", "--list_tracks", action="store_true")
     parser.add_argument("-f", "--filenames_only", action="store_true")
-    parser.add_argument("-d", "--data", action="store_true")
     parser.add_argument("-o", "--output", "--output_file", dest="output_file", default=None)
     args = parser.parse_args()
 
@@ -62,12 +60,11 @@ if __name__ == "__main__":
         sys.exit()
 
     crate = Crate(args.file)
-    tracks = crate.track_paths()
-    if args.filenames_only:
-        track_names = [os.path.splitext(os.path.basename(track))[0] for track in crate.track_paths()]
-        print("\n".join(track_names))
-    elif args.data:
-        crate.print()
+    if args.list_tracks:
+        tracks = crate.get_track_paths()
+        if args.filenames_only:
+            tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
+        print("\n".join(tracks))
     else:
         print(crate)
 

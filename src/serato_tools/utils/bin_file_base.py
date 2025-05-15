@@ -2,7 +2,7 @@ import os
 import io
 import re
 import struct
-from typing import Iterable, TypedDict, Generator, Optional, cast
+from typing import Iterable, TypedDict, Generator, Optional, cast, Callable
 from enum import StrEnum
 
 from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError, DeeplyNestedStructError
@@ -68,9 +68,10 @@ class SeratoBinFile:
 
     DEFAULT_DATA: Struct
 
-    def __init__(self, file: str):
+    def __init__(self, file: str, track_path_key: "SeratoBinFile.Fields"):
         self.filepath = os.path.abspath(file)
         self.dir = os.path.dirname(self.filepath)
+        self.TRACK_PATH_KEY = track_path_key
 
         self.raw_data: bytes
         self.data: SeratoBinFile.Struct
@@ -84,7 +85,20 @@ class SeratoBinFile:
             self._dump()
 
     def __str__(self):
-        return str(list(self.to_entries()))
+        lines: list[str] = []
+        for field, fieldname, value in self.to_entries():
+            if isinstance(value, list):
+                lines.append(f"{field} ({fieldname})")
+                for f, f_name, v in value:
+                    if isinstance(v, list):
+                        raise DeeplyNestedStructError
+                    lines.append(f"    {f} ({f_name}): {str(v)}")
+            else:
+                lines.append(f"{field} ({fieldname}): {str(value)}")
+        return "\n".join(lines)
+
+    def print(self):
+        print(self)
 
     def __repr__(self):
         return str(self.raw_data)
@@ -114,13 +128,16 @@ class SeratoBinFile:
             return [(f, self.get_value(f)) for f in self.fields]
 
     class Track(StructCls):
-        def __init__(self, data: "SeratoBinFile.Struct", filepath_key: str):
+        def __init__(self, data: "SeratoBinFile.Struct", track_path_key: str):
             super().__init__(data)
 
-            filepath = self.get_value(filepath_key)
-            if not isinstance(filepath, str):
-                raise DataTypeError(filepath, str, filepath_key)
-            self.filepath: str = filepath
+            track_path = self.get_value(track_path_key)
+            if not isinstance(track_path, str):
+                raise DataTypeError(track_path, str, track_path_key)
+            self.path: str = track_path
+
+    def _get_track(self, data: "SeratoBinFile.Struct"):
+        return SeratoBinFile.Track(data, track_path_key=self.TRACK_PATH_KEY)
 
     @staticmethod
     def _get_type(field: str) -> str:
@@ -199,6 +216,53 @@ class SeratoBinFile:
     def _dump(self):
         self.raw_data = SeratoBinFile._dump_struct(self.data)
 
+    def get_track_paths(self) -> list[str]:
+        track_paths: list[str] = []
+        for field, value in self.data:
+            if field == SeratoBinFile.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = self._get_track(value)
+                track_paths.append(track.path)
+        return track_paths
+
+    def process_tracks(self, func: Callable[[Track], Track]):
+        for i, (field, value) in enumerate(self.data):
+            if field == SeratoBinFile.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = self._get_track(value)
+                new_track = func(track)
+                self.data[i] = (field, new_track.to_struct())
+        self._dump()
+
+    def filter_tracks(self, func: Callable[[Track], bool]):
+        new_data: "SeratoBinFile.Struct" = []
+        for field, value in self.data:
+            if field == SeratoBinFile.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = self._get_track(value)
+                if not func(track):
+                    continue
+            new_data.append((field, value))
+        self.data = new_data
+        self._dump()
+
+    def remove_track(self, filepath: str):
+        # filepath name must include the containing dir
+        self.filter_tracks(lambda track: track.path != filepath)
+
+    def remove_duplicates(self):
+        track_paths: list[str] = []
+
+        def filter_track(track: "SeratoBinFile.Track") -> bool:
+            was_in_track_paths = track.path not in track_paths
+            track_paths.append(track.path)
+            return was_in_track_paths
+
+        self.filter_tracks(filter_track)
+
     def save(self, file: Optional[str] = None):
         if file is None:
             file = self.filepath
@@ -253,7 +317,7 @@ class SeratoBinFile:
                     track = self.__class__.Track(  # pyright: ignore[reportCallIssue] # pylint: disable=no-value-for-parameter
                         value
                     )
-                    if not bool(re.search(track_matcher, track.filepath, re.IGNORECASE)):
+                    if not bool(re.search(track_matcher, track.path, re.IGNORECASE)):
                         continue
                 try:
                     new_struct: list[SeratoBinFile.EntryFull] = []
@@ -269,14 +333,3 @@ class SeratoBinFile:
                 value = repr(value)
 
             yield field, SeratoBinFile.get_field_name(field), value
-
-    def print(self, track_matcher: Optional[str] = None):
-        for field, fieldname, value in self.to_entries(track_matcher=track_matcher):
-            if isinstance(value, list):
-                print(f"{field} ({fieldname})")
-                for f, f_name, v in value:
-                    if isinstance(v, list):
-                        raise DeeplyNestedStructError
-                    print(f"    {f} ({f_name}): {str(v)}")
-            else:
-                print(f"{field} ({fieldname}): {str(value)}")

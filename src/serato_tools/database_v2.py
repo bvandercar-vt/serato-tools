@@ -22,11 +22,7 @@ class DatabaseV2(SeratoBinFile):
     def __init__(self, file: str = DEFAULT_DATABASE_FILE):
         if not os.path.exists(file):
             raise FileNotFoundError(f"file does not exist: {file}")
-        super().__init__(file=file)
-
-    class Track(SeratoBinFile.Track):
-        def __init__(self, data: "DatabaseV2.Struct"):
-            super().__init__(data, filepath_key=DatabaseV2.Fields.FILE_PATH)
+        super().__init__(file=file, track_path_key=DatabaseV2.Fields.FILE_PATH)
 
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
@@ -71,14 +67,14 @@ class DatabaseV2(SeratoBinFile):
             if field == DatabaseV2.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
-                track = DatabaseV2.Track(value)
+                track = self._get_track(value)
                 for f, v in track.to_struct():
-                    maybe_new_value = _maybe_perform_rule(f, v, track.filepath)
+                    maybe_new_value = _maybe_perform_rule(f, v, track.path)
                     if maybe_new_value is not None:
                         track.set_value(f, maybe_new_value)
                 for rule in rules:
                     if rule["field"] not in track.fields:
-                        maybe_new_value = _maybe_perform_rule(rule["field"], None, track.filepath)
+                        maybe_new_value = _maybe_perform_rule(rule["field"], None, track.path)
                         if maybe_new_value is not None:
                             track.set_value(rule["field"], maybe_new_value)
                 value = track.to_struct()
@@ -104,25 +100,6 @@ class DatabaseV2(SeratoBinFile):
             logger.error(f"File already exists with change: {src}")
             return
         self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
-
-    def remove_duplicates(self):
-        new_data: DatabaseV2.Struct = []
-        tracks_paths: list[str] = []
-        for field, value in self.data:
-            if field == DatabaseV2.Fields.TRACK:
-                if not isinstance(value, list):
-                    raise DataTypeError(value, list, field)
-                track = DatabaseV2.Track(value)
-                if track.filepath in tracks_paths:
-                    # TODO: check if any different aside from date added
-                    logger.info(f"removed duplicate: {track.filepath}")
-                else:
-                    new_data.append((field, value))
-                    tracks_paths.append(track.filepath)
-            else:
-                new_data.append((field, value))
-        self.data = new_data
-        self._dump()
 
     def find_missing(self, drive_letter: Optional[str] = None):
         raise NotImplementedError("TODO: debug. This currently ruins the database.")
@@ -203,4 +180,4 @@ if __name__ == "__main__":
     if args.find_missing:
         db.find_missing()
     else:
-        db.print(track_matcher=args.track_matcher)
+        print(db)
