@@ -12,7 +12,7 @@ from serato_tools.utils import DeeplyNestedStructError
 
 class Crate(CrateBase):
     EXTENSION = ".crate"
-    FOLDER = "Subcrates"
+    DIR = "Subcrates"
 
     DEFAULT_DATA = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Crate"),
@@ -33,7 +33,7 @@ class Crate(CrateBase):
         return f"Crate containing {len(tracks)} tracks: \n" + "\n".join(tracks)
 
     def remove_track(self, filepath: str):
-        # filepath name must include the containing folder
+        # filepath name must include the containing dir
         found = False
         for i, dat in enumerate(self.data):
             if dat[0] == Crate.Fields.TRACK:
@@ -46,7 +46,7 @@ class Crate(CrateBase):
             raise ValueError(f"Track not found in crate: {filepath}")
 
     def add_track(self, filepath: str):
-        # filepath name must include the containing folder
+        # filepath name must include the containing dir
         filepath = self.format_filepath(filepath)
 
         if filepath in self.tracks():
@@ -54,15 +54,15 @@ class Crate(CrateBase):
 
         self.data.append((Crate.Fields.TRACK, [(Crate.Fields.TRACK_PATH, filepath)]))
 
-    def add_tracks_from_folder(self, folder_path: str, replace: bool = False):
-        folder_tracks = [self.format_filepath(os.path.join(folder_path, t)) for t in os.listdir(folder_path)]
+    def add_tracks_from_dir(self, dir: str, replace: bool = False):
+        dir_tracks = [self.format_filepath(os.path.join(dir, t)) for t in os.listdir(dir)]
 
         if replace:
             for track in self.tracks():
-                if track not in folder_tracks:
+                if track not in dir_tracks:
                     self.remove_track(track)
 
-        for track in folder_tracks:
+        for track in dir_tracks:
             self.add_track(track)
 
     def print(self):
@@ -90,8 +90,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.file:
-        print(f"must pass a file! files in {Crate.FOLDER}:")
-        Crate.list_folder()
+        print(f"must pass a file! files in {Crate.DIR}:")
+        Crate.list_dir()
         sys.exit()
 
     crate = Crate(args.file)

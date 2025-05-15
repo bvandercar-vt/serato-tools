@@ -10,7 +10,7 @@ from serato_tools.utils import get_key_from_value, DataTypeError, DeeplyNestedSt
 
 class SmartCrate(CrateBase):
     EXTENSION = ".scrate"
-    FOLDER = "SmartCrates"
+    DIR = "SmartCrates"
 
     RULE_FIELD = {
         "added": 25,
@@ -105,8 +105,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.file:
-        print(f"must pass a file! files in {SmartCrate.FOLDER}:")
-        SmartCrate.list_folder()
+        print(f"must pass a file! files in {SmartCrate.DIR}:")
+        SmartCrate.list_dir()
         sys.exit()
 
     crate = SmartCrate(args.file)

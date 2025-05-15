@@ -164,10 +164,10 @@ tags.save()
 
 ```python
 from serato_tools.crate import Crate
-Crate.list_folder()
+Crate.list_dir()
 
 from serato_tools.smart_crate import smartCrate
-smartCrate.list_folder()
+smartCrate.list_dir()
 ``` 
 
 ### Crate details and adding a track

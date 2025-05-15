@@ -8,11 +8,11 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
-from serato_tools.utils import logger, DataTypeError, SERATO_FOLDER_PATH
+from serato_tools.utils import logger, DataTypeError, SERATO_DIR
 
 
 class DatabaseV2(SeratoBinFile):
-    DEFAULT_DATABASE_FILE = os.path.join(SERATO_FOLDER_PATH, "database V2")
+    DEFAULT_DATABASE_FILE = os.path.join(SERATO_DIR, "database V2")
 
     DEFAULT_DATA = [
         (SeratoBinFile.Fields.VERSION, "2.0/Serato Scratch LIVE Database"),
