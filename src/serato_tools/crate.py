@@ -29,43 +29,10 @@ class Crate(CrateBase):
     ]
 
     def __str__(self):
-        tracks = self.tracks()
+        tracks = self.track_paths()
         return f"Crate containing {len(tracks)} tracks: \n" + "\n".join(tracks)
 
-    def remove_track(self, filepath: str):
-        # filepath name must include the containing dir
-        found = False
-        for i, dat in enumerate(self.data):
-            if dat[0] == Crate.Fields.TRACK:
-                crate_track_name = Crate._get_track_name(dat[1])
-                if crate_track_name == filepath:
-                    self.data.pop(i)
-                    found = True
-
-        if not found:
-            raise ValueError(f"Track not found in crate: {filepath}")
-
-    def add_track(self, filepath: str):
-        # filepath name must include the containing dir
-        filepath = self.format_filepath(filepath)
-
-        if filepath in self.tracks():
-            return
-
-        self.data.append((Crate.Fields.TRACK, [(Crate.Fields.TRACK_PATH, filepath)]))
-
-    def add_tracks_from_dir(self, dir: str, replace: bool = False):
-        dir_tracks = [self.format_filepath(os.path.join(dir, t)) for t in os.listdir(dir)]
-
-        if replace:
-            for track in self.tracks():
-                if track not in dir_tracks:
-                    self.remove_track(track)
-
-        for track in dir_tracks:
-            self.add_track(track)
-
-    def print(self):
+    def print(self):  # pylint: disable=arguments-differ
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
                 field_lines = []
@@ -95,9 +62,9 @@ if __name__ == "__main__":
         sys.exit()
 
     crate = Crate(args.file)
-    tracks = crate.tracks()
+    tracks = crate.track_paths()
     if args.filenames_only:
-        track_names = [os.path.splitext(os.path.basename(track))[0] for track in crate.tracks()]
+        track_names = [os.path.splitext(os.path.basename(track))[0] for track in crate.track_paths()]
         print("\n".join(track_names))
     elif args.data:
         crate.print()

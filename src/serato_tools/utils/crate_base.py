@@ -2,13 +2,13 @@
 # This is from this repo: https://github.com/sharst/seratopy
 import os
 import sys
-from typing import Optional
+from typing import Optional, Callable
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
-from serato_tools.utils import SERATO_DIR
+from serato_tools.utils import SERATO_DIR, DataTypeError
 
 
 class CrateBase(SeratoBinFile):
@@ -18,45 +18,19 @@ class CrateBase(SeratoBinFile):
     def __init__(self, file: str):
         super().__init__(file=file)
 
-        # Omit the _Serato_ and Subcrates dirs at the end
-        self.track_dir: str = os.path.join(*CrateBase._split_path(self.dir)[:-2])
-
     class Track(SeratoBinFile.Track):
         def __init__(self, data: "CrateBase.Struct"):
             super().__init__(data, filepath_key=CrateBase.Fields.TRACK_PATH)
 
-    @staticmethod
-    def _split_path(path: str):
-        allparts = []
-        while True:
-            parts = os.path.split(path)
-            if parts[0] == path:  # sentinel for absolute paths
-                allparts.insert(0, parts[0])
-                break
-            elif parts[1] == path:  # sentinel for relative paths
-                allparts.insert(0, parts[1])
-                break
-            else:
-                path = parts[0]
-                allparts.insert(0, parts[1])
-        return allparts
-
-    @staticmethod
-    def _get_track_name(value: "CrateBase.Value") -> str:
-        if not isinstance(value, list):
-            raise TypeError(f"{CrateBase.Fields.TRACK} should be list")
-        track_name = value[0][1]
-        if not isinstance(track_name, str):
-            raise TypeError("value should be str")
-        return track_name
-
-    def tracks(self) -> list[str]:
-        track_names: list[str] = []
-        for dat in self.data:
-            if dat[0] == CrateBase.Fields.TRACK:
-                track_name = CrateBase._get_track_name(dat[1])
-                track_names.append(track_name)
-        return track_names
+    def track_paths(self) -> list[str]:
+        track_paths: list[str] = []
+        for field, value in self.data:
+            if field == CrateBase.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = CrateBase.Track(value)
+                track_paths.append(track.filepath)
+        return track_paths
 
     def save(self, file: Optional[str] = None):
         if file is None:
@@ -66,6 +40,59 @@ class CrateBase(SeratoBinFile):
             raise ValueError(f"file should end with {self.EXTENSION}: " + file)
 
         super().save(file)
+
+    def process_tracks(self, func: Callable[[str], str]):
+        for i, (field, value) in enumerate(self.data):
+            if field == CrateBase.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = CrateBase.Track(value)
+                maybe_new_path = func(track.filepath)
+                if maybe_new_path != track.filepath:
+                    track.set_value(CrateBase.Fields.TRACK_PATH, maybe_new_path)
+                    self.data[i] = (field, track.to_struct())
+
+    def filter_tracks(self, func: Callable[[str], bool]):
+        for i, (field, value) in enumerate(self.data):
+            if field == CrateBase.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = CrateBase.Track(value)
+                if not func(track.filepath):
+                    self.data.pop(i)
+
+    def remove_track(self, filepath: str):
+        # filepath name must include the containing dir
+        self.filter_tracks(lambda fpath: fpath != filepath)
+
+    def add_track(self, filepath: str):
+        # filepath name must include the containing dir
+        filepath = self.format_filepath(filepath)
+
+        if filepath in self.track_paths():
+            return
+
+        self.data.append((CrateBase.Fields.TRACK, [(CrateBase.Fields.TRACK_PATH, filepath)]))
+
+    def add_tracks_from_dir(self, dir: str, replace: bool = False):
+        dir_tracks = [self.format_filepath(os.path.join(dir, t)) for t in os.listdir(dir)]
+
+        if replace:
+            for track in self.track_paths():
+                if track not in dir_tracks:
+                    self.remove_track(track)
+
+        for track in dir_tracks:
+            self.add_track(track)
+
+    def remove_duplicates(self):
+        track_names: list[str] = []
+
+        def filter_track(fname: str) -> bool:
+            track_names.append(fname)
+            return fname not in track_names
+
+        self.filter_tracks(filter_track)
 
     @classmethod
     def list_dir(cls):

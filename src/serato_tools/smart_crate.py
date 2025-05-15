@@ -68,10 +68,10 @@ class SmartCrate(CrateBase):
         return get_key_from_value(value, SmartCrate.RULE_COMPARISON)
 
     def __str__(self):
-        tracks = self.tracks()
+        tracks = self.track_paths()
         return f"Smart Crate containing {len(tracks)} tracks (TODO: print rules!): \n" + "\n".join(tracks)
 
-    def print(self):
+    def print(self):  # pylint: disable=arguments-differ
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
                 field_lines = []
@@ -110,9 +110,9 @@ if __name__ == "__main__":
         sys.exit()
 
     crate = SmartCrate(args.file)
-    tracks = crate.tracks()
+    tracks = crate.track_paths()
     if args.filenames_only:
-        track_names = [os.path.splitext(os.path.basename(track))[0] for track in crate.tracks()]
+        track_names = [os.path.splitext(os.path.basename(track))[0] for track in crate.track_paths()]
         print("\n".join(track_names))
     elif args.data:
         crate.print()

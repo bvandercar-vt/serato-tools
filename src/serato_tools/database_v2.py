@@ -12,7 +12,8 @@ from serato_tools.utils import logger, DataTypeError, SERATO_DIR
 
 
 class DatabaseV2(SeratoBinFile):
-    DEFAULT_DATABASE_FILE = os.path.join(SERATO_DIR, "database V2")
+    FILENAME = "database V2"
+    DEFAULT_DATABASE_FILE = os.path.join(SERATO_DIR, FILENAME)
 
     DEFAULT_DATA = [
         (SeratoBinFile.Fields.VERSION, "2.0/Serato Scratch LIVE Database"),
