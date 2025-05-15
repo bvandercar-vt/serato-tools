@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "3.1.0"
-description = "Serato crate, smartcrate, library database, and track metadata (cues, beatgrid, etc.) modification, including dyanmic beatgrid analysis."
+version = "3.2.0"
+description = "Serato track metadata (cues, beatgrid, etc.) crate, smartcrate, library database, and  modification; dynamic beatgrid analysis; and better USB sync."
 requires-python = ">= 3.12"
 readme = "README.md"
 authors = [
@@ -34,6 +34,7 @@ beatgrid_analysis = [
 
 [project.scripts]
 serato_analyze_beatgrid = "serato-tools.track_beatgrid:main_analyze"
+serato_usb_sync = "serato-tools.usb_sync:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
