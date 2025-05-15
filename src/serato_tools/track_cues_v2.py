@@ -68,6 +68,7 @@ class TrackCuesV2(SeratoTag):
         BLACK = b"\x99\x99\x99"
 
     def __init__(self, file_or_data: SeratoTag.FileOrData):
+        self.raw_data: bytes | None = None
         super().__init__(file_or_data)
 
         self.entries: list[TrackCuesV2.Entry] = []
@@ -324,7 +325,7 @@ class TrackCuesV2(SeratoTag):
 
         new_raw_data = data.ljust(470, b"\x00")
 
-        self.modified = new_raw_data != self.raw_data
+        self.modified = new_raw_data != self.raw_data  # pylint: disable=access-member-before-definition
         self.raw_data = new_raw_data
 
     @staticmethod
@@ -464,7 +465,7 @@ class TrackCuesV2(SeratoTag):
             delete_tags_v1: Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
         """
         if delete_tags_v1 and self.tagfile:
-            super(SeratoTag, self)._del_geob(TrackCuesV1.GEOB_KEY)
+            super(SeratoTag, self)._del_geob(TrackCuesV1.GEOB_KEY)  # pylint: disable=bad-super-call
 
         new_entries = []
         change_made = False

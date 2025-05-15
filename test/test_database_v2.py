@@ -5,7 +5,7 @@ import io
 
 from contextlib import redirect_stdout
 
-from serato_tools.database_v2 import DatabaseV2
+from src.serato_tools.database_v2 import DatabaseV2
 
 
 def get_print_val(db: DatabaseV2):

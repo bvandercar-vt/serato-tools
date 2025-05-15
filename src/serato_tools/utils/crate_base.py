@@ -35,8 +35,6 @@ class CrateBase(SeratoBinFile):
         if filepath in self.get_track_paths():
             return
 
-        print(filepath)
-        print(self.get_track_paths())
         self.data.append((CrateBase.Fields.TRACK, [(CrateBase.Fields.TRACK_PATH, filepath)]))
 
     def add_tracks_from_dir(self, dir: str, replace: bool = False):

@@ -5,7 +5,7 @@ import io
 
 from contextlib import redirect_stdout
 
-from serato_tools.crate import Crate
+from src.serato_tools.crate import Crate
 
 
 class TestCase(unittest.TestCase):

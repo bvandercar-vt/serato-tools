@@ -2,7 +2,7 @@
 import unittest
 import os
 
-from serato_tools.track_cues_v2 import TrackCuesV2
+from src.serato_tools.track_cues_v2 import TrackCuesV2
 
 
 class TestCase(unittest.TestCase):

@@ -34,6 +34,7 @@ class TrackBeatgrid(SeratoTag):
     type EntryList = list[TerminalBeatgridMarker | NonTerminalBeatgridMarker | Footer]
 
     def __init__(self, file_or_data: SeratoTag.FileOrData):
+        self.raw_data: bytes | None = None
         super().__init__(file_or_data)
 
         self.entries: TrackBeatgrid.EntryList | None = None
