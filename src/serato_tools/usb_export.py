@@ -211,6 +211,15 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-d",
+        "--drive",
+        "--drive_dir",
+        dest="dest_dir",
+        type=str,
+        required=True,
+        help='Directory of the destination drive. Example: "E" on Windows',
+    )
+    parser.add_argument(
         "-c",
         "--crates",
         "--crate_matcher",
@@ -221,20 +230,11 @@ def main():
         help='Glob or Regex matcher for crate and smartcrate filenames. Example: "*house*". Can pass multiple to OR them. To copy all, pass "*"',
     )
     parser.add_argument(
-        "-d",
-        "--drive",
-        "--drive_dir",
-        dest="dest_dir",
-        type=str,
-        required=True,
-        help='Directory of the destination drive. Example: "E" on Windows',
-    )
-    parser.add_argument(
         "--root_crate",
         type=str,
         required=False,
         default=None,
-        help="Sets all crates to be within this crate on the destination drive",
+        help="Not required, but is very nice when plugging your drive into another DJ's laptop. Sets all crates to be within this crate on the destination drive",
     )
     args = parser.parse_args()
 
