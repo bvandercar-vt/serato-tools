@@ -32,8 +32,8 @@ beatgrid_analysis = [
     "numpy"
 ]
 
-[project.scripts]
-serato_analyze_beatgrid = "serato-tools.track_beatgrid:main_analyze"
+[entry_points.console_scripts]
+serato_analyze_beatgrid = "serato-tools.track_beatgrid:main"
 serato_usb_sync = "serato-tools.usb_sync:main"
 
 [tool.setuptools]
