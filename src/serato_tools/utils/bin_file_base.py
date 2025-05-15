@@ -87,6 +87,30 @@ class SeratoBinFile:
     def __repr__(self):
         return str(self.raw_data)
 
+    class StructCls:
+        def __init__(self, data: "SeratoBinFile.Struct"):
+            self.fields: list[str] = []
+
+            for field, value in data:
+                if isinstance(value, list):
+                    raise DeeplyNestedStructError
+                setattr(self, field, value)
+                self.fields.append(field)
+
+        def __repr__(self):
+            return str(self.to_struct())
+
+        def get_value(self, field: str) -> "SeratoBinFile.Value":
+            return getattr(self, field)
+
+        def set_value(self, field: str, value: "SeratoBinFile.Value"):
+            if field not in self.fields:
+                self.fields.append(field)
+            setattr(self, field, value)
+
+        def to_struct(self) -> "SeratoBinFile.Struct":
+            return [(f, self.get_value(f)) for f in self.fields]
+
     @staticmethod
     def _get_type(field: str) -> str:
         # vrsn field has no type_id, but contains text ("t")

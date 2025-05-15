@@ -23,17 +23,14 @@ class DatabaseV2(SeratoBinFile):
             raise FileNotFoundError(f"file does not exist: {file}")
         super().__init__(file=file)
 
-    @staticmethod
-    def _get_track_path(item: SeratoBinFile.Struct):
-        for field, value in item:
-            if isinstance(value, list):
-                raise TypeError("Have not accounted for deeply nested list")
-            if field != DatabaseV2.Fields.FILE_PATH:
-                continue
-            if not isinstance(value, str):
-                raise DataTypeError(value, str, DatabaseV2.Fields.FILE_PATH)
-            return value
-        raise ValueError(f"no filename found ({ DatabaseV2.Fields.FILE_PATH})!")
+    class Track(SeratoBinFile.StructCls):
+        def __init__(self, data: "DatabaseV2.Struct"):
+            super().__init__(data)
+
+            filepath = self.get_value(DatabaseV2.Fields.FILE_PATH)
+            if not isinstance(filepath, str):
+                raise DataTypeError(filepath, str, DatabaseV2.Fields.FILE_PATH)
+            self.filepath: str = filepath
 
     class ModifyRule(TypedDict):
         field: SeratoBinFile.Fields
@@ -78,24 +75,17 @@ class DatabaseV2(SeratoBinFile):
             if field == DatabaseV2.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
-                track_filename = DatabaseV2._get_track_path(value)
-                new_struct: DatabaseV2.Struct = []
-                fields: list[str] = []
-                for f, v in value:
-                    maybe_new_value = _maybe_perform_rule(f, v, track_filename)
+                track = DatabaseV2.Track(value)
+                for f, v in track.to_struct():
+                    maybe_new_value = _maybe_perform_rule(f, v, track.filepath)
                     if maybe_new_value is not None:
-                        v = maybe_new_value
-                    new_struct.append((f, v))
-                    fields.append(f)
+                        track.set_value(f, maybe_new_value)
                 for rule in rules:
-                    if rule["field"] not in fields:
-                        maybe_new_value = _maybe_perform_rule(rule["field"], None, track_filename)
+                    if rule["field"] not in track.fields:
+                        maybe_new_value = _maybe_perform_rule(rule["field"], None, track.filepath)
                         if maybe_new_value is not None:
-                            new_struct.append((rule["field"], maybe_new_value))
-                value = new_struct
-            else:
-                # isn't a track
-                pass
+                            track.set_value(rule["field"], maybe_new_value)
+                value = track.to_struct()
             new_data.append((field, value))
 
         self.data = new_data
@@ -123,21 +113,16 @@ class DatabaseV2(SeratoBinFile):
         new_data: DatabaseV2.Struct = []
         tracks_paths: list[str] = []
         for field, value in self.data:
-            if isinstance(value, list):
-                if field == DatabaseV2.Fields.TRACK:
-                    for f, v in value:
-                        if f == DatabaseV2.Fields.FILE_PATH:
-                            if not isinstance(v, str):
-                                raise DataTypeError(v, str, f)
-                            track_path = v
-                            if track_path in tracks_paths:
-                                # TODO: check if any different aside from date added
-                                logger.info(f"removed duplicate: {track_path}")
-                            else:
-                                new_data.append((field, value))
-                                tracks_paths.append(track_path)
+            if field == DatabaseV2.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = DatabaseV2.Track(value)
+                if track.filepath in tracks_paths:
+                    # TODO: check if any different aside from date added
+                    logger.info(f"removed duplicate: {track.filepath}")
                 else:
                     new_data.append((field, value))
+                    tracks_paths.append(track.filepath)
             else:
                 new_data.append((field, value))
         self.data = new_data

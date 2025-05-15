@@ -8,7 +8,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
-from serato_tools.utils import SERATO_FOLDER_PATH
+from serato_tools.utils import SERATO_FOLDER_PATH, DataTypeError
 
 
 class CrateBase(SeratoBinFile):
@@ -20,6 +20,15 @@ class CrateBase(SeratoBinFile):
 
         # Omit the _Serato_ and Subcrates folders at the end
         self.track_dir: str = os.path.join(*CrateBase._split_path(self.dir)[:-2])
+
+    class Track(SeratoBinFile.StructCls):
+        def __init__(self, data: "CrateBase.Struct"):
+            super().__init__(data)
+
+            filepath = self.get_value(CrateBase.Fields.TRACK_PATH)
+            if not isinstance(filepath, str):
+                raise DataTypeError(filepath, str, CrateBase.Fields.TRACK_PATH)
+            self.filepath: str = filepath
 
     @staticmethod
     def _split_path(path: str):
