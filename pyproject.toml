@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "3.2.4"
-description = "Serato track metadata (cues, beatgrid, etc.) crate, smartcrate, library database, and modification; dynamic beatgrid analysis; and better USB sync."
+version = "3.2.5"
+description = "Serato track metadata (cues, beatgrid, etc.) crate, smartcrate, library database, and modification; dynamic beatgrid analysis; and better USB export."
 keywords = [
     "serato",
     "serato crate",
@@ -16,6 +16,7 @@ keywords = [
     "serato cues",
     "serato beatgrid",
     "serato usb",
+    "serato usb export",
     "serato usb sync",
 ]
 requires-python = ">= 3.12"
@@ -38,7 +39,7 @@ beatgrid_analysis = ["librosa", "numpy"]
 
 [project.scripts]
 serato_analyze_beatgrid = "serato_tools.track_beatgrid:main_analyze"
-serato_usb_sync = "serato_tools.usb_sync:main"
+serato_usb_export = "serato_tools.usb_export:main"
 
 [tool.setuptools.packages.find]
 where = ["src"] 

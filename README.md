@@ -5,14 +5,14 @@
 - Serato crate parsing and modification
 - Serato smart crate parsing (viewing only-- modifying a TODO!)
 - Dynamic beatgrid analysis that can be saved to a track's beatgrid.
-- Serato USB sync that beats Serato's sync by putting all files in 1 folder (without duplicates) and only copying changed files, unlike Serato's sync which takes forever and creates many duplicate file locations
+- Serato USB export that beats Serato's sync by putting all files in 1 folder (without duplicates) and only copying changed files, unlike Serato's sync which takes forever and creates many duplicate file locations
 
 **Currently designed for Python 3.12+. If you would like backwards compatibility with an older version, please reach out!**
 
 ## Example uses:
 
 **USB:**
-- Sync crates (including Smart Crates) to USB. Beats Serato's sync by keeping all files in 1 folder and by comparing files for changes (instead of always copying, like Serato does)
+- Export crates (including Smart Crates) to USB. Beats Serato's sync by keeping all files in 1 folder and by comparing files for changes (instead of always copying, like Serato does)
 
 **Tracks:**
 - Change hot cue's text (i.e. change to all caps; change "c" to "CHORUS", etc.)
@@ -62,12 +62,12 @@ _NOTE: This feature has only been tested on a couple of tracks. Recommend review
 >>> serato_analyze_beatgrid "Music/Dubstep/Mind Splitter - YAPPIN'.mp3"
 ```
 
-### Syncing crates to USB
+### Exporting crates to USB
 
 **NOTE: replaces existing crates on flash drive! (but does not delete existing track files) (TODO: ability to merge with existing)**
 
 ```cmd
->>> serato_usb_sync --drive E --crate_matcher *house* *techno* --root_crate="Dave USB"
+>>> serato_usb_export --drive E --crate_matcher *house* *techno* --root_crate="Dave USB"
 ```
 
 ### Renaming a file and changing its location in the database
