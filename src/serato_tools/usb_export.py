@@ -149,9 +149,11 @@ def copy_crates_to_usb(
 
     print("copying files over...")
 
+    not_found: list[str] = []
+
     def maybe_copy(src_path: str, dst_path: str):
         if not os.path.exists(src_path):
-            print(f"ERROR: does not exist - {src_path}")
+            not_found.append(src_path)
             return
         copy = (not filecmp.cmp(src_path, dst_path, shallow=True)) if os.path.exists(dst_path) else True
         if copy:
@@ -179,6 +181,9 @@ def copy_crates_to_usb(
                 src_path=maybe_stem_files[0],
                 dst_path=os.path.join(dest_drive_dir, dest_tracks_dir, os.path.basename(maybe_stem_files[0])),
             )
+    print("\n")
+    for n in not_found:
+        print(f"ERROR: does not exist - {n}")
 
 
 def get_crate_files(pattern: str):
