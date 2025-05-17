@@ -150,6 +150,9 @@ def copy_crates_to_usb(
     print("copying files over...")
 
     def maybe_copy(src_path: str, dst_path: str):
+        if not os.path.exists(src_path):
+            print(f"ERROR: does not exist - {src_path}")
+            return
         copy = (not filecmp.cmp(src_path, dst_path, shallow=True)) if os.path.exists(dst_path) else True
         if copy:
             os.makedirs(os.path.dirname(dst_path), exist_ok=True)
