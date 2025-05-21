@@ -27,7 +27,7 @@ class TrackWaveform(SeratoTag):
 
     def _parse(self, data: bytes):
         fp = io.BytesIO(data)
-        self._check_version(fp.read(2))
+        self._check_version(fp.read(self.VERSION_LEN))
 
         for x in iter(lambda: fp.read(16), b""):
             assert len(x) == 16

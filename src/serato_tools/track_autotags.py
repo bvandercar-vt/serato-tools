@@ -34,7 +34,7 @@ class TrackAutotags(SeratoTag):
 
     def _parse(self, data: bytes):
         fp = io.BytesIO(data)
-        self._check_version(fp.read(2))
+        self._check_version(fp.read(self.VERSION_LEN))
 
         def get_value():
             value = self._readbytes(fp).decode("ascii")

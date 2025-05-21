@@ -141,7 +141,7 @@ class TrackCuesV1(SeratoTag):
 
     def _parse(self, data: bytes):
         fp = io.BytesIO(data)
-        self._check_version(fp.read(2))
+        self._check_version(fp.read(self.VERSION_LEN))
 
         num_entries = struct.unpack(">I", fp.read(4))[0]
         for i in range(num_entries):  # pylint: disable=unused-variable

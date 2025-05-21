@@ -275,16 +275,17 @@ class TrackCuesV2(SeratoTag):
 
     def _parse(self, data: bytes):
         self._check_version(data[: self.VERSION_LEN])
-
+        data = data[self.VERSION_LEN :]  # b64data
         try:
-            b64data = data[self.VERSION_LEN : data.index(b"\x00", self.VERSION_LEN)]
-        except IndexError:
-            b64data = data[self.VERSION_LEN :]
-        b64data = b64data.replace(b"\n", b"")
-        padding = b"A==" if len(b64data) % 4 == 1 else (b"=" * (-len(b64data) % 4))
-        payload = base64.b64decode(b64data + padding)
+            end_index = data.index(b"\x00")
+            data = data[:end_index]
+        except ValueError:
+            pass  # data = data
+        data = data.replace(b"\n", b"")
+        padding = b"A==" if len(data) % 4 == 1 else (b"=" * (-len(data) % 4))
+        payload = base64.b64decode(data + padding)
         fp = io.BytesIO(payload)
-        self._check_version(fp.read(2))
+        self._check_version(fp.read(self.VERSION_LEN))
         while True:
             entry_name = SeratoTag._readbytes(fp).decode("utf-8")
             if not entry_name:
