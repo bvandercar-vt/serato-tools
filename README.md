@@ -184,6 +184,20 @@ SmartCrate.list_dir()
 
 ### Modifying a SmartCrate Rule
 
+__via command line__
+
+_one crate_
+```cmd
+>>> serato_smartcrate '/Users/Username/Music/_Serato_/SmartCrates/Dubstep.scrate' --set_rules --grouping UNTAGGED
+```
+
+_all crates_
+```cmd
+>>> serato_smartcrate --all --set_rules --grouping UNTAGGED
+```
+
+__via code__
+
 ```python
 from serato_tools.smart_crate import SmartCrate
 

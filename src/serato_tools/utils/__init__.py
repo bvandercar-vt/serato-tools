@@ -18,6 +18,19 @@ def get_key_from_value(value: T, dict: dict[str, T]) -> str:
     raise ValueError(f"no key for value {value}")
 
 
+def parse_cli_keys_and_values(args: list[str]):
+    pairs: dict[str, str | int] = {}
+    key = None
+    for arg in args:
+        if arg.startswith("--"):
+            key = arg.lstrip("-")
+            # pairs[key] = True  # default to True if no value follows
+        elif key:
+            pairs[key] = arg
+            key = None
+    return pairs
+
+
 def get_enum_key_from_value(value: str | bytes, enum_class: Type[Enum]):
     for member in enum_class:
         if member.value == value:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serato-tools"
-version = "3.3.0"
+version = "3.4.0"
 description = "Serato track metadata (cues, beatgrid, etc.) crate, smartcrate, library database, and modification; dynamic beatgrid analysis; and better USB export."
 keywords = [
     "serato",
@@ -40,6 +40,8 @@ beatgrid_analysis = ["librosa", "numpy"]
 [project.scripts]
 serato_analyze_beatgrid = "serato_tools.track_beatgrid:main_analyze"
 serato_usb_export = "serato_tools.usb_export:main"
+serato_smartcrate = "serato_tools.smart_crate:main"
+serato_crate = "serato_tools.crate:main"
 
 [tool.setuptools.packages.find]
 where = ["src"] 

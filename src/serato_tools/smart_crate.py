@@ -6,7 +6,13 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import get_key_from_value, SERATO_DIR, DataTypeError, DeeplyNestedStructError
+from serato_tools.utils import (
+    get_key_from_value,
+    parse_cli_keys_and_values,
+    SERATO_DIR,
+    DataTypeError,
+    DeeplyNestedStructError,
+)
 
 
 class SmartCrate(CrateBase):
@@ -103,14 +109,37 @@ class SmartCrate(CrateBase):
             self.comparison = self.get_value(SmartCrate.Fields.RULE_COMPARISON)
             self.field = self.get_value(SmartCrate.Fields.RULE_FIELD)
 
+            def try_to_get_value(field: str):
+                try:
+                    return self.get_value(field)
+                except AttributeError:
+                    return None
+
             self.value = cast(
                 str | int | float,  # float for date or no?
                 (
-                    self.get_value(SmartCrate.Fields.RULE_VALUE_INTEGER)
-                    or self.get_value(SmartCrate.Fields.RULE_VALUE_TEXT)
-                    or self.get_value(SmartCrate.Fields.RULE_VALUE_DATE)
+                    try_to_get_value(SmartCrate.Fields.RULE_VALUE_INTEGER)
+                    or try_to_get_value(SmartCrate.Fields.RULE_VALUE_TEXT)
+                    or try_to_get_value(SmartCrate.Fields.RULE_VALUE_DATE)
                 ),
             )
+
+        def set_value(self, value: str | int):  # pyright: ignore[reportRedeclaration]
+            if isinstance(value, int):
+                field = SmartCrate.Fields.RULE_VALUE_INTEGER
+            elif isinstance(value, str):
+                field = SmartCrate.Fields.RULE_VALUE_TEXT
+            else:
+                raise TypeError(f"Bad type: {type(value)} (value: {value})")
+            super().set_value(field, value)
+
+        # TODO: stricter type, use enum
+        def set_field(self, value: int):
+            super().set_value(SmartCrate.Fields.RULE_FIELD, value)
+
+        # TODO: stricter type, use enum
+        def set_comparison(self, value: str):
+            super().set_value(SmartCrate.Fields.RULE_COMPARISON, value)
 
     def modify_rules(self, func: Callable[[Rule], Rule]):
         for i, (field, value) in enumerate(self.data):
@@ -132,7 +161,9 @@ def main():
     parser.add_argument("-l", "--list_tracks", action="store_true", help="Only list tracks")
     parser.add_argument("-f", "--filenames_only", action="store_true", help="Only list track filenames")
     parser.add_argument(
-        "-o", "--output", "--output_file", dest="output_file", default=None, help="Output file to save the crate to"
+        "--set_rules",
+        nargs=argparse.REMAINDER,
+        help="Set rules for all crates using key-value pairs like --grouping NEW --title NEW_TITLE",
     )
     args = parser.parse_args()
 
@@ -149,15 +180,30 @@ def main():
         if os.path.isdir(args.file_or_dir)
         else [args.file_or_dir]
     )
+
+    set_rules = parse_cli_keys_and_values(args.set_rules) if args.set_rules else {}
+
+    def set_rule(rule: SmartCrate.Rule):
+        for key, value in set_rules.items():
+            if rule.field == SmartCrate.RULE_FIELD.get(key):
+                rule.set_value(value)
+        return rule
+
     for p in paths:
         crate = SmartCrate(p)
+
+        if args.set_rules:
+            crate.modify_rules(set_rule)
+            crate.save()
+            continue
+
         if args.list_tracks or args.filenames_only:
-        tracks = crate.get_track_paths()
-        if args.filenames_only:
-            tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
-        print("\n".join(tracks))
-    else:
-        print(crate)
+            tracks = crate.get_track_paths()
+            if args.filenames_only:
+                tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
+            print("\n".join(tracks))
+        else:
+            print(crate)
 
 
 if __name__ == "__main__":
