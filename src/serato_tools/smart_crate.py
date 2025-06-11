@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Callable, cast
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -92,6 +93,34 @@ class SmartCrate(CrateBase):
             lines.append(f"{field} ({fieldname}): {print_val}")
 
         return "\n".join(lines)
+
+    class Rule(CrateBase.StructCls):
+        def __init__(self, data: "CrateBase.Struct"):
+            super().__init__(data)
+
+            # TODO: check and ensure types
+
+            self.comparison = self.get_value(SmartCrate.Fields.RULE_COMPARISON)
+            self.field = self.get_value(SmartCrate.Fields.RULE_FIELD)
+
+            self.value = cast(
+                str | int | float,  # float for date or no?
+                (
+                    self.get_value(SmartCrate.Fields.RULE_VALUE_INTEGER)
+                    or self.get_value(SmartCrate.Fields.RULE_VALUE_TEXT)
+                    or self.get_value(SmartCrate.Fields.RULE_VALUE_DATE)
+                ),
+            )
+
+    def modify_rules(self, func: Callable[[Rule], Rule]):
+        for i, (field, value) in enumerate(self.data):
+            if field == CrateBase.Fields.SMARTCRATE_RULE:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                rule = SmartCrate.Rule(value)
+                new_rule = func(rule)
+                self.data[i] = (field, new_rule.to_struct())
+        self._dump()
 
 
 if __name__ == "__main__":

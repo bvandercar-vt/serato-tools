@@ -3,7 +3,7 @@
 - Serato track tag parsing and modification, including cue points, track color, beatgrid, waveform, autogain, etc.
 - Serato library database parsing and modification
 - Serato crate parsing and modification
-- Serato smart crate parsing (viewing only-- modifying a TODO!)
+- Serato smart crate parsing and rule modification
 - Dynamic beatgrid analysis that can be saved to a track's beatgrid.
 - Serato USB export that beats Serato's sync by putting all files in 1 folder (without duplicates) and only copying changed files, unlike Serato's sync which takes forever and creates many duplicate file locations
 
@@ -32,8 +32,8 @@
 - List available crates
 
 **Smart Crate:**
-- Read a smart crate's tracks
-- Read a smart crate's rules (TODO: ability to modify the rules!)
+- Read a smart crate's tracks and rules
+- Modify a smart crate's rules
 - List available smart crates
 
 _**Code examples are below.**_
@@ -178,9 +178,26 @@ tags.save()
 from serato_tools.crate import Crate
 Crate.list_dir()
 
-from serato_tools.smart_crate import smartCrate
-smartCrate.list_dir()
+from serato_tools.smart_crate import SmartCrate
+SmartCrate.list_dir()
 ``` 
+
+### Modifying a SmartCrate Rule
+
+```python
+from serato_tools.smart_crate import SmartCrate
+
+crate = SmartCrate('/Users/Username/Music/_Serato_/SmartCrates/Dubstep.scrate')
+
+def modify_rule(rule: SmartCrate.Rule):
+    if rule.field != SmartCrate.RULE_FIELD["grouping"]:
+        return rule
+    rule.set_value(SmartCrate.Fields.RULE_VALUE_TEXT, "UNTAGGED")
+    return rule
+
+crate.modify_rules(modify_rule)
+crate.save()
+```
 
 ### Crate details and adding a track
 
