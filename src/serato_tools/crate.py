@@ -6,13 +6,14 @@ import sys
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.crate_base import CrateBase
+from serato_tools.utils.crate_base import CrateBase, SERATO_DIR
 from serato_tools.utils import DeeplyNestedStructError
 
 
 class Crate(CrateBase):
     EXTENSION = ".crate"
     DIR = "Subcrates"
+    DIR_PATH = os.path.join(SERATO_DIR, DIR)
 
     DEFAULT_DATA = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Crate"),

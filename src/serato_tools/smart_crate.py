@@ -4,13 +4,14 @@ import sys
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.crate_base import CrateBase
+from serato_tools.utils.crate_base import CrateBase, SERATO_DIR
 from serato_tools.utils import get_key_from_value, DataTypeError, DeeplyNestedStructError
 
 
 class SmartCrate(CrateBase):
     EXTENSION = ".scrate"
     DIR = "SmartCrates"
+    DIR_PATH = os.path.join(SERATO_DIR, DIR)
 
     RULE_FIELD = {
         "added": 25,
