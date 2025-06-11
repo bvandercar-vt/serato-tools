@@ -14,7 +14,7 @@ if __package__ is None:
 from serato_tools.database_v2 import DatabaseV2
 from serato_tools.crate import Crate
 from serato_tools.smart_crate import SmartCrate
-from serato_tools.utils import SERATO_DIR_NAME, SERATO_DIR as LOCAL_SERATO_DIR
+from serato_tools.utils import logger, SERATO_DIR_NAME, SERATO_DIR as LOCAL_SERATO_DIR
 
 # TODO: put in folders if there are different locations locally for the same basename
 
@@ -34,7 +34,7 @@ def copy_crates_to_usb(
     crate_files: list[str], dest_drive_dir: str, dest_tracks_dir: str, root_crate: Optional[str] = None
 ):
     if not os.path.isdir(dest_drive_dir):
-        print(f"destination drive directory does not exist: {dest_drive_dir}")
+        logger.error(f"destination drive directory does not exist: {dest_drive_dir}")
 
     DEST_SERATO_DIR = os.path.join(dest_drive_dir, SERATO_DIR_NAME)
 
@@ -83,10 +83,11 @@ def copy_crates_to_usb(
             new = existing.replace("≫≫", "%%").replace(SmartCrate.EXTENSION, Crate.EXTENSION)
             os.replace(existing, new)
             new_crate_file = new
-        print(f"copied crate {new_crate_file}")
+        logger.info(f"copied crate {new_crate_file}")
 
     # create the db file
     db = DatabaseV2()
+    tracks_to_copy = [os.path.normpath(f) for f in tracks_to_copy]
     tracks_to_copy = _uniq_by_basename(tracks_to_copy)
     tracks_to_copy_basenames = [os.path.basename(f) for f in tracks_to_copy]
 
@@ -101,7 +102,7 @@ def copy_crates_to_usb(
 
     new_db_file = os.path.join(DEST_SERATO_DIR, DatabaseV2.FILENAME)
     db.save(new_db_file)
-    print(f"created database file {new_db_file}")
+    logger.info(f"created database file {new_db_file}")
 
     # copy crate order file, modify if needed
     NEW_ORDER_FILE = "neworder.pref"
@@ -122,7 +123,7 @@ def copy_crates_to_usb(
     DEST_NEW_ORDER_FILEPATH = os.path.join(DEST_SERATO_DIR, NEW_ORDER_FILE)
     with open(DEST_NEW_ORDER_FILEPATH, "w", encoding="utf-8") as f:
         f.writelines(lines)
-        print(f"copied order file {DEST_NEW_ORDER_FILEPATH}")
+        logger.info(f"copied order file {DEST_NEW_ORDER_FILEPATH}")
 
     # copy stems crate
     SERATO_STEMS_CRATE_PATH = os.path.join(Crate.DIR, "Serato Stems", "Stems.crate")
@@ -140,14 +141,14 @@ def copy_crates_to_usb(
         stems_crate.modify_tracks(modify_stems_crate_track)
         stems_crate.remove_duplicates()
         stems_crate.save(DEST_STEMS_CRATE)
-        print(f"copied crate {DEST_STEMS_CRATE}")
+        logger.info(f"copied crate {DEST_STEMS_CRATE}")
 
     # copy files
+    logger.info("copying files over...")
+
     drive = os.path.splitdrive(LOCAL_SERATO_DIR)[0]
     if drive:
         tracks_to_copy = [os.path.join(drive + os.path.sep, t) for t in tracks_to_copy]
-
-    print("copying files over...")
 
     not_found: list[str] = []
 
@@ -158,7 +159,7 @@ def copy_crates_to_usb(
         copy = (not filecmp.cmp(src_path, dst_path, shallow=True)) if os.path.exists(dst_path) else True
         if copy:
             os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-            print(f"copying {src_path}")
+            logger.info(f"copying {src_path}")
             shutil.copy2(src_path, dst_path)
 
     for index, src_path in enumerate(tracks_to_copy):
@@ -182,8 +183,15 @@ def copy_crates_to_usb(
                 dst_path=os.path.join(dest_drive_dir, dest_tracks_dir, os.path.basename(maybe_stem_files[0])),
             )
     print("\n")
+
+    if len(not_found) == len(tracks_to_copy):
+        logger.error("No source files found.")
+        uniq_dirs = list(set(os.path.dirname(d) for d in tracks_to_copy))
+        logger.error(f"Directories: \n{"\n    ".join(uniq_dirs)}")
+        return
+
     for n in not_found:
-        print(f"ERROR: does not exist - {n}")
+        logger.warning(f"ERROR: does not exist - {n}")
 
 
 def get_crate_files(pattern: str):
