@@ -147,8 +147,10 @@ def copy_crates_to_usb(
     logger.info("copying files over...")
 
     drive = os.path.splitdrive(LOCAL_SERATO_DIR)[0]
-    if drive:
+    if drive:  # Windows
         tracks_to_copy = [os.path.join(drive + os.path.sep, t) for t in tracks_to_copy]
+    else:  # Unix
+        tracks_to_copy = [os.path.sep + t for t in tracks_to_copy]
 
     not_found: list[str] = []
 
