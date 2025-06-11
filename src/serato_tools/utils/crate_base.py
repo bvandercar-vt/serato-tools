@@ -8,12 +8,12 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.bin_file_base import SeratoBinFile
-from serato_tools.utils import SERATO_DIR
 
 
 class CrateBase(SeratoBinFile):
     EXTENSION: str
     DIR: str
+    DIR_PATH: str
 
     def __init__(self, file: str):
         super().__init__(file=file, track_path_key=CrateBase.Fields.TRACK_PATH)
@@ -50,6 +50,5 @@ class CrateBase(SeratoBinFile):
 
     @classmethod
     def list_dir(cls):
-        DIR = os.path.join(SERATO_DIR, cls.DIR)
-        for file in os.listdir(DIR):
-            print(os.path.join(DIR, file))
+        for file in os.listdir(cls.DIR_PATH):
+            print(os.path.join(cls.DIR_PATH, file))

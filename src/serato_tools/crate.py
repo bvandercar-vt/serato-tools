@@ -6,8 +6,8 @@ import sys
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from serato_tools.utils.crate_base import CrateBase, SERATO_DIR
-from serato_tools.utils import DeeplyNestedStructError
+from serato_tools.utils.crate_base import CrateBase
+from serato_tools.utils import SERATO_DIR, DeeplyNestedStructError
 
 
 class Crate(CrateBase):
@@ -45,31 +45,40 @@ class Crate(CrateBase):
         return "\n".join(lines)
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", nargs="?")
+    parser.add_argument("file_or_dir", nargs="?", help="Set the crate file, or a directory to do all files in it")
+    parser.add_argument("--all", action="store_true", help="Perform actions on all crates.")
     parser.add_argument("-l", "--list_tracks", action="store_true", help="Only list tracks")
     parser.add_argument("-f", "--filenames_only", action="store_true", help="Only list track filenames")
-    parser.add_argument(
-        "-o", "--output", "--output_file", dest="output_file", default=None, help="Output file to save the crate to"
-    )
     args = parser.parse_args()
 
-    if not args.file:
-        print(f"must pass a file! files in {Crate.DIR}:")
+    if args.all:
+        args.file_or_dir = Crate.DIR_PATH
+
+    if not args.file_or_dir:
+        print(f"must pass a file or dir, or --all!\nfiles in {Crate.DIR_PATH}:")
         Crate.list_dir()
         sys.exit()
 
-    crate = Crate(args.file)
-    if args.list_tracks or args.filenames_only:
-        tracks = crate.get_track_paths()
-        if args.filenames_only:
-            tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
-        print("\n".join(tracks))
-    else:
-        print(crate)
+    paths: list[str] = (
+        [os.path.join(args.file_or_dir, p) for p in os.listdir(args.file_or_dir)]
+        if os.path.isdir(args.file_or_dir)
+        else [args.file_or_dir]
+    )
 
-    if args.output_file:
-        crate.save(args.output_file)
+    for p in paths:
+        crate = Crate(p)
+        if args.list_tracks or args.filenames_only:
+            tracks = crate.get_track_paths()
+            if args.filenames_only:
+                tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
+            print("\n".join(tracks))
+        else:
+            print(crate)
+
+
+if __name__ == "__main__":
+    main()

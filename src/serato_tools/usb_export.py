@@ -248,6 +248,7 @@ def main():
         help='Glob or Regex matcher for crate and smartcrate filenames. Example: "*house*". Can pass multiple to OR them. To copy all, pass "*"',
     )
     parser.add_argument(
+        "-r",
         "--root_crate",
         type=str,
         required=False,
