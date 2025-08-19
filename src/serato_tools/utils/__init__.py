@@ -31,12 +31,11 @@ def parse_cli_keys_and_values(args: list[str]):
     return pairs
 
 
-def get_enum_key_from_value(value: str | bytes, enum_class: Type[Enum]):
+def get_enum_key_from_value(value: str | bytes | int, enum_class: Type[Enum]):
     for member in enum_class:
         if member.value == value:
             return member.name
     raise ValueError(f"no key for value {value}")
-
 
 def to_array(x: T | Iterable[T]) -> Iterable[T]:
     if isinstance(x, (str, bytes)):

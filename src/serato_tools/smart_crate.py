@@ -1,13 +1,14 @@
 import os
 import sys
 from typing import Callable, cast
+from enum import StrEnum, IntEnum
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
 from serato_tools.utils import (
-    get_key_from_value,
+    get_enum_key_from_value,
     parse_cli_keys_and_values,
     SERATO_DIR,
     DataTypeError,
@@ -20,36 +21,34 @@ class SmartCrate(CrateBase):
     DIR = "SmartCrates"
     DIR_PATH = os.path.join(SERATO_DIR, DIR)
 
-    RULE_FIELD = {
-        "added": 25,
-        "album": 8,
-        "artist": 7,
-        "bpm": 15,
-        "comment": 17,
-        "composer": 22,
-        "filename": 4,
-        "genre": 9,
-        "grouping": 19,
-        "key": 51,
-        "label": 21,
-        "plays": 79,
-        "remixer": 20,
-        "song": 6,
-        "year": 23,
-    }
+    class RuleField(IntEnum):
+        ADDED = 25
+        ALBUM = 8
+        ARTIST = 7
+        BPM = 15
+        COMMENT = 17
+        COMPOSER = 22
+        FILENAME = 4
+        GENRE = 9
+        GROUPING = 19
+        KEY = 51
+        LABEL = 21
+        PLAYS = 79
+        REMIXER = 20
+        SONG = 6
+        YEAR = 23
 
-    RULE_COMPARISON = {
-        "STR_CONTAINS": "cond_con_str",
-        "STR_DOES_NOT_CONTAIN": "cond_dnc_str",
-        "STR_IS": "cond_is_str",
-        "STR_IS_NOT": "cond_isn_str",
-        "STR_DATE_BEFORE": "cond_bef_str",
-        "STR_DATE_AFTER": "cond_aft_str",
-        "TIME_IS_BEFORE": "cond_bef_time",
-        "TIME_IS_AFTER": "cond_aft_time",
-        "INT_IS_GE": "cond_greq_uint",
-        "INT_IS_LE": "cond_lseq_uint",
-    }
+    class RuleComparison(StrEnum):
+        STR_CONTAINS = "cond_con_str"
+        STR_DOES_NOT_CONTAIN = "cond_dnc_str"
+        STR_IS = "cond_is_str"
+        STR_IS_NOT = "cond_isn_str"
+        STR_DATE_BEFORE = "cond_bef_str"
+        STR_DATE_AFTER = "cond_aft_str"
+        TIME_IS_BEFORE = "cond_bef_time"
+        TIME_IS_AFTER = "cond_aft_time"
+        INT_IS_GE = "cond_greq_uint"
+        INT_IS_LE = "cond_lseq_uint"
 
     DEFAULT_DATA = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Smart Crate"),
@@ -69,11 +68,11 @@ class SmartCrate(CrateBase):
 
     @staticmethod
     def _get_rule_field_name(value: int) -> str:
-        return get_key_from_value(value, SmartCrate.RULE_FIELD)
+        return get_enum_key_from_value(value, SmartCrate.RuleField).lower()
 
     @staticmethod
     def _get_rule_comparison(value: str) -> str:
-        return get_key_from_value(value, SmartCrate.RULE_COMPARISON)
+        return get_enum_key_from_value(value, SmartCrate.RuleComparison)
 
     def __str__(self):
         lines: list[str] = []
@@ -133,13 +132,11 @@ class SmartCrate(CrateBase):
                 raise TypeError(f"Bad type: {type(value)} (value: {value})")
             super().set_value(field, value)
 
-        # TODO: stricter type, use enum
-        def set_field(self, value: int):
-            super().set_value(SmartCrate.Fields.RULE_FIELD, value)
+        def set_field(self, value: "SmartCrate.RuleField"):
+            super().set_value(SmartCrate.Fields.RULE_FIELD, value.value)
 
-        # TODO: stricter type, use enum
-        def set_comparison(self, value: str):
-            super().set_value(SmartCrate.Fields.RULE_COMPARISON, value)
+        def set_comparison(self, value: "SmartCrate.RuleComparison"):
+            super().set_value(SmartCrate.Fields.RULE_COMPARISON, value.value)
 
     def modify_rules(self, func: Callable[[Rule], Rule]):
         for i, (field, value) in enumerate(self.data):
@@ -185,7 +182,12 @@ def main():
 
     def set_rule(rule: SmartCrate.Rule):
         for key, value in set_rules.items():
-            if rule.field == SmartCrate.RULE_FIELD.get(key):
+            key = key.upper()
+            try:
+                rule_field_id = SmartCrate.RuleField[key].value
+            except KeyError as exc:
+                raise KeyError(f"Unknown RuleField: {key} (must be one of {[rf.name for rf in SmartCrate.RuleField]})") from exc
+            if rule.field == rule_field_id:
                 rule.set_value(value)
         return rule
 
