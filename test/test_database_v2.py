@@ -1,19 +1,9 @@
 # pylint: disable=protected-access
 import unittest
 import os
-import io
-
-from contextlib import redirect_stdout
 
 from src.serato_tools.database_v2 import DatabaseV2
-
-
-def get_print_val(db: DatabaseV2):
-    captured_output = io.StringIO()
-    with redirect_stdout(captured_output):
-        db.print()
-    output = captured_output.getvalue()
-    return output
+from test.utils.utils import get_print_val
 
 
 class TestCase(unittest.TestCase):
@@ -47,7 +37,7 @@ class TestCase(unittest.TestCase):
 
         with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
             expected = f.read()
-            self.assertEqual(get_print_val(db), expected, "parse")
+            self.assertEqual(get_print_val(db.print), expected, "parse")
 
         db._dump()
         self.assertEqual(db.raw_data, file_data, "raw_data read")
@@ -64,14 +54,14 @@ class TestCase(unittest.TestCase):
 
         with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
             expected = f.read()
-            self.assertEqual(get_print_val(db), expected, "parse")
+            self.assertEqual(get_print_val(db.print), expected, "parse")
 
         original_data = db.data
         original_raw_data = db.raw_data
         db.modify([])
         self.assertEqual(db.data, original_data, "was not modified")
         self.assertEqual(db.raw_data, original_raw_data, "was not modified")
-        self.assertEqual(get_print_val(db), expected, "was not modified")
+        self.assertEqual(get_print_val(db.print), expected, "was not modified")
 
         new_time = int(1735748100)
         db.modify(
@@ -82,7 +72,7 @@ class TestCase(unittest.TestCase):
             ]
         )
         with open("test/data/database_v2_test_modified_output.txt", "r", encoding="utf-16") as f:
-            self.assertEqual(get_print_val(db), f.read(), "was modified correctly")
+            self.assertEqual(get_print_val(db.print), f.read(), "was modified correctly")
         with open("test/data/database_v2_test_modified_output.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly")
 
@@ -99,7 +89,7 @@ class TestCase(unittest.TestCase):
             ]
         )
         with open("test/data/database_v2_test_modified_output_2.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(db), f.read(), "was modified correctly, given files")
+            self.assertEqual(get_print_val(db.print), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")
 
@@ -108,9 +98,9 @@ class TestCase(unittest.TestCase):
         db = DatabaseV2(file)
 
         with open("test/data/database_v2_duplicates_output.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(db), f.read(), "original")
+            self.assertEqual(get_print_val(db.print), f.read(), "original")
 
         db.remove_duplicates()
 
         with open("test/data/database_v2_duplicates_output_deduped.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(db), f.read(), "deduped")
+            self.assertEqual(get_print_val(db.print), f.read(), "deduped")

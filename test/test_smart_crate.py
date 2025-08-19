@@ -1,33 +1,12 @@
 # pylint: disable=protected-access
 import unittest
 import os
-import io
-
-from contextlib import redirect_stdout
 
 from src.serato_tools.smart_crate import SmartCrate
+from test.utils.utils import get_print_val
 
 
-class TestCase(unittest.TestCase):
-    def test_parse(self):
-        file = os.path.abspath("test/data/TestSmartCrate.scrate")
-        with open(file, mode="rb") as fp:
-            file_data = fp.read()
-
-        crate = SmartCrate(file)
-
-        self.maxDiff = None
-
-        def get_print_val():
-            captured_output = io.StringIO()
-            with redirect_stdout(captured_output):
-                crate.print()
-            output = captured_output.getvalue()
-            return output
-
-        self.assertEqual(crate.raw_data, file_data, "raw_data read")
-
-        expected = """vrsn (Version): '1.0/Serato ScratchLive Smart Crate'
+base_expected = """vrsn (Version): '1.0/Serato ScratchLive Smart Crate'
 rart (SmartCrate Match All): [ brut (Unknown Field): True ]
 rlut (SmartCrate Live Update): [ brut (Unknown Field): True ]
 rurt (SmartCrate Rule): [ trft (Rule Comparison): cond_aft_time (TIME_IS_AFTER) ], [ urkt (Rule Field): 25 (added) ], [ trtt (Rule Value Date): 5/13/2020 ]
@@ -53,8 +32,32 @@ otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Shaggy - Hope (fe
 otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Shaggy - Angel (feat. Rayvon).mp3 ]
 otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Three 6 Mafia - Sippin On Some Syrup (feat. UGK) (Underground Kingz) & Project Pat).mp3 ]  
 otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Yusuf  Cat Stevens - Peace Train.mp3 ]"""
-        expected = expected.splitlines()
-        given = get_print_val().splitlines()
-        self.assertEqual(len(expected), len(given))
-        for i, line in enumerate(given):
-            self.assertEqual(line.strip(), expected[i].strip(), "parse")
+
+
+class TestCase(unittest.TestCase):
+    def check_lines(self, given: str, expected: str):
+        given = "\n".join([l.strip() for l in given.splitlines()])
+        expected = "\n".join([l.strip() for l in expected.splitlines()])
+        self.maxDiff = None
+        self.assertMultiLineEqual(given, expected)
+
+    def test_parse(self):
+        file = os.path.abspath("test/data/TestSmartCrate.scrate")
+        with open(file, mode="rb") as fp:
+            file_data = fp.read()
+
+        crate = SmartCrate(file)
+
+        self.assertEqual(crate.raw_data, file_data, "raw_data read")
+        self.check_lines(get_print_val(crate.print), base_expected)
+
+    def test_add_rule(self):
+        file = os.path.abspath("test/data/TestSmartCrate.scrate")
+
+        crate = SmartCrate(file)
+        crate.set_rule(SmartCrate.RuleField.ALBUM, SmartCrate.RuleComparison.STR_IS_NOT, "albo")
+        self.check_lines(
+            get_print_val(crate.print),
+            base_expected
+            + "\nrurt (SmartCrate Rule): [ trft (Rule Comparison): cond_isn_str (STR_IS_NOT) ], [ urkt (Rule Field): 8 (album) ], [ trpt (Rule Value Text): albo ]",
+        )

@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Callable, cast
+from typing import cast
 from enum import StrEnum, IntEnum
 
 if __package__ is None:
@@ -67,12 +67,39 @@ class SmartCrate(CrateBase):
     ]
 
     @staticmethod
-    def _get_rule_field_name(value: int) -> str:
-        return get_enum_key_from_value(value, SmartCrate.RuleField).lower()
+    def _get_rule_field_from_val(value: int) -> str:
+        return get_enum_key_from_value(value, SmartCrate.RuleField)
 
     @staticmethod
-    def _get_rule_comparison(value: str) -> str:
+    def _get_rule_comparison_from_val(value: str) -> str:
         return get_enum_key_from_value(value, SmartCrate.RuleComparison)
+
+    @staticmethod
+    def _get_rule_field_from_key(key: str):
+        try:
+            return SmartCrate.RuleField[key.upper()]
+        except KeyError as exc:
+            raise KeyError(
+                f"bad field {key.upper()} , must be one of {[c.name for c in SmartCrate.RuleField]}"
+            ) from exc
+
+    @staticmethod
+    def _get_rule_comparison_from_key(key: str):
+        try:
+            return SmartCrate.RuleComparison[key.upper()]
+        except KeyError as exc:
+            raise KeyError(
+                f"bad comparison {key.upper()} , must be one of {[c.name for c in SmartCrate.RuleComparison]}"
+            ) from exc
+
+    @staticmethod
+    def _get_rule_value_type(value: str | int):
+        if isinstance(value, int):
+            return SmartCrate.Fields.RULE_VALUE_INTEGER
+        elif isinstance(value, str):
+            return SmartCrate.Fields.RULE_VALUE_TEXT
+        else:
+            raise TypeError(f"Bad type: {type(value)} (value: {value})")
 
     def __str__(self):
         lines: list[str] = []
@@ -86,11 +113,11 @@ class SmartCrate(CrateBase):
                     if f == CrateBase.Fields.RULE_FIELD:
                         if not isinstance(v, int):
                             raise DataTypeError(v, int, f)
-                        p_val += f" ({self._get_rule_field_name(v)})"
+                        p_val += f" ({self._get_rule_field_from_val(v).lower()})"
                     elif f == CrateBase.Fields.RULE_COMPARISON:
                         if not isinstance(v, str):
                             raise DataTypeError(v, str, f)
-                        p_val += f" ({self._get_rule_comparison(v)})"
+                        p_val += f" ({self._get_rule_comparison_from_val(v)})"
                     field_lines.append(f"[ {f} ({f_name}): {p_val} ]")
                 print_val = ", ".join(field_lines)
             else:
@@ -124,12 +151,7 @@ class SmartCrate(CrateBase):
             )
 
         def set_value(self, value: str | int):  # pyright: ignore[reportIncompatibleMethodOverride]
-            if isinstance(value, int):
-                field = SmartCrate.Fields.RULE_VALUE_INTEGER
-            elif isinstance(value, str):
-                field = SmartCrate.Fields.RULE_VALUE_TEXT
-            else:
-                raise TypeError(f"Bad type: {type(value)} (value: {value})")
+            field = SmartCrate._get_rule_value_type(value)  # pylint: disable=protected-access
             super().set_value(field, value)
 
         def set_field(self, value: "SmartCrate.RuleField"):
@@ -138,14 +160,48 @@ class SmartCrate(CrateBase):
         def set_comparison(self, value: "SmartCrate.RuleComparison"):
             super().set_value(SmartCrate.Fields.RULE_COMPARISON, value.value)
 
-    def modify_rules(self, func: Callable[[Rule], Rule]):
-        for i, (field, value) in enumerate(self.data):
-            if field == CrateBase.Fields.SMARTCRATE_RULE:
-                if not isinstance(value, list):
-                    raise DataTypeError(value, list, field)
-                rule = SmartCrate.Rule(value)
-                new_rule = func(rule)
-                self.data[i] = (field, new_rule.to_struct())
+    def set_rule(self, field: "SmartCrate.RuleField", comparison: "SmartCrate.RuleComparison", value: str | int):
+        rule_field_id = field.value
+        rule_exists: bool = False
+        new_data: SmartCrate.Struct = []
+        for f, v in self.data:  # pylint: disable=access-member-before-definition
+            if f == CrateBase.Fields.SMARTCRATE_RULE:
+                if not isinstance(v, list):
+                    raise DataTypeError(v, list, f)
+                rule = SmartCrate.Rule(v)
+                if rule.field == rule_field_id:
+                    rule.set_value(value)
+                    rule.set_comparison(comparison)
+                    rule_exists = True
+                v = rule.to_struct()
+            new_data.append((f, v))
+
+        if not rule_exists:
+            new_rule = SmartCrate.Rule(
+                [
+                    (SmartCrate.Fields.RULE_COMPARISON.value, comparison.value),
+                    (SmartCrate.Fields.RULE_FIELD.value, rule_field_id),
+                    (SmartCrate._get_rule_value_type(value).value, value),
+                ]
+            )
+            new_data.append((CrateBase.Fields.SMARTCRATE_RULE.value, new_rule.to_struct()))
+
+        self.data = new_data  # pylint: disable=attribute-defined-outside-init
+        self._dump()
+
+    def delete_rule(self, field: "SmartCrate.RuleField"):
+        rule_field_id = field.value
+        new_data: SmartCrate.Struct = []
+        for f, v in self.data:  # pylint: disable=access-member-before-definition
+            if f == CrateBase.Fields.SMARTCRATE_RULE:
+                if not isinstance(v, list):
+                    raise DataTypeError(v, list, f)
+                rule = SmartCrate.Rule(v)
+                if rule.field == rule_field_id:
+                    continue
+            new_data.append((f, v))
+
+        self.data = new_data  # pylint: disable=attribute-defined-outside-init
         self._dump()
 
 
@@ -160,7 +216,7 @@ def main():
     parser.add_argument(
         "--set_rules",
         nargs=argparse.REMAINDER,
-        help="Set rules for all crates using key-value pairs like --grouping NEW --title NEW_TITLE",
+        help="Set rules for all crates using key-value pairs like --grouping str_contains NEW --title str_does_not_contain NEW_TITLE\nCan also do --key DELETE",
     )
     args = parser.parse_args()
 
@@ -180,22 +236,20 @@ def main():
 
     set_rules = parse_cli_keys_and_values(args.set_rules) if args.set_rules else {}
 
-    def set_rule(rule: SmartCrate.Rule):
-        for key, value in set_rules.items():
-            key = key.upper()
-            try:
-                rule_field_id = SmartCrate.RuleField[key].value
-            except KeyError as exc:
-                raise KeyError(f"Unknown RuleField: {key} (must be one of {[rf.name for rf in SmartCrate.RuleField]})") from exc
-            if rule.field == rule_field_id:
-                rule.set_value(value)
-        return rule
-
     for p in paths:
         crate = SmartCrate(p)
 
         if args.set_rules:
-            crate.modify_rules(set_rule)
+            for key, value in set_rules.items():
+                field = SmartCrate._get_rule_field_from_key(key)  # pylint: disable=protected-access
+                if str(value[0]).upper() == "DELETE":
+                    crate.delete_rule(field)
+                else:
+                    assert len(value) == 2, "must specify 2 values: a comparison and a value"
+                    comparison = SmartCrate._get_rule_comparison_from_key(  # pylint: disable=protected-access
+                        str(value[0])
+                    )
+                    crate.set_rule(field, comparison, value[1])
             crate.save()
             continue
 

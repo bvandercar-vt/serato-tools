@@ -1,11 +1,9 @@
 # pylint: disable=protected-access
 import unittest
 import os
-import io
-
-from contextlib import redirect_stdout
 
 from src.serato_tools.crate import Crate
+from test.utils.utils import get_print_val
 
 
 class TestCase(unittest.TestCase):
@@ -36,13 +34,6 @@ class TestCase(unittest.TestCase):
 
         self.maxDiff = None
 
-        def get_print_val():
-            captured_output = io.StringIO()
-            with redirect_stdout(captured_output):
-                crate.print()
-            output = captured_output.getvalue()
-            return output
-
         self.assertEqual(crate.raw_data, file_data, "raw_data read")
 
         expected = """vrsn (Version): '1.0/Serato ScratchLive Crate'
@@ -59,11 +50,11 @@ otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Tripp St. - Enlig
 otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Slaycub - Visceral Planet.mp3 ]
 otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Zeds Dead - In The Beginning.mp3 ]
 """
-        self.assertEqual(get_print_val(), expected, "parse")
+        self.assertEqual(get_print_val(crate.print), expected, "parse")
 
         crate.add_track("C:\\Users\\bvand\\Music\\DJ Tracks\\Soulacybin - Zeu.mp3")
         expected += "otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Soulacybin - Zeu.mp3 ]\n"
-        self.assertEqual(get_print_val(), expected, "track added")
+        self.assertEqual(get_print_val(crate.print), expected, "track added")
 
         for t in [
             "C:\\Users\\bvand\\Music\\DJ Tracks\\Soulacybin - Zeu.mp3",
@@ -73,8 +64,8 @@ otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Zeds Dead - In Th
             "/Users/bvand/Music/DJ Tracks/Soulacybin - Zeu.mp3",
         ]:
             crate.add_track(t)
-            self.assertEqual(get_print_val(), expected, "duplicate track not added")
+            self.assertEqual(get_print_val(crate.print), expected, "duplicate track not added")
 
         crate.add_track("C:/Users/bvand/Music/DJ Tracks/Thundercat - Them Changes.mp3")
         expected += "otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Thundercat - Them Changes.mp3 ]\n"
-        self.assertEqual(get_print_val(), expected, "track added")
+        self.assertEqual(get_print_val(crate.print), expected, "track added")
