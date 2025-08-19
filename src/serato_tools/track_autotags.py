@@ -22,9 +22,9 @@ class TrackAutotags(SeratoTag):
         self.raw_data: bytes | None = None
         super().__init__(file_or_data)
 
-        self.bpm: float | None
-        self.autogain: float | None
-        self.gaindb: float | None
+        self.bpm: float | None = None
+        self.autogain: float | None = None
+        self.gaindb: float | None = None
 
         if self.raw_data is not None:
             self.bpm, self.autogain, self.gaindb = self._parse(self.raw_data)

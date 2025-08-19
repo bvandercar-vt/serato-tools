@@ -124,7 +124,7 @@ class SmartCrate(CrateBase):
                 ),
             )
 
-        def set_value(self, value: str | int):  # pyright: ignore[reportRedeclaration]
+        def set_value(self, value: str | int):  # pyright: ignore[reportIncompatibleMethodOverride]
             if isinstance(value, int):
                 field = SmartCrate.Fields.RULE_VALUE_INTEGER
             elif isinstance(value, str):

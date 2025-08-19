@@ -15,6 +15,7 @@ class SeratoTrack:
 
     def __init__(self, file: FileArg):
         self.tagfile: SeratoTrack.Tagfile
+
         if isinstance(file, str):
             try:
                 if file.lower().endswith(".mp3"):
@@ -128,7 +129,8 @@ class SeratoTag(SeratoTrack):
     def save(self):
         if not self.tagfile:
             raise Exception("no tagfile, no saving")
-        if self.raw_data is None:
+        if (self._get_geob() != None) and (self.raw_data is None):
             raise ValueError("no data to save")
-        self._tag_geob()
+        if self.raw_data:
+            self._tag_geob()
         self.tagfile.save()
