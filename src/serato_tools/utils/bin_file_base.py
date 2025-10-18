@@ -64,7 +64,8 @@ class SeratoBinFile:
     type Value = BasicValue | Struct
     type ValueOrNone = Value | None
 
-    type EntryFull = tuple[ParsedField, str, BasicValue | list[EntryFull]]
+    type Entry = tuple[ParsedField, str, "SeratoBinFile.EntryValue"]
+    type EntryValue = BasicValue | list[Entry]
 
     DEFAULT_DATA: Struct
 
@@ -85,16 +86,19 @@ class SeratoBinFile:
             self._dump()
 
     def __str__(self) -> str:
+        return self._stringify_entries(self.to_entries())
+
+    def _stringify_entries(self, entries: Iterable[Entry], indent: int = 0) -> str:
         lines: list[str] = []
-        for field, fieldname, value in self.to_entries():
+        indent_str = "    " * indent
+
+        for field, fieldname, value in entries:
             if isinstance(value, list):
-                lines.append(f"{field} ({fieldname})")
-                for f, f_name, v in value:
-                    if isinstance(v, list):
-                        raise DeeplyNestedStructError
-                    lines.append(f"    {f} ({f_name}): {str(v)}")
+                lines.append(f"{indent_str}{field} ({fieldname})")
+                lines.append(self._stringify_entries(value, indent + 1))
             else:
-                lines.append(f"{field} ({fieldname}): {str(value)}")
+                lines.append(f"{indent_str}{field} ({fieldname}): {str(value)}")
+
         return "\n".join(lines)
 
     def print(self):
@@ -313,7 +317,7 @@ class SeratoBinFile:
         for field in uniq_field_names:
             SeratoBinFile._check_valid_field(field)
 
-    def to_entries(self, track_matcher: Optional[str] = None) -> Generator[EntryFull, None, None]:
+    def to_entries(self, track_matcher: Optional[str] = None) -> Generator[Entry, None, None]:
         for field, value in self.data:
             if isinstance(value, list):
                 if track_matcher and field == SeratoBinFile.Fields.TRACK:
@@ -325,7 +329,7 @@ class SeratoBinFile:
                     if not bool(re.search(track_matcher, track.path, re.IGNORECASE)):
                         continue
                 try:
-                    new_struct: list[SeratoBinFile.EntryFull] = []
+                    new_struct: list[SeratoBinFile.Entry] = []
                     for f, v in value:
                         if isinstance(v, list):
                             raise DeeplyNestedStructError

@@ -7,7 +7,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import SERATO_DIR, DeeplyNestedStructError
+from serato_tools.utils import SERATO_DIR
 
 
 class Crate(CrateBase):
@@ -28,21 +28,6 @@ class Crate(CrateBase):
         (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "comment"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
         (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "added"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
     ]
-
-    def __str__(self) -> str:
-        lines: list[str] = []
-        for field, fieldname, value in self.to_entries():
-            if isinstance(value, list):
-                field_lines = []
-                for f, f_name, v in value:
-                    if isinstance(v, list):
-                        raise DeeplyNestedStructError
-                    field_lines.append(f"[ {f} ({f_name}): {v} ]")
-                print_val = ", ".join(field_lines)
-            else:
-                print_val = str(value)
-            lines.append(f"{field} ({fieldname}): {print_val}")
-        return "\n".join(lines)
 
 
 def main():

@@ -2,7 +2,7 @@
 # This is from this repo: https://github.com/sharst/seratopy
 import os
 import sys
-from typing import Optional
+from typing import Optional, Iterable
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -17,6 +17,27 @@ class CrateBase(SeratoBinFile):
 
     def __init__(self, file: str):
         super().__init__(file=file, track_path_key=CrateBase.Fields.TRACK_PATH)
+
+    def _stringify_value(self, entry: SeratoBinFile.Entry, indent: int = 0) -> str:
+        field, fieldname, value = entry  # pylint: disable=unused-variable
+        if isinstance(value, list):
+            return self._stringify_entries(value, indent)
+        return str(value)
+
+    def _stringify_entries(self, entries: Iterable[SeratoBinFile.Entry], indent: int = 0) -> str:
+        lines: list[str] = []
+
+        for field, fieldname, value in entries:
+            if isinstance(value, list):
+                field_lines = [
+                    f"[ {entry[0]} ({entry[1]}): {self._stringify_value(entry, indent + 1)} ]" for entry in value
+                ]
+                print_val = ", ".join(field_lines)
+            else:
+                print_val = str(value)
+            lines.append(f"{field} ({fieldname}): {print_val}")
+
+        return "\n".join(lines)
 
     def save(self, file: Optional[str] = None):
         if file is None:

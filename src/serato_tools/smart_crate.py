@@ -7,13 +7,7 @@ if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from serato_tools.utils.crate_base import CrateBase
-from serato_tools.utils import (
-    get_enum_key_from_value,
-    parse_cli_keys_and_values,
-    SERATO_DIR,
-    DataTypeError,
-    DeeplyNestedStructError,
-)
+from serato_tools.utils import get_enum_key_from_value, parse_cli_keys_and_values, SERATO_DIR, DataTypeError
 
 
 class SmartCrate(CrateBase):
@@ -101,30 +95,22 @@ class SmartCrate(CrateBase):
         else:
             raise TypeError(f"Bad type: {type(value)} (value: {value})")
 
-    def __str__(self) -> str:
-        lines: list[str] = []
-        for field, fieldname, value in self.to_entries():
-            if isinstance(value, list):
-                field_lines = []
-                for f, f_name, v in value:
-                    if isinstance(v, list):
-                        raise DeeplyNestedStructError
-                    p_val = str(v)
-                    if f == CrateBase.Fields.RULE_FIELD:
-                        if not isinstance(v, int):
-                            raise DataTypeError(v, int, f)
-                        p_val += f" ({self._get_rule_field_from_val(v).lower()})"
-                    elif f == CrateBase.Fields.RULE_COMPARISON:
-                        if not isinstance(v, str):
-                            raise DataTypeError(v, str, f)
-                        p_val += f" ({self._get_rule_comparison_from_val(v)})"
-                    field_lines.append(f"[ {f} ({f_name}): {p_val} ]")
-                print_val = ", ".join(field_lines)
-            else:
-                print_val = str(value)
-            lines.append(f"{field} ({fieldname}): {print_val}")
+    def _stringify_value(self, entry: CrateBase.Entry, indent: int = 0) -> str:
+        field, fieldname, value = entry  # pylint: disable=unused-variable
+        if isinstance(value, list):
+            return self._stringify_entries(value, indent)
 
-        return "\n".join(lines)
+        ret_val = str(value)
+        if field == CrateBase.Fields.RULE_FIELD:
+            if not isinstance(value, int):
+                raise DataTypeError(value, int, field)
+            ret_val += f" ({self._get_rule_field_from_val(value).lower()})"
+        elif field == CrateBase.Fields.RULE_COMPARISON:
+            if not isinstance(value, str):
+                raise DataTypeError(value, str, field)
+            ret_val += f" ({self._get_rule_comparison_from_val(value)})"
+
+        return ret_val
 
     class Rule(CrateBase.StructCls):
         def __init__(self, data: "CrateBase.Struct"):
