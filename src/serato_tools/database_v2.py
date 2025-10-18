@@ -63,7 +63,7 @@ class DatabaseV2(SeratoBinFile):
             return maybe_new_value
 
         def modify_track(track: DatabaseV2.Track) -> DatabaseV2.Track:
-            for f, v in track.to_struct():
+            for f, v in track.to_entries():
                 maybe_new_value = _maybe_perform_rule(f, v, track.path)
                 if maybe_new_value is not None:
                     track.set_value(f, maybe_new_value)

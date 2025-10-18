@@ -18,19 +18,19 @@ class CrateBase(SeratoBinFile):
     def __init__(self, file: str):
         super().__init__(file=file, track_path_key=CrateBase.Fields.TRACK_PATH)
 
-    def _stringify_value(self, entry: SeratoBinFile.Entry, indent: int = 0) -> str:
+    def _stringify_entry(self, entry: SeratoBinFile.EntryFull, indent: int = 0) -> str:
         field, fieldname, value = entry  # pylint: disable=unused-variable
         if isinstance(value, list):
             return self._stringify_entries(value, indent)
         return str(value)
 
-    def _stringify_entries(self, entries: Iterable[SeratoBinFile.Entry], indent: int = 0) -> str:
+    def _stringify_entries(self, entries: Iterable[SeratoBinFile.EntryFull], indent: int = 0) -> str:
         lines: list[str] = []
 
         for field, fieldname, value in entries:
             if isinstance(value, list):
                 field_lines = [
-                    f"[ {entry[0]} ({entry[1]}): {self._stringify_value(entry, indent + 1)} ]" for entry in value
+                    f"[ {entry[0]} ({entry[1]}): {self._stringify_entry(entry, indent + 1)} ]" for entry in value
                 ]
                 print_val = ", ".join(field_lines)
             else:
@@ -56,7 +56,7 @@ class CrateBase(SeratoBinFile):
         if filepath in self.get_track_paths():
             return
 
-        self.data.append((CrateBase.Fields.TRACK, [(CrateBase.Fields.TRACK_PATH, filepath)]))
+        self.entries.append((CrateBase.Fields.TRACK, [(CrateBase.Fields.TRACK_PATH, filepath)]))
 
     def add_tracks_from_dir(self, dir: str, replace: bool = False):
         dir_tracks = [self.format_filepath(os.path.join(dir, t)) for t in os.listdir(dir)]

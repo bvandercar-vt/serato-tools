@@ -54,6 +54,6 @@ class DataTypeError(Exception):
         )
 
 
-class DeeplyNestedStructError(Exception):
+class DeeplyNestedListError(Exception):
     def __init__(self):
         super().__init__("unexpected type, deeply nested list. if this occurs, need to implement code for it.")

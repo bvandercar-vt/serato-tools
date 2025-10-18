@@ -56,10 +56,10 @@ class TestCase(unittest.TestCase):
             expected = f.read()
             self.assertEqual(db.__str__(), expected, "parse")
 
-        original_data = db.data
+        original_entries = db.entries
         original_raw_data = db.raw_data
         db.modify([])
-        self.assertEqual(db.data, original_data, "was not modified")
+        self.assertEqual(db.entries, original_entries, "was not modified")
         self.assertEqual(db.raw_data, original_raw_data, "was not modified")
         self.assertEqual(db.__str__(), expected, "was not modified")
 

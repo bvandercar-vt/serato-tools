@@ -3,10 +3,10 @@ import io
 import re
 import struct
 import base64
-from typing import Iterable, TypedDict, Generator, Optional, cast, Callable
+from typing import Iterable, TypedDict, Generator, Optional, cast, Callable, Pattern
 from enum import StrEnum
 
-from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError, DeeplyNestedStructError
+from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError, DeeplyNestedListError
 
 
 class SeratoBinFile:
@@ -60,15 +60,18 @@ class SeratoBinFile:
 
     type ParsedField = Fields | str
     type BasicValue = str | bytes | int | bool
-    type FieldAndValue = tuple[ParsedField, "SeratoBinFile.Value"]
-    type Struct = list[FieldAndValue]
-    type Value = BasicValue | Struct
+
+    type Entry = tuple[ParsedField, "SeratoBinFile.Value"]
+    type EntryList = list[Entry]
+    type Value = BasicValue | EntryList
+
+    type EntryFull = tuple[ParsedField, str, "SeratoBinFile.EntryFullValue"]
+    type EntryFullList = list[EntryFull]
+    type EntryFullValue = BasicValue | EntryFullList
+
     type ValueOrNone = Value | None
 
-    type Entry = tuple[ParsedField, str, "SeratoBinFile.EntryValue"]
-    type EntryValue = BasicValue | list[Entry]
-
-    DEFAULT_DATA: Struct
+    DEFAULT_ENTRIES: EntryList
 
     def __init__(self, file: str, track_path_key: "SeratoBinFile.Fields"):
         self.filepath = os.path.abspath(file)
@@ -76,20 +79,20 @@ class SeratoBinFile:
         self.TRACK_PATH_KEY = track_path_key
 
         self.raw_data: bytes
-        self.data: SeratoBinFile.Struct
+        self.entries: SeratoBinFile.EntryList
         if os.path.exists(file):
             with open(file, "rb") as f:
                 self.raw_data = f.read()
-                self.data = list(SeratoBinFile._parse_item(self.raw_data))
+                self.entries = list(SeratoBinFile._parse_item(self.raw_data))
         else:
             logger.warning(f"File does not exist: {file}. Using default data to create an empty item.")
-            self.data = self.DEFAULT_DATA
+            self.entries = self.DEFAULT_ENTRIES
             self._dump()
 
     def __str__(self) -> str:
-        return self._stringify_entries(self.to_entries())
+        return self._stringify_entries(self.get_entries())
 
-    def _stringify_entries(self, entries: Iterable[Entry], indent: int = 0) -> str:
+    def _stringify_entries(self, entries: Iterable[EntryFull], indent: int = 0) -> str:
         lines: list[str] = []
         indent_str = "    " * indent
 
@@ -109,10 +112,10 @@ class SeratoBinFile:
         value: str | int | bool | list["SeratoBinFile.EntryJson"]
 
     def to_json_object(self) -> list[EntryJson]:
-        def entries_to_json(entries: Iterable[SeratoBinFile.Entry]) -> list[SeratoBinFile.EntryJson]:
+        def entries_to_json(entries: SeratoBinFile.EntryList) -> list[SeratoBinFile.EntryJson]:
             result = []
 
-            for field, fieldname, value in entries:
+            for field, value in entries:
                 if isinstance(value, list):
                     value = entries_to_json(value)
                 elif isinstance(value, (bytes, bytearray, memoryview)):
@@ -120,7 +123,7 @@ class SeratoBinFile:
 
                 entry_obj: SeratoBinFile.EntryJson = {
                     "field": field,
-                    "fieldname": fieldname,
+                    "fieldname": SeratoBinFile.get_field_name(field),
                     "value": value,
                     "type": type(value).__name__,
                 }
@@ -129,28 +132,26 @@ class SeratoBinFile:
 
             return result
 
-        return entries_to_json(self.to_entries())
+        return entries_to_json(self.entries)
 
     def write_json(self, filepath: str) -> None:
         import json
 
-        json_data = self.to_json_object()
-
-        def write_json_array(f, data: list[SeratoBinFile.EntryJson], indent: int = 0) -> None:
+        def write_json_array(f, json_entries: list[SeratoBinFile.EntryJson], indent: int = 0) -> None:
             indent_str = "  " * indent
             f.write("[\n")
 
-            for i, item in enumerate(data):
-                if isinstance(item["value"], list):
+            for i, entry in enumerate(json_entries):
+                if isinstance(entry["value"], list):
                     f.write(
-                        f'{indent_str}  {{"field": "{item["field"]}", "fieldname": "{item["fieldname"]}", "type": "{item["type"]}", "value": '
+                        f'{indent_str}  {{"field": "{entry["field"]}", "fieldname": "{entry["fieldname"]}", "type": "{entry["type"]}", "value": '
                     )
-                    write_json_array(f, item["value"], indent + 1)
+                    write_json_array(f, entry["value"], indent + 1)
                     f.write("}")
                 else:
-                    f.write(f"{indent_str}  {json.dumps(item, ensure_ascii=False)}")
+                    f.write(f"{indent_str}  {json.dumps(entry, ensure_ascii=False)}")
 
-                if i < len(data) - 1:
+                if i < len(json_entries) - 1:
                     f.write(",\n")
                 else:
                     f.write("\n")
@@ -158,7 +159,7 @@ class SeratoBinFile:
             f.write(f"{indent_str}]")
 
         with open(filepath, "w", encoding="utf-8") as f:
-            write_json_array(f, json_data, indent=0)
+            write_json_array(f, self.to_json_object(), indent=0)
 
     def print(self):
         print(self)
@@ -166,18 +167,18 @@ class SeratoBinFile:
     def __repr__(self) -> str:
         return str(self.raw_data)
 
-    class StructCls:
-        def __init__(self, data: "SeratoBinFile.Struct"):
+    class EntryListCls:
+        def __init__(self, entries: "SeratoBinFile.EntryList"):
             self.fields: list[str] = []
 
-            for field, value in data:
+            for field, value in entries:
                 if isinstance(value, list):
-                    raise DeeplyNestedStructError
+                    raise DeeplyNestedListError
                 setattr(self, field, value)
                 self.fields.append(field)
 
         def __repr__(self) -> str:
-            return str(self.to_struct())
+            return str(self.to_entries())
 
         def get_value(self, field: str) -> "SeratoBinFile.Value":
             return getattr(self, field)
@@ -187,12 +188,12 @@ class SeratoBinFile:
                 self.fields.append(field)
             setattr(self, field, value)
 
-        def to_struct(self) -> "SeratoBinFile.Struct":
+        def to_entries(self) -> "SeratoBinFile.EntryList":
             return [(f, self.get_value(f)) for f in self.fields]
 
-    class Track(StructCls):
-        def __init__(self, data: "SeratoBinFile.Struct", track_path_key: str):
-            super().__init__(data)
+    class Track(EntryListCls):
+        def __init__(self, entries: "SeratoBinFile.EntryList", track_path_key: str):
+            super().__init__(entries)
 
             self.track_path_key = track_path_key
             track_path = self.get_value(track_path_key)
@@ -204,8 +205,8 @@ class SeratoBinFile:
             self.set_value(self.track_path_key, path)
             self.path = path
 
-    def _get_track(self, data: "SeratoBinFile.Struct"):
-        return SeratoBinFile.Track(data, track_path_key=self.TRACK_PATH_KEY)
+    def _get_track(self, entries: "SeratoBinFile.EntryList"):
+        return SeratoBinFile.Track(entries, track_path_key=self.TRACK_PATH_KEY)
 
     @staticmethod
     def _get_type(field: str) -> str:
@@ -213,7 +214,7 @@ class SeratoBinFile:
         return "t" if field == SeratoBinFile.Fields.VERSION else field[0]
 
     @staticmethod
-    def _parse_item(item_data: bytes) -> Generator["SeratoBinFile.FieldAndValue", None, None]:
+    def _parse_item(item_data: bytes) -> Generator["SeratoBinFile.Entry", None, None]:
         fp = io.BytesIO(item_data)
         for header in iter(lambda: fp.read(8), b""):
             assert len(header) == 8
@@ -244,16 +245,17 @@ class SeratoBinFile:
             yield field, value
 
     @staticmethod
-    def _dump_item(field: str, value: Value) -> bytes:
+    def _dump_item(entry: Entry) -> bytes:
+        field, value = entry
         field_bytes = field.encode("ascii")
         assert len(field_bytes) == 4
 
         type_id: str = SeratoBinFile._get_type(field)
 
-        if type_id in ("o", "r"):  #  struct
+        if type_id in ("o", "r"):  #  struct (list)
             if not isinstance(value, list):
                 raise DataTypeError(value, list, field)
-            data = SeratoBinFile._dump_struct(value)
+            data = SeratoBinFile._dump_entries(value)
         elif type_id in ("p", "t"):  # text
             if not isinstance(value, str):
                 raise DataTypeError(value, str, field)
@@ -278,15 +280,15 @@ class SeratoBinFile:
         return header + data
 
     @staticmethod
-    def _dump_struct(item: Struct):
-        return b"".join(SeratoBinFile._dump_item(field, value) for field, value in item)
+    def _dump_entries(entries: EntryList):
+        return b"".join(SeratoBinFile._dump_item(entry) for entry in entries)
 
     def _dump(self):
-        self.raw_data = SeratoBinFile._dump_struct(self.data)
+        self.raw_data = SeratoBinFile._dump_entries(self.entries)
 
     def get_track_paths(self) -> list[str]:
         track_paths: list[str] = []
-        for field, value in self.data:
+        for field, value in self.entries:
             if field == SeratoBinFile.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
@@ -295,26 +297,26 @@ class SeratoBinFile:
         return track_paths
 
     def modify_tracks(self, func: Callable[[Track], Track]):
-        for i, (field, value) in enumerate(self.data):
+        for i, (field, value) in enumerate(self.entries):
             if field == SeratoBinFile.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
                 track = self._get_track(value)
                 new_track = func(track)
-                self.data[i] = (field, new_track.to_struct())
+                self.entries[i] = (field, new_track.to_entries())
         self._dump()
 
     def filter_tracks(self, func: Callable[[Track], bool]):
-        new_data: "SeratoBinFile.Struct" = []
-        for field, value in self.data:
+        new_entries: "SeratoBinFile.EntryList" = []
+        for field, value in self.entries:
             if field == SeratoBinFile.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
                 track = self._get_track(value)
                 if not func(track):
                     continue
-            new_data.append((field, value))
-        self.data = new_data
+            new_entries.append((field, value))
+        self.entries = new_entries
         self._dump()
 
     def remove_track(self, filepath: str):
@@ -376,26 +378,34 @@ class SeratoBinFile:
         for field in uniq_field_names:
             SeratoBinFile._check_valid_field(field)
 
-    def to_entries(self, track_matcher: Optional[str] = None) -> Generator[Entry, None, None]:
-        for field, value in self.data:
+    def get_entries(self) -> Generator[EntryFull, None, None]:
+        """Get entry fieldnames."""
+        yield from self.__get_entries_internal(track_matcher=None)
+
+    def get_entries_filtered(self, track_matcher: str | Pattern[str]) -> Generator[EntryFull, None, None]:
+        """Get entry fieldnames with track matching filter."""
+        yield from self.__get_entries_internal(track_matcher=track_matcher)
+
+    def __get_entries_internal(self, track_matcher: Optional[str | Pattern[str]]) -> Generator[EntryFull, None, None]:
+        """Internal implementation for getting entry fieldnames."""
+        for field, value in self.entries:
             if isinstance(value, list):
                 if track_matcher and field == SeratoBinFile.Fields.TRACK:
                     if not isinstance(value, list):
                         raise DataTypeError(value, list, field)
-                    track = self.__class__.Track(  # pyright: ignore[reportCallIssue] # pylint: disable=no-value-for-parameter
-                        value
-                    )
+                    track = self.__class__.Track(value, track_path_key=self.TRACK_PATH_KEY)
                     if not bool(re.search(track_matcher, track.path, re.IGNORECASE)):
                         continue
+
                 try:
-                    new_struct: list[SeratoBinFile.Entry] = []
+                    new_entries: list[SeratoBinFile.EntryFull] = []
                     for f, v in value:
                         if isinstance(v, list):
-                            raise DeeplyNestedStructError
-                        new_struct.append((f, SeratoBinFile.get_field_name(f), v))
+                            raise DeeplyNestedListError
+                        new_entries.append((f, SeratoBinFile.get_field_name(f), v))
                 except:
                     logger.error(f"error on field: {field} value: {value}")
                     raise
-                value = new_struct
+                value = new_entries
 
             yield field, SeratoBinFile.get_field_name(field), value

@@ -95,7 +95,7 @@ class SmartCrate(CrateBase):
         else:
             raise TypeError(f"Bad type: {type(value)} (value: {value})")
 
-    def _stringify_value(self, entry: CrateBase.Entry, indent: int = 0) -> str:
+    def _stringify_entry(self, entry: CrateBase.EntryFull, indent: int = 0) -> str:
         field, fieldname, value = entry  # pylint: disable=unused-variable
         if isinstance(value, list):
             return self._stringify_entries(value, indent)
@@ -112,9 +112,9 @@ class SmartCrate(CrateBase):
 
         return ret_val
 
-    class Rule(CrateBase.StructCls):
-        def __init__(self, data: "CrateBase.Struct"):
-            super().__init__(data)
+    class Rule(CrateBase.EntryListCls):
+        def __init__(self, entries: "CrateBase.EntryList"):
+            super().__init__(entries)
 
             # TODO: check and ensure types
 
@@ -149,8 +149,8 @@ class SmartCrate(CrateBase):
     def set_rule(self, field: "SmartCrate.RuleField", comparison: "SmartCrate.RuleComparison", value: str | int):
         rule_field_id = field.value
         rule_exists: bool = False
-        new_data: SmartCrate.Struct = []
-        for f, v in self.data:  # pylint: disable=access-member-before-definition
+        new_entries: SmartCrate.EntryList = []
+        for f, v in self.entries:  # pylint: disable=access-member-before-definition
             if f == CrateBase.Fields.SMARTCRATE_RULE:
                 if not isinstance(v, list):
                     raise DataTypeError(v, list, f)
@@ -159,8 +159,8 @@ class SmartCrate(CrateBase):
                     rule.set_value(value)
                     rule.set_comparison(comparison)
                     rule_exists = True
-                v = rule.to_struct()
-            new_data.append((f, v))
+                v = rule.to_entries()
+            new_entries.append((f, v))
 
         if not rule_exists:
             new_rule = SmartCrate.Rule(
@@ -170,24 +170,24 @@ class SmartCrate(CrateBase):
                     (SmartCrate._get_rule_value_type(value).value, value),
                 ]
             )
-            new_data.append((CrateBase.Fields.SMARTCRATE_RULE.value, new_rule.to_struct()))
+            new_entries.append((CrateBase.Fields.SMARTCRATE_RULE.value, new_rule.to_entries()))
 
-        self.data = new_data  # pylint: disable=attribute-defined-outside-init
+        self.entries = new_entries  # pylint: disable=attribute-defined-outside-init
         self._dump()
 
     def delete_rule(self, field: "SmartCrate.RuleField"):
         rule_field_id = field.value
-        new_data: SmartCrate.Struct = []
-        for f, v in self.data:  # pylint: disable=access-member-before-definition
+        new_entries: SmartCrate.EntryList = []
+        for f, v in self.entries:  # pylint: disable=access-member-before-definition
             if f == CrateBase.Fields.SMARTCRATE_RULE:
                 if not isinstance(v, list):
                     raise DataTypeError(v, list, f)
                 rule = SmartCrate.Rule(v)
                 if rule.field == rule_field_id:
                     continue
-            new_data.append((f, v))
+            new_entries.append((f, v))
 
-        self.data = new_data  # pylint: disable=attribute-defined-outside-init
+        self.entries = new_entries  # pylint: disable=attribute-defined-outside-init
         self._dump()
 
 
