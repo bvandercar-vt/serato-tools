@@ -5,16 +5,16 @@ import os
 from src.serato_tools.smart_crate import SmartCrate
 
 
-with open("test/data/crate.txt", "r", encoding="utf-8") as f:
+with open("test/data/smart_crate.txt", "r", encoding="utf-8") as f:
     expected = f.read()
 
 
 class TestCase(unittest.TestCase):
-    def check_lines(self, given: str, expected: str):
+    def check_lines(self, given: str, exp: str):
         given = "\n".join([l.strip() for l in given.splitlines()])
-        expected = "\n".join([l.strip() for l in expected.splitlines()])
+        exp = "\n".join([l.strip() for l in exp.splitlines()])
         self.maxDiff = None
-        self.assertMultiLineEqual(given, expected)
+        self.assertMultiLineEqual(given, exp)
 
     def test_parse(self):
         file = os.path.abspath("test/data/TestSmartCrate.scrate")

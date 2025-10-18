@@ -4,6 +4,9 @@ import os
 
 from src.serato_tools.crate import Crate
 
+with open("test/data/crate.txt", "r", encoding="utf-8") as f:
+    base_expected = f.read()
+
 
 class TestCase(unittest.TestCase):
     def test_format_filepath(self):
@@ -34,20 +37,8 @@ class TestCase(unittest.TestCase):
         self.maxDiff = None
 
         self.assertEqual(crate.raw_data, file_data, "raw_data read")
+        expected = base_expected
 
-        expected = """vrsn (Version): 1.0/Serato ScratchLive Crate
-osrt (Sorting): [ tvcn (Column Name): # ], [ brev (Reverse Order): False ]
-ovct (Column): [ tvcn (Column Name): song ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): artist ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): bpm ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): key ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): playCount ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): album ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): length ], [ tvcw (Column Width): 0 ]
-ovct (Column): [ tvcn (Column Name): comment ], [ tvcw (Column Width): 0 ]
-otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Tripp St. - Enlighten.mp3 ]
-otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Slaycub - Visceral Planet.mp3 ]
-otrk (Track): [ ptrk (Track Path): Users/bvand/Music/DJ Tracks/Zeds Dead - In The Beginning.mp3 ]"""
         self.assertEqual(crate.__str__(), expected, "parse")
 
         crate.add_track("C:\\Users\\bvand\\Music\\DJ Tracks\\Soulacybin - Zeu.mp3")
