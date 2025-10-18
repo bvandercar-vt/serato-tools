@@ -84,7 +84,7 @@ class SeratoBinFile:
             self.data = self.DEFAULT_DATA
             self._dump()
 
-    def __str__(self):
+    def __str__(self) -> str:
         lines: list[str] = []
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):
@@ -100,7 +100,7 @@ class SeratoBinFile:
     def print(self):
         print(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.raw_data)
 
     class StructCls:
@@ -113,7 +113,7 @@ class SeratoBinFile:
                 setattr(self, field, value)
                 self.fields.append(field)
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return str(self.to_struct())
 
         def get_value(self, field: str) -> "SeratoBinFile.Value":

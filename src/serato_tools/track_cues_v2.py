@@ -111,7 +111,7 @@ class TrackCuesV2(SeratoTag):
             for field, value in zip(self.FIELDS, args):
                 setattr(self, field, value)
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return "{name}({data})".format(
                 name=self.__class__.__name__,
                 data=", ".join("{}={!r}".format(name, getattr(self, name)) for name in self.FIELDS),

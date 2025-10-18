@@ -29,7 +29,7 @@ class Crate(CrateBase):
         (CrateBase.Fields.COLUMN, [(CrateBase.Fields.COLUMN_NAME, "added"), (CrateBase.Fields.COLUMN_WIDTH, "0")]),
     ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         lines: list[str] = []
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):

@@ -3,7 +3,6 @@ import unittest
 import os
 
 from src.serato_tools.database_v2 import DatabaseV2
-from test.utils.utils import get_print_val
 
 
 class TestCase(unittest.TestCase):
@@ -37,7 +36,7 @@ class TestCase(unittest.TestCase):
 
         with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
             expected = f.read()
-            self.assertEqual(get_print_val(db.print), expected, "parse")
+            self.assertEqual(db.__str__(), expected, "parse")
 
         db._dump()
         self.assertEqual(db.raw_data, file_data, "raw_data read")
@@ -54,14 +53,14 @@ class TestCase(unittest.TestCase):
 
         with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
             expected = f.read()
-            self.assertEqual(get_print_val(db.print), expected, "parse")
+            self.assertEqual(db.__str__(), expected, "parse")
 
         original_data = db.data
         original_raw_data = db.raw_data
         db.modify([])
         self.assertEqual(db.data, original_data, "was not modified")
         self.assertEqual(db.raw_data, original_raw_data, "was not modified")
-        self.assertEqual(get_print_val(db.print), expected, "was not modified")
+        self.assertEqual(db.__str__(), expected, "was not modified")
 
         new_time = int(1735748100)
         db.modify(
@@ -72,7 +71,7 @@ class TestCase(unittest.TestCase):
             ]
         )
         with open("test/data/database_v2_test_modified_output.txt", "r", encoding="utf-16") as f:
-            self.assertEqual(get_print_val(db.print), f.read(), "was modified correctly")
+            self.assertEqual(db.__str__(), f.read(), "was modified correctly")
         with open("test/data/database_v2_test_modified_output.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly")
 
@@ -89,7 +88,7 @@ class TestCase(unittest.TestCase):
             ]
         )
         with open("test/data/database_v2_test_modified_output_2.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(db.print), f.read(), "was modified correctly, given files")
+            self.assertEqual(db.__str__(), f.read(), "was modified correctly, given files")
         with open("test/data/database_v2_test_modified_output_2.bin", "rb") as f:
             self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")
 
@@ -98,9 +97,9 @@ class TestCase(unittest.TestCase):
         db = DatabaseV2(file)
 
         with open("test/data/database_v2_duplicates_output.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(db.print), f.read(), "original")
+            self.assertEqual(db.__str__(), f.read(), "original")
 
         db.remove_duplicates()
 
         with open("test/data/database_v2_duplicates_output_deduped.txt", "r", encoding="utf-8") as f:
-            self.assertEqual(get_print_val(db.print), f.read(), "deduped")
+            self.assertEqual(db.__str__(), f.read(), "deduped")

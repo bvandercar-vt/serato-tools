@@ -101,7 +101,7 @@ class SmartCrate(CrateBase):
         else:
             raise TypeError(f"Bad type: {type(value)} (value: {value})")
 
-    def __str__(self):
+    def __str__(self) -> str:
         lines: list[str] = []
         for field, fieldname, value in self.to_entries():
             if isinstance(value, list):

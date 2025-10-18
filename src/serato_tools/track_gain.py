@@ -17,7 +17,7 @@ class TrackGain(SeratoTrack):
         self.gain: float | None = self.tagfile.get(TrackGain.REPLAY_GAIN_GAIN_KEY, None)
         self.peak: float | None = self.tagfile.get(TrackGain.REPLAY_GAIN_PEAK_KEY, None)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"gain: {self.gain}\npeak: {self.peak}"
 
     def set_and_save(self, gain: Optional[float] = None, peak: Optional[float] = None):

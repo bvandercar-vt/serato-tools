@@ -101,7 +101,7 @@ class SeratoTag(SeratoTrack):
             super().__init__(file=file_or_data)
             self.raw_data = self._get_geob()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.raw_data)
 
     def _get_geob(self):  # pylint: disable=arguments-differ  # pyright: ignore[reportIncompatibleMethodOverride]

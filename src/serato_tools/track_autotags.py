@@ -29,7 +29,7 @@ class TrackAutotags(SeratoTag):
         if self.raw_data is not None:
             self.bpm, self.autogain, self.gaindb = self._parse(self.raw_data)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"bpm: {self.bpm}\nautogain: {self.autogain}\ngaindb: {self.gaindb}"
 
     def _parse(self, data: bytes):

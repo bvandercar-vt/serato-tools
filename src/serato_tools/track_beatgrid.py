@@ -42,7 +42,7 @@ class TrackBeatgrid(SeratoTag):
         if self.raw_data is not None:
             self.entries = list(self._parse(self.raw_data))
 
-    def __str__(self):
+    def __str__(self) -> str:
         nonterminal_markers, terminal_markers, footer = self._check_and_split()  # pylint: disable=unused-variable
         markers = nonterminal_markers + terminal_markers
         return f"Beatgrid with {len(markers)} markers"
