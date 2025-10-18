@@ -2,6 +2,7 @@ import os
 import io
 import re
 import struct
+import base64
 from typing import Iterable, TypedDict, Generator, Optional, cast, Callable
 from enum import StrEnum
 
@@ -100,6 +101,64 @@ class SeratoBinFile:
                 lines.append(f"{indent_str}{field} ({fieldname}): {str(value)}")
 
         return "\n".join(lines)
+
+    class EntryJson(TypedDict):
+        field: "SeratoBinFile.ParsedField"
+        fieldname: str
+        type: str
+        value: str | int | bool | list["SeratoBinFile.EntryJson"]
+
+    def to_json_object(self) -> list[EntryJson]:
+        def entries_to_json(entries: Iterable[SeratoBinFile.Entry]) -> list[SeratoBinFile.EntryJson]:
+            result = []
+
+            for field, fieldname, value in entries:
+                if isinstance(value, list):
+                    value = entries_to_json(value)
+                elif isinstance(value, (bytes, bytearray, memoryview)):
+                    value = base64.b64encode(value).decode("utf-8")  # need to make JSON compatible
+
+                entry_obj: SeratoBinFile.EntryJson = {
+                    "field": field,
+                    "fieldname": fieldname,
+                    "value": value,
+                    "type": type(value).__name__,
+                }
+
+                result.append(entry_obj)
+
+            return result
+
+        return entries_to_json(self.to_entries())
+
+    def write_json(self, filepath: str) -> None:
+        import json
+
+        json_data = self.to_json_object()
+
+        def write_json_array(f, data: list[SeratoBinFile.EntryJson], indent: int = 0) -> None:
+            indent_str = "  " * indent
+            f.write("[\n")
+
+            for i, item in enumerate(data):
+                if isinstance(item["value"], list):
+                    f.write(
+                        f'{indent_str}  {{"field": "{item["field"]}", "fieldname": "{item["fieldname"]}", "type": "{item["type"]}", "value": '
+                    )
+                    write_json_array(f, item["value"], indent + 1)
+                    f.write("}")
+                else:
+                    f.write(f"{indent_str}  {json.dumps(item, ensure_ascii=False)}")
+
+                if i < len(data) - 1:
+                    f.write(",\n")
+                else:
+                    f.write("\n")
+
+            f.write(f"{indent_str}]")
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            write_json_array(f, json_data, indent=0)
 
     def print(self):
         print(self)

@@ -1,6 +1,7 @@
 # pylint: disable=protected-access
 import unittest
 import os
+import json
 
 from src.serato_tools.database_v2 import DatabaseV2
 
@@ -103,3 +104,10 @@ class TestCase(unittest.TestCase):
 
         with open("test/data/database_v2_duplicates_output_deduped.txt", "r", encoding="utf-8") as f:
             self.assertEqual(db.__str__(), f.read(), "deduped")
+
+    def test_to_json_object(self):
+        file = os.path.abspath("test/data/database_v2_test.bin")
+        db = DatabaseV2(file)
+
+        with open("test/data/database_v2_json.json", "r", encoding="utf-8") as f:
+            self.assertEqual(db.to_json_object(), json.loads(f.read()))
