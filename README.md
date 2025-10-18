@@ -233,7 +233,7 @@ print(crate)
 crate.print()
 # OUTPUT:
 #
-# [   ('vrsn', '1.0/Serato ScratchLive Crate'),
+# [   ('vrsn', 1.0/Serato ScratchLive Crate),
 #     ('osrt', [('brev', b'\x00')]),
 #     ('ovct', [('tvcn', 'key'), ('tvcw', '0')]),
 #     ('ovct', [('tvcn', 'artist'), ('tvcw', '0')]),

@@ -334,7 +334,5 @@ class SeratoBinFile:
                     logger.error(f"error on field: {field} value: {value}")
                     raise
                 value = new_struct
-            else:
-                value = repr(value)
 
             yield field, SeratoBinFile.get_field_name(field), value

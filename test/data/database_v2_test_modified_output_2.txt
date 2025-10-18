@@ -1,4 +1,4 @@
-vrsn (Version): '2.0/Serato Scratch LIVE Database'
+vrsn (Version): 2.0/Serato Scratch LIVE Database
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Users/bvand/Music/DJ Tracks/Zeds Dead - In The Beginning.mp3

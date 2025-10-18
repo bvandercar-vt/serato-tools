@@ -1,4 +1,4 @@
-vrsn (Version): '2.0/Serato Scratch LIVE Database'
+vrsn (Version): 2.0/Serato Scratch LIVE Database
 otrk (Track)
     ttyp (File Type): mp3
     pfil (File Path): Music/Zeds Dead - Rude Boy.mp3

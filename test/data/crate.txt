@@ -1,4 +1,4 @@
-vrsn (Version): '1.0/Serato ScratchLive Smart Crate'
+vrsn (Version): 1.0/Serato ScratchLive Smart Crate
 rart (SmartCrate Match All): [ brut (Unknown Field): True ]
 rlut (SmartCrate Live Update): [ brut (Unknown Field): True ]
 rurt (SmartCrate Rule): [ trft (Rule Comparison): cond_aft_time (TIME_IS_AFTER) ], [ urkt (Rule Field): 25 (added) ], [ trtt (Rule Value Date): 5/13/2020 ]

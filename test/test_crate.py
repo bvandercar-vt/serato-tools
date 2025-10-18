@@ -35,7 +35,7 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(crate.raw_data, file_data, "raw_data read")
 
-        expected = """vrsn (Version): '1.0/Serato ScratchLive Crate'
+        expected = """vrsn (Version): 1.0/Serato ScratchLive Crate
 osrt (Sorting): [ tvcn (Column Name): # ], [ brev (Reverse Order): False ]
 ovct (Column): [ tvcn (Column Name): song ], [ tvcw (Column Width): 0 ]
 ovct (Column): [ tvcn (Column Name): artist ], [ tvcw (Column Width): 0 ]
