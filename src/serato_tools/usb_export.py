@@ -14,7 +14,12 @@ if __package__ is None:
 from serato_tools.database_v2 import DatabaseV2
 from serato_tools.crate import Crate
 from serato_tools.smart_crate import SmartCrate
-from serato_tools.utils import logger, SERATO_DIR_NAME, SERATO_DIR as LOCAL_SERATO_DIR
+from serato_tools.utils import (
+    logger,
+    SERATO_DIR_NAME,
+    SERATO_DIR as LOCAL_SERATO_DIR,
+    SERATO_DRIVE as LOCAL_SERATO_DRIVE,
+)
 
 # TODO: put in folders if there are different locations locally for the same basename
 
@@ -146,11 +151,8 @@ def copy_crates_to_usb(
     # copy files
     logger.info("copying files over...")
 
-    drive = os.path.splitdrive(LOCAL_SERATO_DIR)[0]
-    if drive:  # Windows
-        tracks_to_copy = [os.path.join(drive + os.path.sep, t) for t in tracks_to_copy]
-    else:  # Unix
-        tracks_to_copy = [os.path.sep + t for t in tracks_to_copy]
+    root = LOCAL_SERATO_DRIVE + os.sep if LOCAL_SERATO_DRIVE else os.sep
+    tracks_to_copy = [os.path.join(root, t) for t in tracks_to_copy]
 
     not_found: list[str] = []
 

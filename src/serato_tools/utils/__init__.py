@@ -9,6 +9,7 @@ logger = logging.getLogger("serato-tools")
 
 SERATO_DIR_NAME = "_Serato_"
 SERATO_DIR = os.path.join(os.path.expanduser("~"), "Music", SERATO_DIR_NAME)
+SERATO_DRIVE = os.path.splitdrive(SERATO_DIR)[0]
 
 
 def get_key_from_value(value: T, dict: dict[str, T]) -> str:

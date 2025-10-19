@@ -214,7 +214,7 @@ def main():
         SmartCrate.list_dir()
         sys.exit()
 
-    paths: list[str] = (
+    crate_paths: list[str] = (
         [os.path.join(args.file_or_dir, p) for p in os.listdir(args.file_or_dir)]
         if os.path.isdir(args.file_or_dir)
         else [args.file_or_dir]
@@ -222,8 +222,8 @@ def main():
 
     set_rules = parse_cli_keys_and_values(args.set_rules) if args.set_rules else {}
 
-    for p in paths:
-        crate = SmartCrate(p)
+    for crate_path in crate_paths:
+        crate = SmartCrate(crate_path)
 
         if args.set_rules:
             for key, value in set_rules.items():
@@ -240,10 +240,7 @@ def main():
             continue
 
         if args.list_tracks or args.filenames_only:
-            tracks = crate.get_track_paths()
-            if args.filenames_only:
-                tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
-            print("\n".join(tracks))
+            crate.print_track_paths(filenames_only=args.filenames_only)
         else:
             print(crate)
 

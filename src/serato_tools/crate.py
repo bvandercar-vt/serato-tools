@@ -38,6 +38,7 @@ def main():
     parser.add_argument("--all", action="store_true", help="Perform actions on all crates.")
     parser.add_argument("-l", "--list_tracks", action="store_true", help="Only list tracks")
     parser.add_argument("-f", "--filenames_only", action="store_true", help="Only list track filenames")
+    parser.add_argument("--find_missing", action="store_true", help="List files that do not exist")
     args = parser.parse_args()
 
     if args.all:
@@ -48,19 +49,20 @@ def main():
         Crate.list_dir()
         sys.exit()
 
-    paths: list[str] = (
+    crate_paths: list[str] = (
         [os.path.join(args.file_or_dir, p) for p in os.listdir(args.file_or_dir)]
         if os.path.isdir(args.file_or_dir)
         else [args.file_or_dir]
     )
 
-    for p in paths:
-        crate = Crate(p)
-        if args.list_tracks or args.filenames_only:
-            tracks = crate.get_track_paths()
-            if args.filenames_only:
-                tracks = [os.path.splitext(os.path.basename(t))[0] for t in tracks]
-            print("\n".join(tracks))
+    for crate_path in crate_paths:
+        crate = Crate(crate_path)
+        if args.find_missing:
+            for track_path in crate.get_track_paths(include_drive=True):
+                if not os.path.isfile(track_path):
+                    print(f"missing: {track_path}")
+        elif args.list_tracks or args.filenames_only:
+            crate.print_track_paths(filenames_only=args.filenames_only)
         else:
             print(crate)
 

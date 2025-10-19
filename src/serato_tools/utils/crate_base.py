@@ -39,6 +39,12 @@ class CrateBase(SeratoBinFile):
 
         return "\n".join(lines)
 
+    def print_track_paths(self, filenames_only: bool = False):
+        track_paths = self.get_track_paths(include_drive=True)
+        if filenames_only:
+            track_paths = [os.path.splitext(os.path.basename(t))[0] for t in track_paths]
+        print("\n".join(track_paths))
+
     def save(self, file: Optional[str] = None):
         if file is None:
             file = self.filepath

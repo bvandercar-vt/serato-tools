@@ -7,7 +7,7 @@ from enum import StrEnum
 import json
 from typing import Iterable, TypedDict, Generator, Optional, cast, Callable, Pattern
 
-from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError, DeeplyNestedListError
+from serato_tools.utils import get_enum_key_from_value, logger, SERATO_DRIVE, DataTypeError, DeeplyNestedListError
 
 
 class SeratoBinFile:
@@ -319,14 +319,16 @@ class SeratoBinFile:
     def _dump(self):
         self.raw_data = SeratoBinFile._dump_entries(self.entries)
 
-    def get_track_paths(self) -> list[str]:
+    def get_track_paths(self, include_drive: bool = False) -> list[str]:
         track_paths: list[str] = []
         for field, value in self.entries:
             if field == SeratoBinFile.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
-                track = self._get_track(value)
-                track_paths.append(track.path)
+                track_path = self._get_track(value).path
+                if include_drive:
+                    track_path = os.path.normpath(os.path.join(SERATO_DRIVE, "\\", track_path))
+                track_paths.append(track_path)
         return track_paths
 
     def modify_tracks(self, func: Callable[[Track], Track]):
@@ -395,7 +397,7 @@ class SeratoBinFile:
 
     @staticmethod
     def format_filepath(filepath: str) -> str:
-        drive, filepath = os.path.splitdrive(filepath)  # pylint: disable=unused-variable
+        filepath = os.path.splitdrive(filepath)[1]
         return os.path.normpath(filepath).replace(os.path.sep, "/").lstrip("/")
 
     class __FieldObj(TypedDict):
