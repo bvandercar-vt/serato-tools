@@ -57,7 +57,7 @@ class CrateBase(SeratoBinFile):
 
     def add_track(self, filepath: str):
         # filepath name must include the containing dir
-        filepath = self.format_filepath(filepath)
+        filepath = self.get_relative_path(filepath)
 
         if filepath in self.get_track_paths():
             return
@@ -65,7 +65,7 @@ class CrateBase(SeratoBinFile):
         self.entries.append((CrateBase.Fields.TRACK, [(CrateBase.Fields.TRACK_PATH, filepath)]))
 
     def add_tracks_from_dir(self, dir: str, replace: bool = False):
-        dir_tracks = [self.format_filepath(os.path.join(dir, t)) for t in os.listdir(dir)]
+        dir_tracks = [self.get_relative_path(os.path.join(dir, t)) for t in os.listdir(dir)]
 
         if replace:
             for track in self.get_track_paths():

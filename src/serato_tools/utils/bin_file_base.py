@@ -225,21 +225,25 @@ class SeratoBinFile:
             return [(f, self.get_value(f)) for f in self.fields]
 
     class Track(EntryListCls):
-        def __init__(self, entries: "SeratoBinFile.EntryList", track_path_key: str):
+        def __init__(self, entries: "SeratoBinFile.EntryList", path_key: str):
             super().__init__(entries)
 
-            self.track_path_key = track_path_key
-            track_path = self.get_value(track_path_key)
-            if not isinstance(track_path, str):
-                raise DataTypeError(track_path, str, track_path_key)
-            self.path: str = track_path
+            self.path_key = path_key
+            relative_path = self.get_value(path_key)
+            if not isinstance(relative_path, str):
+                raise DataTypeError(relative_path, str, path_key)
+            self.relpath: str = relative_path
 
         def set_path(self, path: str):
-            self.set_value(self.track_path_key, path)
-            self.path = path
+            relpath = SeratoBinFile.get_relative_path(path)
+            self.set_value(self.path_key, relpath)
+            self.relpath = relpath
+
+        def get_full_path(self):
+            return os.path.normpath(os.path.join(SERATO_DRIVE, "\\", self.relpath))
 
     def _get_track(self, entries: "SeratoBinFile.EntryList"):
-        return SeratoBinFile.Track(entries, track_path_key=self.TRACK_PATH_KEY)
+        return SeratoBinFile.Track(entries, path_key=self.TRACK_PATH_KEY)
 
     @staticmethod
     def _get_type(field: str) -> str:
@@ -325,9 +329,8 @@ class SeratoBinFile:
             if field == SeratoBinFile.Fields.TRACK:
                 if not isinstance(value, list):
                     raise DataTypeError(value, list, field)
-                track_path = self._get_track(value).path
-                if include_drive:
-                    track_path = os.path.normpath(os.path.join(SERATO_DRIVE, "\\", track_path))
+                track = self._get_track(value)
+                track_path = track.get_full_path() if include_drive else track.relpath
                 track_paths.append(track_path)
         return track_paths
 
@@ -355,15 +358,14 @@ class SeratoBinFile:
         self._dump()
 
     def remove_track(self, filepath: str):
-        # filepath name must include the containing dir
-        self.filter_tracks(lambda track: track.path != filepath)
+        self.filter_tracks(lambda track: track.relpath != SeratoBinFile.get_relative_path(filepath))
 
     def remove_duplicates(self):
         track_paths: list[str] = []
 
         def filter_track(track: "SeratoBinFile.Track") -> bool:
-            was_in_track_paths = track.path not in track_paths
-            track_paths.append(track.path)
+            was_in_track_paths = track.relpath not in track_paths
+            track_paths.append(track.relpath)
             return was_in_track_paths
 
         self.filter_tracks(filter_track)
@@ -396,9 +398,10 @@ class SeratoBinFile:
             )
 
     @staticmethod
-    def format_filepath(filepath: str) -> str:
+    def get_relative_path(filepath: str) -> str:
         filepath = os.path.splitdrive(filepath)[1]
-        return os.path.normpath(filepath).replace(os.path.sep, "/").lstrip("/")
+        relpath = os.path.normpath(filepath).replace(os.path.sep, "/").lstrip("/")
+        return relpath
 
     class __FieldObj(TypedDict):
         field: str
@@ -428,8 +431,8 @@ class SeratoBinFile:
                 if track_matcher and field == SeratoBinFile.Fields.TRACK:
                     if not isinstance(value, list):
                         raise DataTypeError(value, list, field)
-                    track = self.__class__.Track(value, track_path_key=self.TRACK_PATH_KEY)
-                    if not bool(re.search(track_matcher, track.path, re.IGNORECASE)):
+                    track = self.__class__.Track(value, path_key=self.TRACK_PATH_KEY)
+                    if not bool(re.search(track_matcher, track.relpath, re.IGNORECASE)):
                         continue
 
                 try:

@@ -11,19 +11,19 @@ with open("test/data/crate.txt", "r", encoding="utf-8") as f:
 class TestCase(unittest.TestCase):
     def test_format_filepath(self):
         self.assertEqual(
-            Crate.format_filepath("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            Crate.get_relative_path("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
             "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
         )
         self.assertEqual(
-            Crate.format_filepath("Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            Crate.get_relative_path("Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
             "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
         )
         self.assertEqual(
-            Crate.format_filepath("C:/Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            Crate.get_relative_path("C:/Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
             "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
         )
         self.assertEqual(
-            Crate.format_filepath("Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            Crate.get_relative_path("Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
             "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
         )
 

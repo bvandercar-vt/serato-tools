@@ -38,16 +38,16 @@ class DatabaseV2(SeratoBinFile):
 
         for rule in rules:
             if "files" in rule:
-                rule["files"] = [DatabaseV2.format_filepath(file).upper() for file in rule["files"]]
+                rule["files"] = [DatabaseV2.get_relative_path(file).upper() for file in rule["files"]]
 
-        def _maybe_perform_rule(field: str, prev_val: "DatabaseV2.ValueOrNone", track_filename: str):
+        def _maybe_perform_rule(field: str, prev_val: "DatabaseV2.ValueOrNone", track_relpath: str):
             rule = next((r for r in rules if field == r["field"]), None)
             if rule is None:
                 return None
-            if "files" in rule and track_filename.upper() not in rule["files"]:
+            if "files" in rule and track_relpath.upper() not in rule["files"]:
                 return None
 
-            maybe_new_value = rule["func"](track_filename, prev_val)
+            maybe_new_value = rule["func"](track_relpath, prev_val)
             if maybe_new_value is None or maybe_new_value == prev_val:
                 return None
 
@@ -56,20 +56,20 @@ class DatabaseV2(SeratoBinFile):
                     raise DataTypeError(maybe_new_value, str, field)
                 if not os.path.exists(maybe_new_value):
                     raise FileNotFoundError(f"set track location to {maybe_new_value}, but doesn't exist")
-                maybe_new_value = DatabaseV2.format_filepath(maybe_new_value)
+                maybe_new_value = DatabaseV2.get_relative_path(maybe_new_value)
 
             field_name = DatabaseV2.get_field_name(field)
-            logger.info(f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_filename}")
+            logger.info(f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_relpath}")
             return maybe_new_value
 
         def modify_track(track: DatabaseV2.Track) -> DatabaseV2.Track:
             for f, v in track.to_entries():
-                maybe_new_value = _maybe_perform_rule(f, v, track.path)
+                maybe_new_value = _maybe_perform_rule(f, v, track.relpath)
                 if maybe_new_value is not None:
                     track.set_value(f, maybe_new_value)
             for rule in rules:
                 if rule["field"] not in track.fields:
-                    maybe_new_value = _maybe_perform_rule(rule["field"], None, track.path)
+                    maybe_new_value = _maybe_perform_rule(rule["field"], None, track.relpath)
                     if maybe_new_value is not None:
                         track.set_value(rule["field"], maybe_new_value)
             return track

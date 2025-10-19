@@ -54,11 +54,11 @@ def copy_crates_to_usb(
     os.makedirs(crate_dir, exist_ok=True)
 
     def change_track_path(track_path: str):
-        return Crate.format_filepath(os.path.join(dest_drive_dir, dest_tracks_dir, os.path.basename(track_path)))
+        return Crate.get_relative_path(os.path.join(dest_tracks_dir, os.path.basename(track_path)))
 
     def modify_crate_track(track: Crate.Track) -> Crate.Track:
-        tracks_to_copy.append(track.path)
-        track.set_path(change_track_path(track.path))
+        tracks_to_copy.append(track.relpath)
+        track.set_path(change_track_path(track.relpath))
         return track
 
     for crate_file in crate_files:
@@ -97,11 +97,11 @@ def copy_crates_to_usb(
     tracks_to_copy_basenames = [os.path.basename(f) for f in tracks_to_copy]
 
     def modify_db_track(track: DatabaseV2.Track) -> DatabaseV2.Track:
-        track.set_path(os.path.join(dest_tracks_dir, os.path.basename(track.path)))
+        track.set_path(os.path.join(dest_tracks_dir, os.path.basename(track.relpath)))
         track.set_value(DatabaseV2.Fields.PLAYED, False)
         return track
 
-    db.filter_tracks(lambda track: os.path.basename(track.path) in tracks_to_copy_basenames)
+    db.filter_tracks(lambda track: os.path.basename(track.relpath) in tracks_to_copy_basenames)
     db.modify_tracks(modify_db_track)
     db.remove_duplicates()
 
@@ -139,10 +139,10 @@ def copy_crates_to_usb(
         stems_crate = Crate(LOCAL_STEMS_CRATE)
 
         def modify_stems_crate_track(track: Crate.Track) -> Crate.Track:
-            track.set_path(change_track_path(track.path))
+            track.set_path(change_track_path(track.relpath))
             return track
 
-        stems_crate.filter_tracks(lambda track: os.path.basename(track.path) in tracks_to_copy_basenames)
+        stems_crate.filter_tracks(lambda track: os.path.basename(track.relpath) in tracks_to_copy_basenames)
         stems_crate.modify_tracks(modify_stems_crate_track)
         stems_crate.remove_duplicates()
         stems_crate.save(DEST_STEMS_CRATE)

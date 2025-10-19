@@ -9,19 +9,19 @@ from src.serato_tools.database_v2 import DatabaseV2
 class TestCase(unittest.TestCase):
     def test_format_filepath(self):
         self.assertEqual(
-            DatabaseV2.format_filepath("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            DatabaseV2.get_relative_path("C:\\Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
             "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
         )
         self.assertEqual(
-            DatabaseV2.format_filepath("Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
+            DatabaseV2.get_relative_path("Music\\DJ Tracks\\Zeds Dead - In The Beginning.mp3"),
             "Music/DJ Tracks/Zeds Dead - In The Beginning.mp3",
         )
         self.assertEqual(
-            DatabaseV2.format_filepath("C:/Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            DatabaseV2.get_relative_path("C:/Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
             "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
         )
         self.assertEqual(
-            DatabaseV2.format_filepath("Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
+            DatabaseV2.get_relative_path("Music/DJ Tracks/Tripp St. - Enlighten.mp3"),
             "Music/DJ Tracks/Tripp St. - Enlighten.mp3",
         )
 
