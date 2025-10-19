@@ -43,14 +43,9 @@ class TestCase(unittest.TestCase):
         self.assertEqual(db.raw_data, file_data, "raw_data read")
 
     def test_parse_and_modify(self):
-        file = os.path.abspath("test/data/database_v2_test.bin")
-        with open(file, mode="rb") as fp:
-            file_data = fp.read()
-
-        db = DatabaseV2(file)
+        db = DatabaseV2(os.path.abspath("test/data/database_v2_test.bin"))
 
         self.maxDiff = None
-        self.assertEqual(db.raw_data, file_data, "raw_data read")
 
         with open("test/data/database_v2_test_output.txt", "r", encoding="utf-16") as f:
             expected = f.read()
@@ -94,8 +89,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(db.raw_data, f.read(), "was modified correctly, given files")
 
     def test_dedupe(self):
-        file = os.path.abspath("test/data/database_v2_duplicates.bin")
-        db = DatabaseV2(file)
+        db = DatabaseV2(os.path.abspath("test/data/database_v2_duplicates.bin"))
 
         with open("test/data/database_v2_duplicates_output.txt", "r", encoding="utf-8") as f:
             self.assertEqual(db.__str__(), f.read(), "original")
@@ -106,8 +100,18 @@ class TestCase(unittest.TestCase):
             self.assertEqual(db.__str__(), f.read(), "deduped")
 
     def test_to_json_object(self):
-        file = os.path.abspath("test/data/database_v2_test.bin")
-        db = DatabaseV2(file)
+        db = DatabaseV2(os.path.abspath("test/data/database_v2_test.bin"))
 
         with open("test/data/database_v2_json.json", "r", encoding="utf-8") as f:
             self.assertEqual(db.to_json_object(), json.loads(f.read()))
+
+    def test_from_json_object(self):
+        db_from_json = DatabaseV2(os.path.abspath("test/data/database_v2_json.json"))
+        db_from_bin = DatabaseV2(os.path.abspath("test/data/database_v2_test.bin"))
+
+        self.assertEqual(db_from_json.__str__(), db_from_bin.__str__())
+
+        json_object = db_from_bin.to_json_object()
+        db_from_json.from_json_object(json_object)
+
+        self.assertEqual(db_from_json.__str__(), db_from_bin.__str__())

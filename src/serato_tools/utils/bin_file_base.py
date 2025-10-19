@@ -3,8 +3,9 @@ import io
 import re
 import struct
 import base64
-from typing import Iterable, TypedDict, Generator, Optional, cast, Callable, Pattern
 from enum import StrEnum
+import json
+from typing import Iterable, TypedDict, Generator, Optional, cast, Callable, Pattern
 
 from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError, DeeplyNestedListError
 
@@ -75,15 +76,19 @@ class SeratoBinFile:
 
     def __init__(self, file: str, track_path_key: "SeratoBinFile.Fields"):
         self.filepath = os.path.abspath(file)
-        self.dir = os.path.dirname(self.filepath)
         self.TRACK_PATH_KEY = track_path_key
 
         self.raw_data: bytes
         self.entries: SeratoBinFile.EntryList
+
         if os.path.exists(file):
-            with open(file, "rb") as f:
-                self.raw_data = f.read()
-                self.entries = list(SeratoBinFile._parse_item(self.raw_data))
+            if file.lower().endswith(".json"):
+                with open(file, "r", encoding="utf-8") as f:
+                    self.from_json_object(json.load(f))
+            else:
+                with open(file, "rb") as f:
+                    self.raw_data = f.read()
+                    self.entries = list(SeratoBinFile._parse_item(self.raw_data))
         else:
             logger.warning(f"File does not exist: {file}. Using default data to create an empty item.")
             self.entries = self.DEFAULT_ENTRIES
@@ -134,32 +139,60 @@ class SeratoBinFile:
 
         return entries_to_json(self.entries)
 
-    def write_json(self, filepath: str) -> None:
-        import json
+    def from_json_object(self, json_data: list[EntryJson]):
+        def json_to_entries(json_list: list[SeratoBinFile.EntryJson]) -> SeratoBinFile.EntryList:
+            result: SeratoBinFile.EntryList = []
 
-        def write_json_array(f, json_entries: list[SeratoBinFile.EntryJson], indent: int = 0) -> None:
+            for entry_obj in json_list:
+                field = entry_obj["field"]
+                value = entry_obj["value"]
+                value_type = entry_obj["type"]
+
+                if value_type == "list":
+                    value = json_to_entries(cast(list[SeratoBinFile.EntryJson], value))
+                elif value_type in ("bytes", "bytearray", "memoryview"):
+                    value = base64.b64decode(cast(bytes, value))
+                elif value_type == "int":
+                    value = int(cast(int, value))
+                elif value_type == "bool":
+                    value = bool(cast(bool, value))
+                elif value_type == "str":
+                    value = str(cast(str, value))
+                else:
+                    raise ValueError(f"unexpected type: {value_type}")
+
+                result.append((field, value))
+
+            return result
+
+        self.entries = json_to_entries(json_data)
+        self._dump()
+
+    def write_json(self, filepath: str) -> None:
+        def write_json_array(json_entries: list[SeratoBinFile.EntryJson], indent: int = 0) -> str:
             indent_str = "  " * indent
-            f.write("[\n")
+            lines = ["[\n"]
 
             for i, entry in enumerate(json_entries):
                 if isinstance(entry["value"], list):
-                    f.write(
+                    lines.append(
                         f'{indent_str}  {{"field": "{entry["field"]}", "fieldname": "{entry["fieldname"]}", "type": "{entry["type"]}", "value": '
                     )
-                    write_json_array(f, entry["value"], indent + 1)
-                    f.write("}")
+                    lines.append(write_json_array(entry["value"], indent + 1))
+                    lines.append("}")
                 else:
-                    f.write(f"{indent_str}  {json.dumps(entry, ensure_ascii=False)}")
+                    lines.append(f"{indent_str}  {json.dumps(entry, ensure_ascii=False)}")
 
-                if i < len(json_entries) - 1:
-                    f.write(",\n")
-                else:
-                    f.write("\n")
+                lines.append(",\n" if i < len(json_entries) - 1 else "\n")
 
-            f.write(f"{indent_str}]")
+            lines.append(f"{indent_str}]")
+            return "".join(lines)
+
+        json_content = write_json_array(self.to_json_object(), indent=0)
 
         with open(filepath, "w", encoding="utf-8") as f:
-            write_json_array(f, self.to_json_object(), indent=0)
+            json.loads(json_content)  # check
+            f.write(json_content)
 
     def print(self):
         print(self)

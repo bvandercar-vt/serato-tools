@@ -34,7 +34,7 @@ class DatabaseV2(SeratoBinFile):
         field: str  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def modify(self, rules: list[ModifyRule]):
-        DatabaseV2._check_rule_fields(cast(list[DatabaseV2.__GeneralModifyRule], rules))
+        SeratoBinFile._check_rule_fields(cast(list[DatabaseV2.__GeneralModifyRule], rules))
 
         for rule in rules:
             if "files" in rule:
