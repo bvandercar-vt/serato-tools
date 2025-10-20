@@ -102,7 +102,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs="?", default=DatabaseV2.DEFAULT_DATABASE_FILE)
+    parser.add_argument("--find_missing", action="store_true", help="List files that do not exist")
     args = parser.parse_args()
 
     db = DatabaseV2(args.file)
+
+    if args.find_missing:
+        # TODO: actually look for that missing flag.
+        db.find_missing()
+    else:
     print(db)

@@ -190,6 +190,9 @@ class SmartCrate(CrateBase):
         self.entries = new_entries  # pylint: disable=attribute-defined-outside-init
         self._dump()
 
+    def find_missing(self):
+        raise Exception("cannot be done on smart crate")
+
 
 def main():
     import argparse

@@ -53,9 +53,7 @@ def main():
     for crate_path in Crate.get_serato_crate_files(args.file_or_dir):
         crate = Crate(crate_path)
         if args.find_missing:
-            for track_path in crate.get_track_paths(include_drive=True):
-                if not os.path.isfile(track_path):
-                    print(f"missing: {track_path}")
+            crate.find_missing()
         elif args.list_tracks or args.filenames_only:
             crate.print_track_paths(filenames_only=args.filenames_only)
         else:

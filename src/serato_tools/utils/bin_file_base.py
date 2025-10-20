@@ -449,3 +449,45 @@ class SeratoBinFile:
                 value = new_entries
 
             yield field, SeratoBinFile.get_field_name(field), value
+
+    def find_missing(self):
+        new_entries: SeratoBinFile.EntryList = []
+        new_dir: str | None = None
+        for field, value in self.entries:
+            if field == SeratoBinFile.Fields.TRACK:
+                if not isinstance(value, list):
+                    raise DataTypeError(value, list, field)
+                track = self._get_track(value)
+                track_path = track.get_full_path()
+                if not os.path.isfile(track_path):
+                    print(f"missing: {track_path}")
+                    new_location = None
+                    if new_dir is not None:
+                        possible_new_loc = os.path.join(new_dir, os.path.basename(track_path))
+                        if os.path.isfile(possible_new_loc):
+                            new_location = possible_new_loc
+                    if not new_location:
+                        while True:
+                            new_location = os.path.normpath(
+                                input(
+                                    'enter new location of file, or directory to look for missing files, or "s" to skip:'
+                                )
+                                .strip()
+                                .strip('"')
+                            )
+                            if new_location == "s":
+                                new_location = None
+                                break
+                            if os.path.isdir(new_location):
+                                new_dir = new_location
+                                new_location = os.path.join(new_dir, os.path.basename(track_path))
+                            if os.path.exists(new_location):
+                                break
+                    if new_location:
+                        print("   new_location: " + new_location)
+                        track.set_path(new_location)
+                value = track.to_entries()
+            new_entries.append((field, value))
+        self.entries = new_entries
+        self._dump()
+        self.save()
