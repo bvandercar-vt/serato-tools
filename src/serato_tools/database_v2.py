@@ -13,15 +13,16 @@ from serato_tools.utils import logger, SERATO_DIR
 class DatabaseV2(SeratoBinFile):
     FILENAME = "database V2"
     DEFAULT_DATABASE_FILE = os.path.join(SERATO_DIR, FILENAME)
+    TRACK_PATH_KEY = SeratoBinFile.Fields.FILE_PATH
 
-    DEFAULT_DATA = [
+    DEFAULT_ENTRIES = [
         (SeratoBinFile.Fields.VERSION, "2.0/Serato Scratch LIVE Database"),
     ]
 
     def __init__(self, file: str = DEFAULT_DATABASE_FILE):
         if not os.path.exists(file):
             raise FileNotFoundError(f"file does not exist: {file}")
-        super().__init__(file=file, track_path_key=DatabaseV2.Fields.FILE_PATH)
+        super().__init__(file=file)
 
     def rename_track_file(self, src: str, dest: str):
         """
@@ -35,7 +36,7 @@ class DatabaseV2(SeratoBinFile):
             # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
             logger.error(f"File already exists with change: {src}")
             return
-        self.modify_and_save([{"field": DatabaseV2.Fields.FILE_PATH, "files": [src], "func": lambda *args: dest}])
+        self.modify_and_save([{"field": self.TRACK_PATH_KEY, "files": [src], "func": lambda *args: dest}])
 
     # TODO: find_missing function!
 

@@ -14,9 +14,7 @@ class CrateBase(SeratoBinFile):
     EXTENSION: str
     DIR: str
     DIR_PATH: str
-
-    def __init__(self, file: str):
-        super().__init__(file=file, track_path_key=CrateBase.Fields.TRACK_PATH)
+    TRACK_PATH_KEY = SeratoBinFile.Fields.TRACK_PATH
 
     def _stringify_entry(self, entry: SeratoBinFile.EntryFull, indent: int = 0) -> str:
         field, fieldname, value = entry  # pylint: disable=unused-variable

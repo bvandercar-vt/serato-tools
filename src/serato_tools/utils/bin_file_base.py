@@ -73,13 +73,16 @@ class SeratoBinFile:
     type ValueOrNone = Value | None
 
     DEFAULT_ENTRIES: EntryList
+    TRACK_PATH_KEY: Fields
 
-    def __init__(self, file: str, track_path_key: "SeratoBinFile.Fields"):
+    def __init__(self, file: str):
         self.filepath = os.path.abspath(file)
-        self.TRACK_PATH_KEY = track_path_key
 
         self.raw_data: bytes
         self.entries: SeratoBinFile.EntryList
+
+        if not self.TRACK_PATH_KEY:
+            raise ValueError("need to set TRACK_PATH_KEY in subclass")
 
         if os.path.exists(file):
             if file.lower().endswith(".json"):
@@ -91,6 +94,8 @@ class SeratoBinFile:
                     self.entries = list(SeratoBinFile._parse_item(self.raw_data))
         else:
             logger.warning(f"File does not exist: {file}. Using default data to create an empty item.")
+            if not self.DEFAULT_ENTRIES:
+                raise ValueError("no self.DEFAULT_ENTRIES passed in subclass")
             self.entries = self.DEFAULT_ENTRIES
             self._dump()
 

@@ -44,7 +44,7 @@ class SmartCrate(CrateBase):
         INT_IS_GE = "cond_greq_uint"
         INT_IS_LE = "cond_lseq_uint"
 
-    DEFAULT_DATA = [
+    DEFAULT_ENTRIES = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Smart Crate"),
         (CrateBase.Fields.SMARTCRATE_MATCH_ALL, [("brut", False)]),
         (CrateBase.Fields.SMARTCRATE_LIVE_UPDATE, [("brut", False)]),
