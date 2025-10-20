@@ -510,6 +510,9 @@ class SeratoBinFile:
         self.modify(rules)
         self.save(file)
 
+    def change_track_path(self, src: str, dest: str):
+        self.modify([{"field": self.TRACK_PATH_KEY, "files": [src], "func": lambda *args: dest}])
+
     def find_missing(self):
         new_entries: SeratoBinFile.EntryList = []
         new_dir: str | None = None

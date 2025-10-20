@@ -36,9 +36,15 @@ class DatabaseV2(SeratoBinFile):
             # can't just do os.path.exists, doesn't pick up case changes for certain filesystems
             logger.error(f"File already exists with change: {src}")
             return
-        self.modify_and_save([{"field": self.TRACK_PATH_KEY, "files": [src], "func": lambda *args: dest}])
+        self.change_track_path(src, dest)
+        self.save()
 
-    # TODO: find_missing function!
+        from serato_tools.crate import Crate
+
+        for crate_path in Crate.get_serato_crate_files():
+            crate = Crate(crate_path)
+            crate.change_track_path(src, dest)
+            crate.save()
 
 
 if __name__ == "__main__":
@@ -55,4 +61,4 @@ if __name__ == "__main__":
         # TODO: actually look for that missing flag.
         db.find_missing()
     else:
-    print(db)
+        print(db)
