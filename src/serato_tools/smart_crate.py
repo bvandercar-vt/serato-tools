@@ -211,18 +211,12 @@ def main():
 
     if not args.file_or_dir:
         print(f"must pass a file or dir, or --all!\nfiles in {SmartCrate.DIR_PATH}:")
-        SmartCrate.list_dir()
+        print("\n".join(SmartCrate.get_serato_crate_files()))
         sys.exit()
-
-    crate_paths: list[str] = (
-        [os.path.join(args.file_or_dir, p) for p in os.listdir(args.file_or_dir)]
-        if os.path.isdir(args.file_or_dir)
-        else [args.file_or_dir]
-    )
 
     set_rules = parse_cli_keys_and_values(args.set_rules) if args.set_rules else {}
 
-    for crate_path in crate_paths:
+    for crate_path in SmartCrate.get_serato_crate_files(args.file_or_dir):
         crate = SmartCrate(crate_path)
 
         if args.set_rules:

@@ -131,10 +131,9 @@ def copy_crates_to_usb(
         logger.info(f"copied order file {DEST_NEW_ORDER_FILEPATH}")
 
     # copy stems crate
-    SERATO_STEMS_CRATE_PATH = os.path.join(Crate.DIR, "Serato Stems", "Stems.crate")
-    LOCAL_STEMS_CRATE = os.path.join(LOCAL_SERATO_DIR, SERATO_STEMS_CRATE_PATH)
+    LOCAL_STEMS_CRATE = os.path.join(LOCAL_SERATO_DIR, Crate.SERATO_STEMS_CRATE_PATH)
     if os.path.exists(LOCAL_STEMS_CRATE):
-        DEST_STEMS_CRATE = os.path.join(DEST_SERATO_DIR, SERATO_STEMS_CRATE_PATH)
+        DEST_STEMS_CRATE = os.path.join(DEST_SERATO_DIR, Crate.SERATO_STEMS_CRATE_PATH)
         os.makedirs(os.path.dirname(DEST_STEMS_CRATE), exist_ok=True)
         stems_crate = Crate(LOCAL_STEMS_CRATE)
 

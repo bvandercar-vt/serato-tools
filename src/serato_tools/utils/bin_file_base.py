@@ -373,6 +373,8 @@ class SeratoBinFile:
     def save(self, file: Optional[str] = None):
         if file is None:
             file = self.filepath
+        if file.lower().endswith(".json"):
+            raise ValueError("cannot save raw data to .json")
         with open(file, "wb") as f:
             f.write(self.raw_data)
 

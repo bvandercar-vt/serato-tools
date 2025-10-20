@@ -14,6 +14,7 @@ class Crate(CrateBase):
     EXTENSION = ".crate"
     DIR = "Subcrates"
     DIR_PATH = os.path.join(SERATO_DIR, DIR)
+    SERATO_STEMS_CRATE_PATH = os.path.join(DIR, "Serato Stems", "Stems.crate")
 
     DEFAULT_DATA = [
         (CrateBase.Fields.VERSION, "1.0/Serato ScratchLive Crate"),
@@ -46,16 +47,10 @@ def main():
 
     if not args.file_or_dir:
         print(f"must pass a file or dir, or --all!\nfiles in {Crate.DIR_PATH}:")
-        Crate.list_dir()
+        print("\n".join(Crate.get_serato_crate_files()))
         sys.exit()
 
-    crate_paths: list[str] = (
-        [os.path.join(args.file_or_dir, p) for p in os.listdir(args.file_or_dir)]
-        if os.path.isdir(args.file_or_dir)
-        else [args.file_or_dir]
-    )
-
-    for crate_path in crate_paths:
+    for crate_path in Crate.get_serato_crate_files(args.file_or_dir):
         crate = Crate(crate_path)
         if args.find_missing:
             for track_path in crate.get_track_paths(include_drive=True):

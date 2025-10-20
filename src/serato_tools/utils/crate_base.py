@@ -76,6 +76,20 @@ class CrateBase(SeratoBinFile):
             self.add_track(track)
 
     @classmethod
-    def list_dir(cls):
-        for file in os.listdir(cls.DIR_PATH):
-            print(os.path.join(cls.DIR_PATH, file))
+    def get_serato_crate_files(cls, file_or_dir: str | None = None) -> list[str]:
+        if file_or_dir is None:
+            file_or_dir = cls.DIR_PATH
+
+        crate_paths: list[str] = []
+        if os.path.isdir(file_or_dir):
+
+            for fname in os.listdir(file_or_dir):
+                path = os.path.normpath(os.path.join(file_or_dir, fname))
+                if os.path.isfile(path):
+                    crate_paths.append(path)
+        elif os.path.isfile(file_or_dir):
+            crate_paths = [file_or_dir]
+        else:
+            raise FileNotFoundError("does not exist: " + file_or_dir)
+
+        return crate_paths
