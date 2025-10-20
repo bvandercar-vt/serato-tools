@@ -5,7 +5,7 @@ import struct
 import base64
 from enum import StrEnum
 import json
-from typing import Iterable, TypedDict, Generator, Optional, cast, Callable, Pattern
+from typing import Iterable, TypedDict, Generator, Optional, cast, Callable, Pattern, NotRequired
 
 from serato_tools.utils import get_enum_key_from_value, logger, SERATO_DRIVE, DataTypeError, DeeplyNestedListError
 
@@ -240,7 +240,7 @@ class SeratoBinFile:
             self.relpath = relpath
 
         def get_full_path(self):
-            return os.path.normpath(os.path.join(SERATO_DRIVE, "\\", self.relpath))
+            return SeratoBinFile.get_full_path(self.relpath)
 
     def _get_track(self, entries: "SeratoBinFile.EntryList"):
         return SeratoBinFile.Track(entries, path_key=self.TRACK_PATH_KEY)
@@ -405,18 +405,13 @@ class SeratoBinFile:
         relpath = os.path.normpath(filepath).replace(os.path.sep, "/").lstrip("/")
         return relpath
 
-    class __FieldObj(TypedDict):
-        field: str
-
     @staticmethod
-    def _check_rule_fields(rules: Iterable[__FieldObj]):
-        all_field_names = [rule["field"] for rule in rules]
-        uniq_field_names = list(set(all_field_names))
-        assert len(list(rules)) == len(
-            uniq_field_names
-        ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
-        for field in uniq_field_names:
-            SeratoBinFile._check_valid_field(field)
+    def get_full_path(filepath: str):
+        drive, filepath = os.path.splitdrive(filepath)[1]
+        if drive:
+            return filepath
+        else:
+            return os.path.normpath(os.path.join(SERATO_DRIVE, "\\", filepath))
 
     def get_entries(self) -> Generator[EntryFull, None, None]:
         """Get entry fieldnames."""
@@ -449,6 +444,66 @@ class SeratoBinFile:
                 value = new_entries
 
             yield field, SeratoBinFile.get_field_name(field), value
+
+    class ModifyRule(TypedDict):
+        field: "SeratoBinFile.Fields"
+        func: Callable[[str, "SeratoBinFile.ValueOrNone"], "SeratoBinFile.ValueOrNone"]
+        """ (filename: str, prev_value: ValueType | None) -> new_value: ValueType | None """
+        files: NotRequired[list[str]]
+
+    def modify(self, rules: list[ModifyRule]):
+        # check rule fields
+        all_field_names = [rule["field"] for rule in rules]
+        assert len(list(rules)) == len(
+            list(set(all_field_names))
+        ), f"must only have 1 function per field. fields passed: {str(sorted(all_field_names))}"
+        for field in all_field_names:
+            SeratoBinFile._check_valid_field(field)
+
+        # fix some rules if needed
+        for rule in rules:
+            if "files" in rule:
+                rule["files"] = [SeratoBinFile.get_relative_path(file).upper() for file in rule["files"]]
+
+        def _maybe_perform_rule(field: str, prev_val: "SeratoBinFile.ValueOrNone", track_relpath: str):
+            rule = next((r for r in rules if field == r["field"]), None)
+            if rule is None:
+                return None
+            if "files" in rule and track_relpath.upper() not in rule["files"]:
+                return None
+
+            maybe_new_value = rule["func"](track_relpath, prev_val)
+            if maybe_new_value is None or maybe_new_value == prev_val:
+                return None
+
+            if field == self.TRACK_PATH_KEY:
+                if not isinstance(maybe_new_value, str):
+                    raise DataTypeError(maybe_new_value, str, field)
+                if not os.path.exists(SeratoBinFile.get_full_path(maybe_new_value)):
+                    raise FileNotFoundError(f"set track location to {maybe_new_value}, but doesn't exist")
+                maybe_new_value = SeratoBinFile.get_relative_path(maybe_new_value)
+
+            field_name = SeratoBinFile.get_field_name(field)
+            logger.info(f"Set {field}({field_name})={str(maybe_new_value)} in library for {track_relpath}")
+            return maybe_new_value
+
+        def modify_track(track: SeratoBinFile.Track) -> SeratoBinFile.Track:
+            for f, v in track.to_entries():
+                maybe_new_value = _maybe_perform_rule(f, v, track.relpath)
+                if maybe_new_value is not None:
+                    track.set_value(f, maybe_new_value)
+            for rule in rules:
+                if rule["field"] not in track.fields:
+                    maybe_new_value = _maybe_perform_rule(rule["field"], None, track.relpath)
+                    if maybe_new_value is not None:
+                        track.set_value(rule["field"], maybe_new_value)
+            return track
+
+        self.modify_tracks(modify_track)
+
+    def modify_and_save(self, rules: list[ModifyRule], file: Optional[str] = None):
+        self.modify(rules)
+        self.save(file)
 
     def find_missing(self):
         new_entries: SeratoBinFile.EntryList = []
