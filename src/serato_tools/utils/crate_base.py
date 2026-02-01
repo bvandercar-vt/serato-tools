@@ -83,7 +83,7 @@ class CrateBase(SeratoBinFile):
 
             for fname in os.listdir(file_or_dir):
                 path = os.path.normpath(os.path.join(file_or_dir, fname))
-                if os.path.isfile(path):
+                if os.path.isfile(path) and path.endswith(".crate"):
                     crate_paths.append(path)
         elif os.path.isfile(file_or_dir):
             crate_paths = [file_or_dir]

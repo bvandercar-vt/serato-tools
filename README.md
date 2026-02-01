@@ -176,10 +176,10 @@ tags.save()
 
 ```python
 from serato_tools.crate import Crate
-Crate.list_dir()
+Crate.get_serato_crate_files(Crate.DIR_PATH)
 
 from serato_tools.smart_crate import SmartCrate
-SmartCrate.list_dir()
+SmartCrate.get_serato_crate_files(SmartCrate.DIR_PATH)
 ``` 
 
 ### Modifying a SmartCrate Rule
