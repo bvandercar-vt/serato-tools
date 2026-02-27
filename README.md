@@ -145,44 +145,33 @@ Only cue points within the tolerance window of some beat are moved; others are l
 ### Modifying track metadata / hot cues
 
 ```python
+import dataclasses
 from mutagen.id3._frames import TIT1
 from serato_tools.track_cues_v2 import TrackCuesV2, CUE_COLORS, TRACK_COLORS
-from serato_tools.utils.track_tags import del_geob
 
-def red_fix(prev_val: ValueType):
-    if prev_val in [CUE_COLORS["pinkred"], CUE_COLORS["magenta"]]:
-        print("Cue close to red, changed to red")
-        return CUE_COLORS["red"]
+def track_rule(track: TrackCuesV2.TrackCuesInfo) -> TrackCuesV2.TrackCuesInfo | None:
+    # Set ID3 grouping field from track color
+    if track.color is not None:
+        track_color = track.color.color
+        if track_color == TRACK_COLORS["limegreen3"]:
+            tagfile.tags.setall("TIT1", [TIT1(text="TAGGED")])
+        elif track_color in [TRACK_COLORS["white"], TRACK_COLORS["grey"], TRACK_COLORS["black"]]:
+            tagfile.tags.setall("TIT1", [TIT1(text="UNTAGGED")])
 
-def name_changes(prev_val: ValueType):
-    if (not isinstance(prev_val, str)) or prev_val == "":
-        return
+    # Normalize cue colors and names
+    new_cues = []
+    for c in track.cues:
+        # Make "close to red", red.
+        cue_color = CUE_COLORS["red"] if c.color in [CUE_COLORS["pinkred"], CUE_COLORS["magenta"]] else c.color
+        # Make all cuenames all-caps
+        cue_name = c.name.strip().upper()
 
-    # make cue names all caps
-    val_caps = prev_val.strip().upper()
-    if prev_val != val_caps:
-        return val_caps
-
-def set_grouping_based_on_track_color(prev_val: ValueType):
-    if prev_val == TRACK_COLORS["limegreen3"]:
-        tagfile.tags.setall("TIT1", [TIT1(text="TAGGED")])
-    elif prev_val in [ TRACK_COLORS["white"], TRACK_COLORS["grey"], TRACK_COLORS["black"]]:
-        tagfile.tags.setall("TIT1", [TIT1(text="UNTAGGED")])
+        new_cues.append(dataclasses.replace(c, color=cue_color, name=cue_name))
+    new_track = dataclasses.replace(track, cues=new_cues)
+    return new_track if new_track != track else None
 
 tags = TrackCuesV2(file)
-tags.modify_entries(
-    {
-        "cues": [
-            {"field": "color", "func": red_fix},
-            {"field": "name", "func": name_changes},
-        ],
-        "color": [
-            {"field": "color", "func": set_grouping_based_on_track_color},
-        ],
-    },
-    delete_tags_v1=True
-    # Must delete delete_tags_v1 in order for many tags_v2 changes appear in Serato (since we never change tags_v1 along with it (TODO)). Not sure what tags_v1 is even for, probably older versions of Serato. Have found no issues with deleting this, but use with caution if running an older version of Serato.
-)
+tags.modify_entries(track_rule, delete_tags_v1=True)
 tags.save()
 ```
 
