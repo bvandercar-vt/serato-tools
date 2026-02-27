@@ -6,9 +6,11 @@ import struct
 import os
 import sys
 from typing import cast, overload, TypeVar, Unpack
+from dataclasses import dataclass
 
 from mutagen._file import FileType
 from mutagen.mp3 import HeaderNotFoundError
+from mutagen.id3 import ID3
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -52,6 +54,8 @@ class TrackBeatgrid(SeratoTag):
         if self.raw_data is not None:
             self.entries = cast(TrackBeatgrid.EntryList, tuple(self._parse(self.raw_data)))
             self.enhanced_entries = self._enhance_entries(self.entries)
+
+        self.beats: list[TrackBeatgrid.BeatPoint] | None = None
 
     def __str__(self) -> str:
         if not self.enhanced_entries:
@@ -158,6 +162,25 @@ class TrackBeatgrid(SeratoTag):
                 enhanced.append(marker)
         return cast(TrackBeatgrid.EntryListEnhanced, (*enhanced, footer))
 
+    def get_beat_position(self, position_ms: float) -> float:
+        position_s = position_ms / 1000.0
+        nonterminal_markers, terminal_marker, _footer = self._check_and_split()
+
+        cumulative_beats = 0.0
+        for i, marker in enumerate(nonterminal_markers):
+            next_pos = (
+                nonterminal_markers[i + 1].position_s
+                if i + 1 < len(nonterminal_markers)
+                else terminal_marker.position_s
+            )
+            if position_s < next_pos:
+                interval = (next_pos - marker.position_s) / marker.beats_till_next_marker
+                return cumulative_beats + (position_s - marker.position_s) / interval
+            cumulative_beats += marker.beats_till_next_marker
+
+        terminal_interval = 60.0 / terminal_marker.bpm
+        return cumulative_beats + (position_s - terminal_marker.position_s) / terminal_interval
+
     BeatPoint = collections.namedtuple(
         "BeatInfo",
         ("position_s", "bpm"),
@@ -172,7 +195,7 @@ class TrackBeatgrid(SeratoTag):
 
         nonterminal_markers, terminal_marker, _footer = self._check_and_split(self.enhanced_entries)
 
-        beats_with_bpm: list[TrackBeatgrid.BeatPoint] = []
+        beats: list[TrackBeatgrid.BeatPoint] = []
 
         for i, marker in enumerate(nonterminal_markers):
             next_pos = (
@@ -183,16 +206,51 @@ class TrackBeatgrid(SeratoTag):
             interval = (next_pos - marker.position_s) / marker.beats_till_next_marker
             for j in range(marker.beats_till_next_marker):
                 pos = marker.position_s + j * interval
-                beats_with_bpm.append(TrackBeatgrid.BeatPoint(position_s=pos, bpm=marker.bpm))
+                beats.append(TrackBeatgrid.BeatPoint(position_s=pos, bpm=marker.bpm))
 
+        if isinstance(self.tagfile, ID3):
+            raise ValueError("ID3 tagfile not supported, must pass MP3() type or other that has .length attribute")
         track_length: float = self.tagfile.info.length
         terminal_interval = 60.0 / terminal_marker.bpm
         pos = terminal_marker.position_s
         while pos <= track_length:
-            beats_with_bpm.append(TrackBeatgrid.BeatPoint(position_s=pos, bpm=terminal_marker.bpm))
+            beats.append(TrackBeatgrid.BeatPoint(position_s=pos, bpm=terminal_marker.bpm))
             pos += terminal_interval
 
-        return beats_with_bpm
+        if not beats:
+            raise ValueError("No beats found")
+        if len(beats) < 5:
+            raise ValueError(f"More beats should be found... num beats: {len(beats)}")
+
+        self.beats = beats
+        return beats
+
+    def find_nearest_beat(self, position_ms: int, tolerance_beats: float) -> float | None:
+        position_s = position_ms / 1000.0
+
+        nearest_beat: TrackBeatgrid.BeatPoint | None = None
+        nearest_distance_beats: float | None = None
+
+        beats = self.beats or self.get_beats()
+        for i, beat in enumerate(beats):
+            if position_s == beat.position_s:
+                return None
+
+            bpm_for_interval = beats[i - 1].bpm if i > 0 and position_s < beat.position_s else beat.bpm
+            interval_s = 60.0 / bpm_for_interval
+            distance_beats = abs(position_s - beat.position_s) / interval_s
+
+            if distance_beats > tolerance_beats:
+                continue
+
+            if nearest_distance_beats is None or distance_beats < nearest_distance_beats:
+                nearest_distance_beats = distance_beats
+                nearest_beat = beat
+
+        if nearest_beat is None:
+            return None
+
+        return nearest_beat.position_s * 1000.0
 
     def analyze_and_write(self):
         if not self.tagfile:
@@ -226,10 +284,15 @@ class TrackBeatgrid(SeratoTag):
 def main():
     import argparse
 
+    @dataclass
+    class Args:
+        file: str
+        analyze: bool
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
     parser.add_argument("-a", "--analyze", action="store_true", help="Analyze dynamic beatgrid and write to file")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     try:
         tags = TrackBeatgrid(args.file)
@@ -250,9 +313,13 @@ def main():
 def main_analyze():
     import argparse
 
+    @dataclass
+    class Args:
+        file: str
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
     tags = TrackBeatgrid(args.file)
     tags.analyze_and_write()
 

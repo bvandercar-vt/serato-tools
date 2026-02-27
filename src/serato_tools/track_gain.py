@@ -1,6 +1,7 @@
 import os
 import sys
 from typing import Optional
+from dataclasses import dataclass
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -42,9 +43,13 @@ class TrackGain(SeratoTrack):
 if __name__ == "__main__":
     import argparse
 
+    @dataclass
+    class Args:
+        file: str
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     tags = TrackGain(args.file)
     print(str(tags))

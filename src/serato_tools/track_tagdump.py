@@ -4,6 +4,7 @@
 import base64
 import os
 import sys
+from dataclasses import dataclass
 
 import mutagen._file
 import mutagen.aiff
@@ -83,12 +84,18 @@ def get_serato_tagdata(tagfile: mutagen._file.FileType, decode: bool = False):
 if __name__ == "__main__":
     import argparse
 
+    @dataclass
+    class Args:
+        input_file: str
+        output_dir: str | None
+        decode: bool
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("input_file")
     parser.add_argument("output_dir", nargs="?")
     parser.add_argument("-d", "--decode", action="store_true")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     # pylint: disable-next=protected-access
     tagfile: mutagen._file.FileType | None = mutagen._file.File(args.input_file)

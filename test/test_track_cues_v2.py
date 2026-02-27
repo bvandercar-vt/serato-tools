@@ -1,6 +1,8 @@
 # pylint: disable=protected-access
 import unittest
 import os
+import io
+from contextlib import redirect_stdout
 
 from src.serato_tools.track_cues_v2 import TrackCuesV2
 
@@ -62,3 +64,13 @@ class TestCase(unittest.TestCase):
         with open(os.path.abspath("test/data/track_cues_v2_modified.bin"), mode="rb") as fp:
             expected_modified_data = fp.read()
         self.assertEqual(tags.raw_data, expected_modified_data, "modified data dump")
+
+    def test_snap_position_to_beat(self):
+        tags = TrackCuesV2("test/data/test_mp3.mp3")
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            tags.snap_positions_to_beat(1 / 16, 2)
+        output = buf.getvalue()
+
+        self.assertEqual(output.strip(), "Snapped by 42 ms")

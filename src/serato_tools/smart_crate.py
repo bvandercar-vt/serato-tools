@@ -2,6 +2,7 @@ import os
 import sys
 from typing import cast
 from enum import StrEnum, IntEnum
+from dataclasses import dataclass
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -200,6 +201,14 @@ class SmartCrate(CrateBase):
 def main():
     import argparse
 
+    @dataclass
+    class Args:
+        file_or_dir: str | None
+        all: bool
+        list_tracks: bool
+        filenames_only: bool
+        set_rules: list[str] | None
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file_or_dir", nargs="?", help="Set the crate file, or a directory to do all files in it")
     parser.add_argument("--all", action="store_true", help="Perform actions on all crates.")
@@ -210,7 +219,7 @@ def main():
         nargs=argparse.REMAINDER,
         help="Set rules for all crates using key-value pairs like --grouping str_contains NEW --title str_does_not_contain NEW_TITLE\nCan also do --key DELETE",
     )
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     if args.all:
         args.file_or_dir = SmartCrate.DIR_PATH

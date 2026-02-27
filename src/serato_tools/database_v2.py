@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+from dataclasses import dataclass
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -51,10 +52,15 @@ class DatabaseV2(SeratoBinFile):
 if __name__ == "__main__":
     import argparse
 
+    @dataclass
+    class Args:
+        file: str
+        find_missing: bool
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs="?", default=DatabaseV2.DEFAULT_DATABASE_FILE)
     parser.add_argument("--find_missing", action="store_true", help="List files that do not exist")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     db = DatabaseV2(args.file)
 

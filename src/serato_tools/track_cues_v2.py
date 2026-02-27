@@ -9,6 +9,8 @@ import struct
 import sys
 from typing import Callable, TypedDict, Literal, List, Sequence, Union, NotRequired
 from enum import Enum
+from dataclasses import dataclass
+
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -18,6 +20,7 @@ if __package__ is None:
 from serato_tools.track_cues_v1 import TrackCuesV1
 from serato_tools.utils import get_enum_key_from_value, logger, DataTypeError
 from serato_tools.utils.track_tags import SeratoTag
+from serato_tools.track_beatgrid import TrackBeatgrid
 
 
 class TrackCuesV2(SeratoTag):
@@ -75,6 +78,8 @@ class TrackCuesV2(SeratoTag):
         if self.raw_data is not None:
             self.entries = list(self._parse(self.raw_data))
         self.modified: bool = False
+
+        self.beatgrid: TrackBeatgrid | None = None
 
     def __str__(self) -> str:
         return "\n".join(str(entry) for entry in self.entries)
@@ -378,12 +383,17 @@ class TrackCuesV2(SeratoTag):
         func: Callable[[str], str | None]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
+    class CuePositionModifyRule(EntryModifyRule):
+        field: Literal["position"]  # pyright: ignore[reportIncompatibleVariableOverride]
+        func: Callable[[int], int | None]
+        """ (prev_value: ValueType) -> new_value: ValueType | None """
+
     class TrackColorModifyRule(EntryModifyRule):
         field: Literal["color"]  # pyright: ignore[reportIncompatibleVariableOverride]
         func: Callable[["TrackCuesV2.TrackColors"], Union["TrackCuesV2.TrackColors", None]]
         """ (prev_value: ValueType) -> new_value: ValueType | None """
 
-    type CueRules = CueIndexModifyRule | CueColorModifyRule | CueNameModifyRule | EntryModifyRule
+    type CueRules = CueIndexModifyRule | CueColorModifyRule | CueNameModifyRule | CuePositionModifyRule | EntryModifyRule
     type TrackColorRules = TrackColorModifyRule | EntryModifyRule
 
     class EntryModifyRules(TypedDict):
@@ -517,6 +527,48 @@ class TrackCuesV2(SeratoTag):
         """
         self.modify_entries({"color": [{"field": "color", "func": lambda v: color}]}, delete_tags_v1)
 
+    def get_snapped_beat_ms(self, postion_ms: int, tolerance_beats: float, min_ms_change: int = 1) -> int | None:
+        beatgrid = self.beatgrid or self._get_beatgrid()
+        snapped_ms = beatgrid.find_nearest_beat(postion_ms, tolerance_beats)
+        if not snapped_ms:
+            return None
+        snapped_ms = int(round(snapped_ms))
+        return snapped_ms if abs(snapped_ms - postion_ms) > min_ms_change else None
+
+    def snap_positions_to_beat(self, tolerance_beats: float, min_ms_change: int = 1) -> None:
+        """
+        Snap cue positions to the nearest beat if they are within a given tolerance (in beats).
+
+        Args:
+            tolerance_beats: Maximum distance in beats from the nearest whole beat at which snapping occurs.
+                             For example, pass 1/16, 1/8, 1/4, etc.
+        """
+        if not self.entries:
+            raise ValueError("No entries set")
+
+        def snap_to_beat_modify_rule(prev_ms: int) -> int | None:
+            new_ms = self.get_snapped_beat_ms(prev_ms, tolerance_beats, min_ms_change)
+            if new_ms is not None:
+                print(f"Snapped by {new_ms - prev_ms} ms")
+            return new_ms
+
+        self.modify_entries({"cues": [{"field": "position", "func": snap_to_beat_modify_rule}]}, delete_tags_v1=True)
+
+    def _get_beatgrid(self, file_or_data: SeratoTag.FileOrData | None = None) -> TrackBeatgrid:
+        if file_or_data is None:
+            if not self.tagfile:
+                raise ValueError("No tagfile set, or must pass beatgrid")
+            self.beatgrid = TrackBeatgrid(self.tagfile)
+        else:
+            self.beatgrid = TrackBeatgrid(file_or_data)
+        return self.beatgrid
+
+    def get_entry_beat_position(
+        self, entry: "TrackCuesV2.CueEntry", file_or_data: SeratoTag.FileOrData | None = None
+    ) -> float:
+        beatgrid = self.beatgrid or self._get_beatgrid(file_or_data)
+        return beatgrid.get_beat_position(getattr(entry, "position"))
+
     def is_beatgrid_locked(self) -> bool:
         return any(
             (isinstance(entry, TrackCuesV2.BpmLockEntry) and getattr(entry, "enabled")) for entry in self.entries
@@ -531,6 +583,14 @@ if __name__ == "__main__":
 
     from serato_tools.utils.ui import get_hex_editor, get_text_editor, ui_ask
 
+    @dataclass
+    class Args:
+        file: str
+        set_color: str | None
+        snap_cues: bool
+        snap_tolerance: str | None
+        edit: bool
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
     parser.add_argument(
@@ -539,8 +599,19 @@ if __name__ == "__main__":
         default=None,
         help="Set track color",
     )
+    parser.add_argument(
+        "--snap_cues",
+        action="store_true",
+        help="Snap cue positions to nearest beat within tolerance",
+    )
+    parser.add_argument(
+        "--snap_tolerance",
+        type=str,
+        default=None,
+        help='Snapping tolerance as a fraction of a beat (e.g. "1/16", "1/8", "1/4")',
+    )
     parser.add_argument("-e", "--edit", action="store_true")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     try:
         tags = TrackCuesV2(args.file)
@@ -550,7 +621,34 @@ if __name__ == "__main__":
         tags = TrackCuesV2(data)
 
     if args.set_color:
-        tags.set_track_color(args.set_color)
+        try:
+            color = TrackCuesV2.TrackColors[args.set_color.upper()]
+        except KeyError as exc:
+            valid = ", ".join(c.name for c in TrackCuesV2.TrackColors)
+            raise ValueError(f"Invalid track color {args.set_color!r}, must be one of: {valid}") from exc
+
+        tags.set_track_color(color)
+        tags.save()
+        sys.exit()
+
+    if args.snap_cues:
+        if not args.snap_tolerance:
+            raise ValueError("--snap_cues requires --snap_tolerance")
+        num_str, sep, den_str = args.snap_tolerance.partition("/")
+        if sep != "/" or not num_str or not den_str:
+            raise ValueError(f"Invalid snap tolerance: {args.snap_tolerance!r}, expected format like '1/4'")
+        try:
+            num = float(num_str)
+            den = float(den_str)
+        except ValueError as exc:
+            raise ValueError(f"Invalid snap tolerance: {args.snap_tolerance!r}") from exc
+        if den == 0:
+            raise ValueError("Snap tolerance denominator cannot be zero")
+        tolerance_beats = num / den
+        if tolerance_beats >= 1:
+            raise NotImplementedError("Snap tolerance must be less than 1 beat. TODO: implement this to allow")
+
+        tags.snap_positions_to_beat(tolerance_beats)
         tags.save()
         sys.exit()
 

@@ -2,6 +2,7 @@
 # This is from this repo: https://github.com/sharst/seratopy
 import os
 import sys
+from dataclasses import dataclass
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -35,13 +36,21 @@ class Crate(CrateBase):
 def main():
     import argparse
 
+    @dataclass
+    class Args:
+        file_or_dir: str | None
+        all: bool
+        list_tracks: bool
+        filenames_only: bool
+        find_missing: bool
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file_or_dir", nargs="?", help="Set the crate file, or a directory to do all files in it")
     parser.add_argument("--all", action="store_true", help="Perform actions on all crates.")
     parser.add_argument("-l", "--list_tracks", action="store_true", help="Only list tracks")
     parser.add_argument("-f", "--filenames_only", action="store_true", help="Only list track filenames")
     parser.add_argument("--find_missing", action="store_true", help="List files that do not exist")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     if args.all:
         args.file_or_dir = Crate.DIR_PATH

@@ -20,6 +20,7 @@
 - Set a track's color (i.e. if has hot cues, change to BLUE)
 - Set a piece of metadata due to a track's color (i.e. if track is green, set "grouping" to "TAGGED") (this is useful since can't create smart crates by track color in Serato)
 - Analyze a track's Dynamic Beatgrid and save it to the beatgrid Serato tag.
+ - Snap cue points to the nearest beat with a configurable tolerance (e.g. 1/16, 1/8, 1/4 of a beat).
 
 **Database:**
 - Rename a file while changing its location in the database as well, so that it doesn't go missing.
@@ -127,6 +128,19 @@ tags.set_track_color('/Users/Username/Music/Dubstep/Raaket - ILL.mp3',
 )
 tags.save()
 ```
+
+### Snapping cue positions to the beatgrid
+
+After you have a good beatgrid (including dynamic beatgrids), you can snap cue positions so they land exactly on beats, within a configurable tolerance:
+
+```cmd
+serato_snap_cues_v2 "/Users/Username/Music/Dubstep/Some Track.mp3" --snap_cues --snap_tolerance 1/16
+```
+
+- `--snap_cues` enables snapping for all cue entries in the `Serato Markers2` tag.
+- `--snap_tolerance` is a fraction of a beat (e.g. `1/16`, `1/8`, `1/4`) that a cue point can come within a beat in order to "snap" to it.
+
+Only cue points within the tolerance window of some beat are moved; others are left unchanged.
 
 ### Modifying track metadata / hot cues
 

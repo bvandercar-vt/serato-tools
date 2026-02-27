@@ -5,7 +5,8 @@ import shutil
 import glob
 import re
 import platform
-from typing import Optional, cast
+from typing import Optional
+from dataclasses import dataclass
 
 if __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -227,6 +228,12 @@ def get_crate_files(pattern: str):
 def main():
     import argparse
 
+    @dataclass
+    class Args:
+        dest_dir: str
+        crate_matcher: list[str]
+        root_crate: str | None
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d",
@@ -255,20 +262,18 @@ def main():
         default=None,
         help="Not required, but is very nice when plugging your drive into another DJ's laptop. Sets all crates to be within this crate on the destination drive",
     )
-    args = parser.parse_args()
-
-    dest_dir = cast(str, args.dest_dir)
+    args = Args(**vars(parser.parse_args()))
 
     crate_files: list[str] = []
-    for cm in cast(list[str], args.crate_matcher):
+    for cm in args.crate_matcher:
         crate_files += get_crate_files(cm)
 
-    if platform.system() == "Windows" and len(dest_dir) == 1:
-        dest_dir += ":\\\\"
+    if platform.system() == "Windows" and len(args.dest_dir) == 1:
+        args.dest_dir += ":\\\\"
 
     copy_crates_to_usb(
         crate_files=crate_files,
-        dest_drive_dir=dest_dir,
+        dest_drive_dir=args.dest_dir,
         dest_tracks_dir="Tracks",
         root_crate=args.root_crate,
     )

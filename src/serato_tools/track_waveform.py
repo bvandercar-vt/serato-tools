@@ -3,6 +3,7 @@
 import io
 import os
 import sys
+from dataclasses import dataclass
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -62,9 +63,13 @@ class TrackWaveform(SeratoTag):
 if __name__ == "__main__":
     import argparse
 
+    @dataclass
+    class Args:
+        file: str
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     try:
         tags = TrackWaveform(args.file)

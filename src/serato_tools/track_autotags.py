@@ -4,6 +4,7 @@ import io
 import os
 import sys
 from typing import Optional
+from dataclasses import dataclass
 
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -75,10 +76,15 @@ if __name__ == "__main__":
 
     from serato_tools.utils.ui import get_text_editor
 
+    @dataclass
+    class Args:
+        file: str
+        edit: bool
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file")
     parser.add_argument("-e", "--edit", action="store_true")
-    args = parser.parse_args()
+    args = Args(**vars(parser.parse_args()))
 
     try:
         tags = TrackAutotags(args.file)
