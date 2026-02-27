@@ -202,13 +202,14 @@ class TrackCuesV2(SeratoTag):
             return cls(field1, index, position, field4, color, field6, name.decode("utf-8"))
 
         def dump(self) -> bytes:
+            position = max(0, min(self.position, 0xFFFFFFFF))
             return b"".join(
                 (
                     struct.pack(
                         self._FORMAT,
                         self.field1,
                         self.index,
-                        self.position,
+                        position,
                         self.field4,
                         self.color,
                         self.field6,
@@ -264,14 +265,16 @@ class TrackCuesV2(SeratoTag):
             return cls(field1, index, startposition, endposition, field5, field6, color, locked, name.decode("utf-8"))
 
         def dump(self) -> bytes:
+            startposition = max(0, min(self.startposition, 0xFFFFFFFF))
+            endposition = max(0, min(self.endposition, 0xFFFFFFFF))
             return b"".join(
                 (
                     struct.pack(
                         self._FORMAT,
                         self.field1,
                         self.index,
-                        self.startposition,
-                        self.endposition,
+                        startposition,
+                        endposition,
                         self.field5,
                         self.field6,
                         self.color,
@@ -312,7 +315,11 @@ class TrackCuesV2(SeratoTag):
         payload = base64.b64decode(data + padding)
         fp = io.BytesIO(payload)
         self._check_version(fp.read(self.VERSION_LEN))
+        num_entries = 0
+        MAX_PARSE_ENTRIES = 100
         while True:
+            if num_entries >= MAX_PARSE_ENTRIES:
+                raise ValueError(f"cue payload has more than {MAX_PARSE_ENTRIES} entries; malformed or unsupported")
             entry_name = SeratoTag._readbytes(fp).decode("utf-8")
             if not entry_name:
                 break
@@ -321,6 +328,7 @@ class TrackCuesV2(SeratoTag):
 
             entry_class = TrackCuesV2._get_entry_class(entry_name)
             yield entry_class.load(fp.read(entry_len))
+            num_entries += 1
 
     def _dump(self):
         version = self._pack_version()
@@ -342,8 +350,15 @@ class TrackCuesV2(SeratoTag):
         payload = b"".join(contents)
         payload_base64 = bytearray(base64.b64encode(payload).replace(b"=", b"A"))
 
+        MAX_LINE_WRAPS = 10_000
+        wrap_count = 0
         i = 72
         while i < len(payload_base64):
+            if wrap_count >= MAX_LINE_WRAPS:
+                raise ValueError(
+                    f"base64 payload line wrapping exceeded {MAX_LINE_WRAPS} iterations; payload too large or malformed"
+                )
+            wrap_count += 1
             payload_base64.insert(i, 0x0A)
             i += 73
 

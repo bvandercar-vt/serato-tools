@@ -52,12 +52,19 @@ class TrackBeatgrid(SeratoTag):
         self.enhanced_entries: TrackBeatgrid.EntryListEnhanced | None = None
 
         if self.raw_data is not None:
-            self.entries = cast(TrackBeatgrid.EntryList, tuple(self._parse(self.raw_data)))
-            self.enhanced_entries = self._enhance_entries(self.entries)
+            entries = tuple(self._parse(self.raw_data))
+            if len(entries) == 1 and isinstance(entries[0], TrackBeatgrid.Footer):
+                # sometimes happens from serato. There is no grid in this case.
+                entries = None
+            if entries:
+                self.entries = cast(TrackBeatgrid.EntryList, entries)
+                self.enhanced_entries = self._enhance_entries(self.entries)
 
         self.beats: list[TrackBeatgrid.BeatPoint] | None = None
 
     def __str__(self) -> str:
+        if not self.entries:
+            return ""
         if not self.enhanced_entries:
             raise ValueError("no enhanced_entries set")
         nonterminal_markers, terminal_marker, _footer = self._check_and_split(self.enhanced_entries)
@@ -79,7 +86,9 @@ class TrackBeatgrid(SeratoTag):
                 yield TrackBeatgrid.NonTerminalBeatgridMarker(position_s, beats_till_next_marker)
 
         # TODO: What's the meaning of the footer byte?
-        yield TrackBeatgrid.Footer(struct.unpack("B", fp.read(1))[0])
+        footer_byte = fp.read(1)
+        footer_value = struct.unpack("B", footer_byte)[0] if len(footer_byte) == 1 else 0
+        yield TrackBeatgrid.Footer(footer_value)
         assert fp.read() == b""
 
     __SplitEntryList = tuple[list[_T], TerminalBeatgridMarker, Footer]
@@ -90,9 +99,11 @@ class TrackBeatgrid(SeratoTag):
     def _check_and_split(self, entries: "_EntryList[_T]") -> "__SplitEntryList[_T]": ...
     def _check_and_split(self, entries: "_EntryList[_T] | None" = None):
         if entries is None:
-            if not self.entries:
-                raise ValueError("no entries set")
             entries = cast("TrackBeatgrid._EntryList[_T]", self.entries)
+
+        if not entries:
+            raise ValueError("no entries set")
+
         nonterminal_markers: list[_T] = []
         terminal_markers: list[TrackBeatgrid.TerminalBeatgridMarker] = []
         footers: list[TrackBeatgrid.Footer] = []
@@ -150,7 +161,10 @@ class TrackBeatgrid(SeratoTag):
             if isinstance(marker, TrackBeatgrid.NonTerminalBeatgridMarker):
                 next_marker = markers[i + 1]
                 time_diff = next_marker.position_s - marker.position_s
-                bpm = marker.beats_till_next_marker / time_diff * 60
+                if time_diff == 0:
+                    bpm = float("nan")  # mark invalid BPM when segment has zero duration
+                else:
+                    bpm = marker.beats_till_next_marker / time_diff * 60
                 enhanced.append(
                     TrackBeatgrid.NonTerminalBeatgridMarkerEnhanced(
                         marker.position_s,
@@ -190,6 +204,8 @@ class TrackBeatgrid(SeratoTag):
         """Return a list of BeatInfo(position_s, bpm, index) for all beats in the track."""
         if not isinstance(self.tagfile, FileType):
             raise ValueError("no tagfile set, cannot determine track length")
+        if not self.entries:
+            return []
         if not self.enhanced_entries:
             raise ValueError("no enhanced_entries set")
 
@@ -211,6 +227,8 @@ class TrackBeatgrid(SeratoTag):
         if isinstance(self.tagfile, ID3):
             raise ValueError("ID3 tagfile not supported, must pass MP3() type or other that has .length attribute")
         track_length: float = self.tagfile.info.length
+        if track_length > 60 * 60 * 3:  # 3 hours
+            raise ValueError(f"Track length is too long: {track_length} seconds")
         terminal_interval = 60.0 / terminal_marker.bpm
         pos = terminal_marker.position_s
         while pos <= track_length:

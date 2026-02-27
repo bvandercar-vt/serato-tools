@@ -2,6 +2,10 @@
 
 Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.0.1] - 2026-02-27
+
+- Misc. Beatgrid and Cues fixes.
+
 ## [4.0.0] - 2026-02-27
 
 - Significant refactor to track cues: more readable classes, pass whole track cue information to modifier function
