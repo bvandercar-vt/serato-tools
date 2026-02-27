@@ -5,8 +5,9 @@ import io
 import struct
 import os
 import sys
-from typing import cast
+from typing import cast, overload, TypeVar, Unpack
 
+from mutagen._file import FileType
 from mutagen.mp3 import HeaderNotFoundError
 
 if __package__ is None:
@@ -15,6 +16,8 @@ if __package__ is None:
 from serato_tools.utils.track_tags import SeratoTag
 from serato_tools.utils import logger
 
+_T = TypeVar("_T")
+
 
 class TrackBeatgrid(SeratoTag):
     GEOB_KEY = "Serato BeatGrid"
@@ -22,30 +25,39 @@ class TrackBeatgrid(SeratoTag):
 
     NonTerminalBeatgridMarker = collections.namedtuple(
         "NonTerminalBeatgridMarker",
-        ("position", "beats_till_next_marker"),
+        ("position_s", "beats_till_next_marker"),
     )
     TerminalBeatgridMarker = collections.namedtuple(
         "TerminalBeatgridMarker",
-        ("position", "bpm"),
+        ("position_s", "bpm"),
     )
-
     Footer = collections.namedtuple("Footer", ("unknown",))
 
-    type EntryList = list[TerminalBeatgridMarker | NonTerminalBeatgridMarker | Footer]
+    NonTerminalBeatgridMarkerEnhanced = collections.namedtuple(
+        "NonTerminalBeatgridMarkerEnhanced",
+        NonTerminalBeatgridMarker._fields + ("bpm",),
+    )
+
+    _EntryList = tuple[Unpack[tuple[_T, ...]], TerminalBeatgridMarker, Footer]
+    type EntryList = _EntryList[NonTerminalBeatgridMarker]
+    type EntryListEnhanced = _EntryList[NonTerminalBeatgridMarkerEnhanced]
 
     def __init__(self, file_or_data: SeratoTag.FileOrData):
         self.raw_data: bytes | None = None
         super().__init__(file_or_data)
 
         self.entries: TrackBeatgrid.EntryList | None = None
+        self.enhanced_entries: TrackBeatgrid.EntryListEnhanced | None = None
 
         if self.raw_data is not None:
-            self.entries = list(self._parse(self.raw_data))
+            self.entries = cast(TrackBeatgrid.EntryList, tuple(self._parse(self.raw_data)))
+            self.enhanced_entries = self._enhance_entries(self.entries)
 
     def __str__(self) -> str:
-        nonterminal_markers, terminal_markers, footer = self._check_and_split()  # pylint: disable=unused-variable
-        markers = nonterminal_markers + terminal_markers
-        return f"Beatgrid with {len(markers)} markers"
+        if not self.enhanced_entries:
+            raise ValueError("no enhanced_entries set")
+        nonterminal_markers, terminal_marker, _footer = self._check_and_split(self.enhanced_entries)
+        return "\n".join(str(marker) for marker in (*nonterminal_markers, terminal_marker))
 
     def _parse(self, data: bytes):
         fp = io.BytesIO(data)
@@ -53,30 +65,39 @@ class TrackBeatgrid(SeratoTag):
 
         num_markers = struct.unpack(">I", fp.read(4))[0]
         for i in range(num_markers):
-            position = struct.unpack(">f", fp.read(4))[0]
+            position_s = struct.unpack(">f", fp.read(4))[0]
             data = fp.read(4)
             if i == num_markers - 1:
                 bpm = struct.unpack(">f", data)[0]
-                yield TrackBeatgrid.TerminalBeatgridMarker(position, bpm)
+                yield TrackBeatgrid.TerminalBeatgridMarker(position_s, bpm)
             else:
                 beats_till_next_marker = struct.unpack(">I", data)[0]
-                yield TrackBeatgrid.NonTerminalBeatgridMarker(position, beats_till_next_marker)
+                yield TrackBeatgrid.NonTerminalBeatgridMarker(position_s, beats_till_next_marker)
 
         # TODO: What's the meaning of the footer byte?
         yield TrackBeatgrid.Footer(struct.unpack("B", fp.read(1))[0])
         assert fp.read() == b""
 
-    def _check_and_split(self):
-        if not self.entries:
-            raise ValueError("no entries set")
+    __SplitEntryList = tuple[list[_T], TerminalBeatgridMarker, Footer]
 
-        nonterminal_markers: list[TrackBeatgrid.NonTerminalBeatgridMarker] = []
+    @overload
+    def _check_and_split(self) -> "__SplitEntryList[NonTerminalBeatgridMarker]": ...
+    @overload
+    def _check_and_split(self, entries: "_EntryList[_T]") -> "__SplitEntryList[_T]": ...
+    def _check_and_split(self, entries: "_EntryList[_T] | None" = None):
+        if entries is None:
+            if not self.entries:
+                raise ValueError("no entries set")
+            entries = cast("TrackBeatgrid._EntryList[_T]", self.entries)
+        nonterminal_markers: list[_T] = []
         terminal_markers: list[TrackBeatgrid.TerminalBeatgridMarker] = []
         footers: list[TrackBeatgrid.Footer] = []
 
-        for entry in self.entries:
-            if isinstance(entry, TrackBeatgrid.NonTerminalBeatgridMarker):
-                nonterminal_markers.append(entry)
+        for entry in entries:
+            if isinstance(
+                entry, (TrackBeatgrid.NonTerminalBeatgridMarker, TrackBeatgrid.NonTerminalBeatgridMarkerEnhanced)
+            ):
+                nonterminal_markers.append(cast(_T, entry))
             elif isinstance(entry, TrackBeatgrid.TerminalBeatgridMarker):
                 terminal_markers.append(entry)
             elif isinstance(entry, TrackBeatgrid.Footer):
@@ -86,15 +107,14 @@ class TrackBeatgrid(SeratoTag):
 
         assert len(terminal_markers) == 1, f"should only be 1 terminal marker, but #: {len(terminal_markers)}"
         assert len(footers) == 1, f"should only be 1 footer, but #: {len(footers)}"
-        assert isinstance(self.entries[-1], TrackBeatgrid.Footer), "last item should be a footer"
-        assert isinstance(
-            self.entries[-2], TrackBeatgrid.TerminalBeatgridMarker
-        ), "last item should be a terminal marker"
-        return nonterminal_markers, terminal_markers, footers[0]
+        assert isinstance(entries[-1], TrackBeatgrid.Footer), "last item should be a footer"
+        assert isinstance(entries[-2], TrackBeatgrid.TerminalBeatgridMarker), "last item should be a terminal marker"
+        return (nonterminal_markers, terminal_markers[0], footers[0])
 
     def _dump(self):
-        nonterminal_markers, terminal_markers, footer = self._check_and_split()
-        markers = nonterminal_markers + terminal_markers
+        entries = self._check_and_split()
+        nonterminal_markers, terminal_marker, footer = entries
+        markers = (*nonterminal_markers, terminal_marker)
 
         fp = io.BytesIO()
         # Write version
@@ -103,7 +123,7 @@ class TrackBeatgrid(SeratoTag):
         # Write markers
         fp.write(struct.pack(">I", len(markers)))
         for marker in markers:
-            fp.write(struct.pack(">f", marker.position))
+            fp.write(struct.pack(">f", marker.position_s))
             if isinstance(marker, TrackBeatgrid.TerminalBeatgridMarker):
                 fp.write(struct.pack(">f", marker.bpm))
             elif isinstance(marker, TrackBeatgrid.NonTerminalBeatgridMarker):
@@ -118,6 +138,62 @@ class TrackBeatgrid(SeratoTag):
         fp.seek(0)
         self.raw_data = fp.getvalue()
 
+    @staticmethod
+    def _enhance_entries(raw_entries: "TrackBeatgrid.EntryList") -> "TrackBeatgrid.EntryListEnhanced":
+        *markers, footer = raw_entries
+        enhanced: list[TrackBeatgrid.NonTerminalBeatgridMarkerEnhanced | TrackBeatgrid.TerminalBeatgridMarker] = []
+        for i, marker in enumerate(markers):
+            if isinstance(marker, TrackBeatgrid.NonTerminalBeatgridMarker):
+                next_marker = markers[i + 1]
+                time_diff = next_marker.position_s - marker.position_s
+                bpm = marker.beats_till_next_marker / time_diff * 60
+                enhanced.append(
+                    TrackBeatgrid.NonTerminalBeatgridMarkerEnhanced(
+                        marker.position_s,
+                        marker.beats_till_next_marker,
+                        bpm,
+                    )
+                )
+            else:
+                enhanced.append(marker)
+        return cast(TrackBeatgrid.EntryListEnhanced, (*enhanced, footer))
+
+    BeatPoint = collections.namedtuple(
+        "BeatInfo",
+        ("position_s", "bpm"),
+    )
+
+    def get_beats(self) -> list["TrackBeatgrid.BeatPoint"]:
+        """Return a list of BeatInfo(position_s, bpm, index) for all beats in the track."""
+        if not isinstance(self.tagfile, FileType):
+            raise ValueError("no tagfile set, cannot determine track length")
+        if not self.enhanced_entries:
+            raise ValueError("no enhanced_entries set")
+
+        nonterminal_markers, terminal_marker, _footer = self._check_and_split(self.enhanced_entries)
+
+        beats_with_bpm: list[TrackBeatgrid.BeatPoint] = []
+
+        for i, marker in enumerate(nonterminal_markers):
+            next_pos = (
+                nonterminal_markers[i + 1].position_s
+                if i + 1 < len(nonterminal_markers)
+                else terminal_marker.position_s
+            )
+            interval = (next_pos - marker.position_s) / marker.beats_till_next_marker
+            for j in range(marker.beats_till_next_marker):
+                pos = marker.position_s + j * interval
+                beats_with_bpm.append(TrackBeatgrid.BeatPoint(position_s=pos, bpm=marker.bpm))
+
+        track_length: float = self.tagfile.info.length
+        terminal_interval = 60.0 / terminal_marker.bpm
+        pos = terminal_marker.position_s
+        while pos <= track_length:
+            beats_with_bpm.append(TrackBeatgrid.BeatPoint(position_s=pos, bpm=terminal_marker.bpm))
+            pos += terminal_interval
+
+        return beats_with_bpm
+
     def analyze_and_write(self):
         if not self.tagfile:
             raise Exception("No tagfile set")
@@ -131,14 +207,17 @@ class TrackBeatgrid(SeratoTag):
         analyzed_breatgrid = analyze_beatgrid(filename, bpm_helper=bpm)
 
         logger.info("Writing tags...")
-        entries: TrackBeatgrid.EntryList = [
-            TrackBeatgrid.NonTerminalBeatgridMarker(position, 4) for position in analyzed_breatgrid.downbeats[:-1]
-        ] + [
+        raw_entries: TrackBeatgrid.EntryList = (
+            *(
+                TrackBeatgrid.NonTerminalBeatgridMarker(position_s, 4)
+                for position_s in analyzed_breatgrid.downbeats[:-1]
+            ),
             TrackBeatgrid.TerminalBeatgridMarker(analyzed_breatgrid.downbeats[-1], bpm=bpm or analyzed_breatgrid.bpm),
             TrackBeatgrid.Footer(0),
-        ]
+        )
 
-        self.entries = entries
+        self.entries = raw_entries
+        self.enhanced_entries = self._enhance_entries(self.entries)
 
         self._dump()
         self.save()

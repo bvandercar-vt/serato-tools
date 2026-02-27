@@ -14,10 +14,10 @@ class TestCase(unittest.TestCase):
         assert tags.entries is not None
         self.assertEqual(
             tags.entries,
-            [
-                TrackBeatgrid.TerminalBeatgridMarker(position=0.029895611107349396, bpm=75.0),
+            (
+                TrackBeatgrid.TerminalBeatgridMarker(position_s=0.029895611107349396, bpm=75.0),
                 TrackBeatgrid.Footer(unknown=0),
-            ],
+            ),
             "parsed entries",
         )
         tags._dump()

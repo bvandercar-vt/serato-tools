@@ -76,6 +76,9 @@ class TrackCuesV2(SeratoTag):
             self.entries = list(self._parse(self.raw_data))
         self.modified: bool = False
 
+    def __str__(self) -> str:
+        return "\n".join(str(entry) for entry in self.entries)
+
     @staticmethod
     def _get_cue_color_key(value: bytes) -> str:
         return get_enum_key_from_value(value, TrackCuesV2.CueColors)
@@ -168,7 +171,7 @@ class TrackCuesV2(SeratoTag):
         FIELDS = (
             "field1",
             "index",
-            "position",
+            "position",  # in milliseconds
             "field4",
             "color",
             "field6",
