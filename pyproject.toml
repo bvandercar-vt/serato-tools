@@ -22,7 +22,7 @@ keywords = [
 requires-python = ">= 3.12"
 readme = "README.md"
 authors = [
-    { name = "bvandercar-vt", email = "bvandercar@outlook.com" },
+    { name = "bvandrc", email = "bvandercar@outlook.com" },
 ]
 license = "MIT"
 dependencies = [
@@ -39,8 +39,8 @@ beatgrid_analysis = ["librosa", "numpy"]
 
 [project.urls]
 Homepage = "https://pypi.org/project/serato-tools/"
-Repository = "https://github.com/bvandercar-vt/serato-tools"
-Issues = "https://github.com/bvandercar-vt/serato-tools/issues"
+Repository = "https://github.com/bvandrc/serato-tools"
+Issues = "https://github.com/bvandrc/serato-tools/issues"
 
 
 [project.scripts]
