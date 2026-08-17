@@ -1,9 +1,6 @@
 # Serato Markers_
 
-The `Serato Markers_` tag stores information about the first 5 Cues and 9
-Loops.  This is redunant with some of the information from the [`Serato
-Markers2`](serato_markers2.md) tag. Serato will prefer information from `Serato
-Markers_` if it's present.
+The `Serato Markers_` tag stores information about the first 5 Cues and 9 Loops.  This is redunant with some of the information from the [`Serato Markers2`](serato_markers2.md) tag. Serato will prefer information from `Serato Markers_` if it's present.
 
 The tag data consists of a header followed by 14 entries and 4 footer bytes.
 
@@ -57,10 +54,7 @@ Each entry has the same format. Labels for Cues and Loops are not supported and 
 
 ### Custom `serato32` Binary Format
 
-The values that Serato uses in the `Serato Markers_` entries are encoded in a
-weird 4-byte binary format that I called `serato32` in the tables above.
-Apparently they thought it was best to do sprinkle some unused bits into
-the 3-byte value. Hence, the resulting data becomes 4 bytes long:
+The values that Serato uses in the `Serato Markers_` entries are encoded in a weird 4-byte binary format that I called `serato32` in the tables above. Apparently they thought it was best to do sprinkle some unused bits into the 3-byte value. Hence, the resulting data becomes 4 bytes long:
 
     Serato32     |     Byte1     |     Byte2     |     Byte3     |     Byte4     |
                  | Nibb1 | Nibb2 | Nibb3 | Nibb4 | Nibb5 | Nibb6 | Nibb7 | Nibb8 |

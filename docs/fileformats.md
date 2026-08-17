@@ -27,8 +27,7 @@ Data is stored inside [ID3v2.4 General encapsulated object (GEOB)](http://id3.or
 
 ## FLAC
 
-Data is stored inside the [`VORBIS_COMMENT`](https://xiph.org/vorbis/doc/v-comment.html) block.
-The fields used are as follows:
+Data is stored inside the [`VORBIS_COMMENT`](https://xiph.org/vorbis/doc/v-comment.html) block. The fields used are as follows:
 
 - `SERATO_ANALYSIS`
 - `SERATO_AUTOGAIN`
@@ -38,8 +37,7 @@ The fields used are as follows:
 - `SERATO_RELVOL`
 - `SERATO_VIDEO_ASSOC`
 
-The field data is base64-encoded without padding and linefeed `\n`
-inserted after every 72 characters.
+The field data is base64-encoded without padding and linefeed `\n` inserted after every 72 characters.
 
 After decoding, the data contains:
 
@@ -50,8 +48,7 @@ After decoding, the data contains:
 
 ## MP4/M4A (AAC, ALAC)
 
-Data is stored as custom MP4 atoms using the *type* `----` and the
-*mean* `com.serato.dj`:
+Data is stored as custom MP4 atoms using the *type* `----` and the *mean* `com.serato.dj`:
 
 - `----:com.serato.dj:analysisVersion`
 - `----:com.serato.dj:autgain`
@@ -62,10 +59,7 @@ Data is stored as custom MP4 atoms using the *type* `----` and the
 - `----:com.serato.dj:relvol`
 - `----:com.serato.dj:videoassociation`
 
-Field data is base64-encoded without padding. Both fields `markers` and
-`markersv2` contain linefeeds after every 72 characters while all other
-fields don't (i.e. *no* linefeeds). The decoded data matches the format
-used for FLAC files.
+Field data is base64-encoded without padding. Both fields `markers` and `markersv2` contain linefeeds after every 72 characters while all other fields don't (i.e. *no* linefeeds). The decoded data matches the format used for FLAC files.
 
 In the special case of MP4/M4A files, Serato only reads the first 5 cue points and all loops when these are also in the `markers` field. This field has a fixed length and even when cue points or loops are not in use, they should still be filled.
 

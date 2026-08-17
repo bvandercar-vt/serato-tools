@@ -21,8 +21,7 @@ There are two different types of beatgrid markers: terminal and non-terminal.
 
 ### Terminal
 
-The last beatgrid marker always has to be a terminal one.
-This is also the case if the tag only contain a single beatgrid marker.
+The last beatgrid marker always has to be a terminal one. This is also the case if the tag only contain a single beatgrid marker.
 
 | Offset | Length | Raw Value                 | Decoded Value | Type                    | Description
 | ------ | ------ | ------------------------- | ------------- | ----------------------- | -----------
@@ -31,8 +30,7 @@ This is also the case if the tag only contain a single beatgrid marker.
 
 ### Non-terminal
 
-All beatgrid markers before the last one are non-terminal beatgrid markers.
-Instead of a floating point BPM value, they contain the number of beats till the next marker as an integer.
+All beatgrid markers before the last one are non-terminal beatgrid markers. Instead of a floating point BPM value, they contain the number of beats till the next marker as an integer.
 
 | Offset | Length | Raw Value                 | Decoded Value | Type                    | Description
 | ------ | ------ | ------------------------- | ------------- | ----------------------- | -----------
