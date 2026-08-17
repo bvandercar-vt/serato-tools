@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Conventions
 
-The repo's conventions live in `conventions/` and are imported here in full — they apply to all work in this repo, and everything below extends rather than overrides them. If they conflict with anything in this file, the conventions win.
+The repo's conventions live in `conventions/` and are imported here in full — they apply to all work in this repo, and everything below extends them. Keep this file consistent with them: nothing here should ever contradict a convention.
 
 @conventions/all.md
 
