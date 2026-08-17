@@ -85,16 +85,19 @@ class TrackCuesV1(SeratoTag):
                 elif field == "start_position":
                     assert start_position_set is not None
                     if start_position_set:
+                        assert isinstance(value, bytes)
                         value = struct.unpack(">I", _decode_bytes_32(value).rjust(4, b"\x00"))[0]
                     else:
                         value = None
                 elif field == "end_position":
                     assert end_position_set is not None
                     if end_position_set:
+                        assert isinstance(value, bytes)
                         value = struct.unpack(">I", _decode_bytes_32(value).rjust(4, b"\x00"))[0]
                     else:
                         value = None
                 elif field == "color":
+                    assert isinstance(value, bytes)
                     value = _decode_bytes_32(value)
                 elif field == "type":
                     value = TrackCuesV1.EntryType(value)
