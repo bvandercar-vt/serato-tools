@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Conventions
+
+The repo's conventions live in `conventions/` and are imported here in full — they apply to all work in this repo, and everything below extends rather than overrides them. If they conflict with anything in this file, the conventions win.
+
+@conventions/all.md
+
+`conventions/` is synced automatically from `bvandrc/bvandrc-conventions` by `.github/workflows/sync-conventions.yml`. The workflow deletes and recreates the directory on every run, so edits made here are lost — change them upstream. When a sync adds a new file to `conventions/`, add a matching `@conventions/<file>` import to this section.
+
 ## Commands
 
 Requires Python 3.12+ (the code uses PEP 695 `type` statements, which are a syntax error on 3.11).
@@ -15,6 +23,8 @@ pylint $(git ls-files '*.py')                                     # lint (config
 pyright                                                           # type check (config in pyproject.toml)
 black .                                                           # format, line-length 120
 ```
+
+This is a Python repo with no package manager scripts, so `black .` is the "format script" the conventions require before every commit; CI enforces it with `psf/black@stable`.
 
 Tests import via `from src.serato_tools...`, so `python -m unittest` only works from the repo root.
 
@@ -72,4 +82,4 @@ Console scripts are declared in `[project.scripts]` in `pyproject.toml` and poin
 - `test/data/` — fixtures for the unittest suite. Tests assert **byte-exact** round-trips (parse → dump must reproduce the input), so regenerate fixtures deliberately, never to make a test pass.
 - `data/` — reference dumps of raw GEOB tags captured from real tracks, organized by container (`id3`, `flac`, `mp4`, `aif`, `ogg`) and scenario (`hotcue-colors`, `saved-loops`, `bpmlock`, ...). Used as evidence for the format writeups in `docs/`, not by the test suite. Committed as binary via `.gitattributes`.
 - `docs/` — per-tag format documentation; `docs/fileformats.md` covers how each container stores the tags.
-- `conventions/` — synced automatically from `bvandrc/bvandrc-conventions` by `.github/workflows/sync-conventions.yml`. The workflow deletes and recreates the directory on every run, so edits made here are lost — change them upstream. Read `conventions/all.md`; notably, branches are named `<conventional-commit-type>/<kebab-slug>` and markdown prose is never hard-wrapped.
+- `conventions/` — see [Conventions](#conventions) above; imported, not editable in place.
