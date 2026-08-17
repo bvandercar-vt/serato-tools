@@ -1,5 +1,6 @@
 # pylint: disable=protected-access
 import unittest
+import copy
 import os
 
 from src.serato_tools.crate import Crate
@@ -66,3 +67,21 @@ class TestCase(unittest.TestCase):
         b = Crate("/tmp/serato_test_B.crate")
         otrk_entries = [e for e in b.entries if e[0] == "otrk"]
         self.assertEqual(otrk_entries, [], "new Crate must not inherit tracks from a previous instance")
+
+    def test_new_crate_does_not_share_nested_entries_with_class_default(self):
+        default_entries = copy.deepcopy(Crate.DEFAULT_ENTRIES)
+
+        a = Crate("/tmp/serato_test_C.crate")
+        b = Crate("/tmp/serato_test_D.crate")
+
+        for i, (field, value) in enumerate(a.entries):
+            if isinstance(value, list):
+                self.assertIsNot(value, Crate.DEFAULT_ENTRIES[i][1], f"{field} sublist shared with class default")
+                self.assertIsNot(value, b.entries[i][1], f"{field} sublist shared between instances")
+
+        sorting_value = a.entries[1][1]
+        assert isinstance(sorting_value, list)
+        sorting_value.append((Crate.Fields.COLUMN_NAME, "mutated"))
+
+        self.assertEqual(Crate.DEFAULT_ENTRIES, default_entries, "class default must not be mutated")
+        self.assertEqual(b.entries, default_entries, "other instance must not be mutated")
