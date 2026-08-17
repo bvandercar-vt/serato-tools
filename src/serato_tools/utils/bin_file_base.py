@@ -102,7 +102,7 @@ class SeratoBinFile:
             # deep copy: nested values (osrt, ovct, ...) are lists too, and a shallow copy would leave every
             # instance sharing — and able to mutate — the class-level DEFAULT_ENTRIES sublists.
             self.entries = copy.deepcopy(self.DEFAULT_ENTRIES)
-            version_entry = self.DEFAULT_ENTRIES[0]
+            version_entry = self.entries[0]
             default_version = version_entry[1]
             if not isinstance(default_version, str):
                 raise DataTypeError(default_version, str, version_entry[0])
