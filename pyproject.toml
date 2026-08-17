@@ -60,3 +60,7 @@ line-length = 120
 
 [tool.pyright]
 disableBytesTypePromotions = true
+# Pyright doesn't read .gitignore, so a stale build/ left behind by `pip install .`
+# gets type-checked as a second copy of the source. Setting exclude replaces
+# Pyright's defaults, hence __pycache__ and dotted dirs are restated here.
+exclude = ["build", "dist", "**/__pycache__", "**/.*"]
