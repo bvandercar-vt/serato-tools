@@ -98,7 +98,7 @@ class SeratoBinFile:
                     self.entries = list(self._parse_item(self.raw_data))
         else:
             logger.warning(f"File does not exist: {file}. Using default data to create an empty item.")
-            self.entries = self.DEFAULT_ENTRIES
+            self.entries = list(self.DEFAULT_ENTRIES)
             version_entry = self.DEFAULT_ENTRIES[0]
             default_version = version_entry[1]
             if not isinstance(default_version, str):
