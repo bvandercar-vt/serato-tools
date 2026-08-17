@@ -2,8 +2,7 @@
 
 ## Cue Colors
 
-The on-screen representation of hotcue colors can differ slightly from what's stored in the `Serato Markers2` tag depending on wether Serato DJ Pro, Serato DJ Lite or Serato DJ Intro is used.
-In contrast to Serato DJ Intro which just displays the colors unchanged, both Serato DJ Lite and Serato DJ Pro apply some kind of transformation or colorscheme, so that the actual color of the hotcue and the color show in the GUI are not the same.
+The on-screen representation of hotcue colors can differ slightly from what's stored in the `Serato Markers2` tag depending on wether Serato DJ Pro, Serato DJ Lite or Serato DJ Intro is used. In contrast to Serato DJ Intro which just displays the colors unchanged, both Serato DJ Lite and Serato DJ Pro apply some kind of transformation or colorscheme, so that the actual color of the hotcue and the color show in the GUI are not the same.
 
 
 ### Serato DJ Intro
@@ -84,9 +83,7 @@ In contrast to Serato DJ Intro, the saved and displayed colors are slightly diff
 
 ## Track Colors
 
-Serato DJ Pro displays different colors in the color picker and the actual column (see table below).
-Generally, the column value can be calculated by substracting `0x666666` from the stored value. If the result is less than 0, `0x1000000` is also added.
-An alternative way to calculate is without using signed numbers: If the stored value is less than `0x666666` then add `0x99999A`, else substract `0x666666`
+Serato DJ Pro displays different colors in the color picker and the actual column (see table below). Generally, the column value can be calculated by substracting `0x666666` from the stored value. If the result is less than 0, `0x1000000` is also added. An alternative way to calculate is without using signed numbers: If the stored value is less than `0x666666` then add `0x99999A`, else substract `0x666666`
 
 There are some exceptions though:
 - If the stored color is `0x999999`, `0x090909` will be displayed instead of `0x333333` (this means that both `0x999999` and `0x6F6F6F` will result in the same color)

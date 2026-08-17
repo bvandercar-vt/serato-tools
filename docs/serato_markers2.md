@@ -1,15 +1,10 @@
 # Serato Markers2
 
-This tag stores various kinds of track "markers" like Cue Points, Saved Loops, Flips.
-It also stores information about the tracks' color in the tracklist and if the track's beatgrid is locked.
+This tag stores various kinds of track "markers" like Cue Points, Saved Loops, Flips. It also stores information about the tracks' color in the tracklist and if the track's beatgrid is locked.
 
-Note that some of this information is also stored in [`Serato Markers_`](serato_markers_.md), and Serato
-will prefer that data over the information stored in `Serato Markers2` if it is present.
+Note that some of this information is also stored in [`Serato Markers_`](serato_markers_.md), and Serato will prefer that data over the information stored in `Serato Markers2` if it is present.
 
-The tag contains a two-byte tag header, followed by base64-encoded binary data.
-If the content is very long, a linefeed character (`0a`) is inserted into the base64 string every 72 bytes.
-For some unknown reason, Serato may produce a base64 string that is 1 byte longer than a multiple of 4 (i.e. an invalid base64 string).
-In that case, you can just append an `A` (of `A==` if you use padding) before decoding it.
+The tag contains a two-byte tag header, followed by base64-encoded binary data. If the content is very long, a linefeed character (`0a`) is inserted into the base64 string every 72 bytes. For some unknown reason, Serato may produce a base64 string that is 1 byte longer than a multiple of 4 (i.e. an invalid base64 string). In that case, you can just append an `A` (of `A==` if you use padding) before decoding it.
 
 The minimum length of this tag seems to be 470 bytes, and shorter contents are padded with null bytes.
 
@@ -30,12 +25,9 @@ The base64-encoded content ends with a single null byte (`00`).
 
 ## Marker Entries
 
-Each entry is described by a header that contains type and length.
-The type is a null-terminated ASCII string.
+Each entry is described by a header that contains type and length. The type is a null-terminated ASCII string.
 
-The length of the entry's data depends heavily on the entry type.
-`BPMLOCK` entries contain only a single byte of data, while `FLIP` might become quite large.
-By storing the length explicitly instead of deriving it from the type, a parser could ignore unknown entry types and still be able to parse known ones.
+The length of the entry's data depends heavily on the entry type. `BPMLOCK` entries contain only a single byte of data, while `FLIP` might become quite large. By storing the length explicitly instead of deriving it from the type, a parser could ignore unknown entry types and still be able to parse known ones.
 
 | Offset   |              Length | Raw Value                 | Decoded Value | Type                    | Description
 | -------- | ------------------- | ------------------------- | ------------- | ----------------------- | -----------
@@ -112,9 +104,7 @@ Each `CUE` entry contains information about a [cue point](https://support.serato
 
 Each subentry starts with a header that contains its type and length.
 
-The last entry is always a jump entry where the source position is the time when the Flip recording was stopped.
-If looping is enabled, it's target position is the source position of the first entry.
-If not, the target position of that last entry is the same as its source position.
+The last entry is always a jump entry where the source position is the time when the Flip recording was stopped. If looping is enabled, it's target position is the source position of the first entry. If not, the target position of that last entry is the same as its source position.
 
 
 | Offset   |              Length | Raw Value                 | Decoded Value | Type                    | Description
@@ -126,8 +116,7 @@ If not, the target position of that last entry is the same as its source positio
 
 ##### Subentries of type `0` (Jumps)
 
-Subentries of type `0` are 16 bytes long and consist of two `double` precision floating point values.
-The first value denotes the absolute position in the track where a jump occurs, the second value is the jump target.
+Subentries of type `0` are 16 bytes long and consist of two `double` precision floating point values. The first value denotes the absolute position in the track where a jump occurs, the second value is the jump target.
 
 | Offset   |              Length | Raw Value                 | Decoded Value | Type                    | Description
 | -------- | ------------------- | ------------------------- | ------------- | ----------------------- | -----------
@@ -136,10 +125,7 @@ The first value denotes the absolute position in the track where a jump occurs, 
 
 ##### Subentries of type `1` (Playback/Censor)
 
-Subentries of type `1` are 24 bytes long and consist of three `double` precision floating point values.
-The first value denotes the absolute position in the track where playback starts, the second value is the playback ends.
-The third value is the playback speed factor.
-Subentries of this type are used for censoring (playback speed factor is -1.0) and are followed with a jump subentry from the censoring entry's end position to the play position that the track would be at without the reverse playback.
+Subentries of type `1` are 24 bytes long and consist of three `double` precision floating point values. The first value denotes the absolute position in the track where playback starts, the second value is the playback ends. The third value is the playback speed factor. Subentries of this type are used for censoring (playback speed factor is -1.0) and are followed with a jump subentry from the censoring entry's end position to the play position that the track would be at without the reverse playback.
 
 | Offset   |              Length | Raw Value                 | Decoded Value | Type                    | Description
 | -------- | ------------------- | ------------------------- | ------------- | ----------------------- | -----------
