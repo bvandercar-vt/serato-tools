@@ -1,6 +1,7 @@
 import os
 import io
 import re
+import copy
 import struct
 import base64
 from enum import StrEnum
@@ -98,8 +99,10 @@ class SeratoBinFile:
                     self.entries = list(self._parse_item(self.raw_data))
         else:
             logger.warning(f"File does not exist: {file}. Using default data to create an empty item.")
-            self.entries = list(self.DEFAULT_ENTRIES)
-            version_entry = self.DEFAULT_ENTRIES[0]
+            # deep copy: nested values (osrt, ovct, ...) are lists too, and a shallow copy would leave every
+            # instance sharing — and able to mutate — the class-level DEFAULT_ENTRIES sublists.
+            self.entries = copy.deepcopy(self.DEFAULT_ENTRIES)
+            version_entry = self.entries[0]
             default_version = version_entry[1]
             if not isinstance(default_version, str):
                 raise DataTypeError(default_version, str, version_entry[0])
